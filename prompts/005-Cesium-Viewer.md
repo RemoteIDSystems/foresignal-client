@@ -1,7 +1,7 @@
 # 005 — Cesium Viewer
 
-**Goal.** Mount the Cesium map/globe inside the shell with a working **2D Map / 3D Globe / Split**
-toggle and the map HUD chrome.
+**Goal.** Mount the Cesium map/globe inside the shell — **2D by default**, with a manual **2D / 3D**
+toggle (no Split) — and the map HUD chrome. Contextual auto-switch to 3D on selection is built in 014.
 
 **Read first.** 004-CR; [Architecture.md](../docs/Architecture.md) §5, §16. Design: the Global
 Dashboard and Tropical-Storm mockups (map region, scene toggle, HUD, mini inset).
@@ -12,14 +12,14 @@ Dashboard and Tropical-Storm mockups (map region, scene toggle, HUD, mini inset)
   globe renders in `vite build` output, not just dev.
 - `map/Viewer.tsx`: a Resium `<Viewer>` with the default widgets stripped (we draw our own HUD),
   a base imagery layer, sensible camera defaults.
-- **Scene-mode toggle** (`SceneMode.SCENE3D | SCENE2D | COLUMBUS_VIEW`) bound to the design's
-  2D/3D/Split control; the mode is held in local state here and wired to the store in 012.
+- **2D / 3D toggle** — `SceneMode.SCENE2D` is the **default**; `SCENE3D` is the other option. **No
+  Split, no Columbus view.** The mode is held in local state here and wired to the store in 012.
 - **HUD chrome** (DOM overlay, not Cesium widgets): scale bar, lat/lon/elev readout, N compass,
   zoom controls, and the mini "global view" inset.
 - Resize/retina handling; `powerPreference` left at Cesium defaults (desktop target).
 
-**Done when.** The globe renders in a production build; the 2D/3D/Split toggle switches scene mode
-live; HUD elements show live camera lat/lon/elev. A Playwright check captures the canvas and the
+**Done when.** The map renders in a production build, **2D by default**; the 2D/3D toggle switches
+scene mode live; HUD elements show live lat/lon/elev. A Playwright check captures the canvas and the
 HUD.
 
 **Commit.** `005: Cesium Viewer`; `completion-reports/005-CR-Cesium-Viewer.md` (hash + owner questions).
