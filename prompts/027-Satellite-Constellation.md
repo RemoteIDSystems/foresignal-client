@@ -21,7 +21,7 @@ panel, passes, ground stations).
 - Selected-satellite panel (operator, NORAD id, orbit type, altitude, inclination, period, next
   pass, sensors/bands) from the record.
 - Upcoming passes and ground stations lists; sensor discovery via `listSensors` for an AOI.
-- 2D/3D/Split reuse the 005 scene toggle.
+- 2D/3D reuse the 005 scene toggle.
 
 **Done when.** The constellation renders live orbits that animate with the scrubber; selecting a
 satellite shows its details and next pass; arcs occlude correctly in 3D. Playwright: constellation

@@ -85,7 +85,7 @@ in this list.
 ### Map — prompts 005–010
 | # | Prompt | What it delivers |
 |---|---|---|
-| 005 | Cesium-Viewer | Resium `<Viewer>`, 2D/3D/split scene-mode toggle, `CESIUM_BASE_URL`, base imagery, HUD (scale bar, lat/lon/elev, compass, zoom, mini inset) |
+| 005 | Cesium-Viewer | Resium `<Viewer>`, 2D/3D toggle (2D default; contextual 3D on selection, 014), `CESIUM_BASE_URL`, base imagery, HUD (scale bar, lat/lon/elev, compass, zoom, mini inset) |
 | 006 | Map-Overlay-Style | `getMapStyle` + sprites/icons as the per-kind styling source; legend panel |
 | 007 | Record-Layers | Record vector tiles (`listTileLayers`/`getTileJson`/`getTile`) via deck.gl `MVTLayer`; left LAYERS rail with toggles |
 | 008 | Aggregation-And-Viewport | Hex aggregation below `aggBelowZoom`; viewport bbox+zoom scoping; `summarizeContext` counts |

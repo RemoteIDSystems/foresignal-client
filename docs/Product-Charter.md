@@ -57,7 +57,7 @@ build-time only and ships nothing at runtime.
 - Operator interactions the backend exposes: selection, filtering, annotations, workspace
   context and deep links, alert acknowledge/snooze/resolve, saved views/watchlists, and
   on-demand analysis requests.
-- Full **2D map, 3D globe and split** views, scaling to the backend's entire source catalog
+- Full **2D map and 3D globe** views (2D default, contextual 3D on selection), scaling to the backend's entire source catalog
   (~300–500 simultaneous source layers) **without an artificial client-side cap**.
 
 ### Out of scope
@@ -90,7 +90,7 @@ invented, and not sourced from a prose document.
 - **Vite + React 19 + TypeScript** — the application shell and all non-map UI (panels, charts,
   timelines, entity graph, HUD chrome).
 - **CesiumJS (via Resium)** — the map/globe rendering engine: one component providing **2D map,
-  3D globe and split** scene modes.
+  3D globe** scene modes (2D default; contextual 3D on selection).
 - **deck.gl** — GPU-batched rendering for high-cardinality data layers.
 - **A typed API layer generated from `docs/OpenAPI.json`** (openapi-typescript + a `fetch`
   wrapper), plus a resumable SSE change-stream client.
@@ -133,7 +133,7 @@ strength; and a static SPA served by the backend keeps the whole solution to **t
 
 ## 7. Success criteria
 
-- The **Global Intelligence Dashboard** renders live backend data over a 2D/3D/split Cesium map,
+- The **Global Intelligence Dashboard** renders live backend data over a 2D/3D Cesium map,
   with the left layer rail, right dossier panel, bottom activity/insights, and a working timeline
   scrubber.
 - Selecting an entity opens its **dossier**; selecting a situation or investigation opens the

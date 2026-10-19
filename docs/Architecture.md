@@ -14,7 +14,7 @@
 │  Java / Spring Boot + PostGIS│          │                                            │
 │                              │  HTTP    │  React UI shell ── panels, charts, graph,  │
 │  • /v1 REST + SSE API  ◄─────┼──────────┤  timelines, HUD, search, alerts            │
-│  • serves the static web ────┼── SSE ───┤  Cesium map/globe (2D/3D/split) + deck.gl  │
+│  • serves the static web ────┼── SSE ───┤  Cesium map/globe (2D/3D) + deck.gl        │
 │    build (same-origin)       │  tiles   │  API layer (generated from OpenAPI) + SSE  │
 └──────────────────────────────┘          └───────────────────────────────────────────┘
         two runtime components. Vite/Resium/deck.gl are build-time only.
