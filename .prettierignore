@@ -1,0 +1,9 @@
+dist/
+coverage/
+node_modules/
+openapi/
+design/
+docs/
+prompts/
+src/api/generated/
+package-lock.json
