@@ -13,7 +13,7 @@ Dashboard and Tropical-Storm mockups (map region, scene toggle, HUD, mini inset)
 - `map/Viewer.tsx`: a Resium `<Viewer>` with the default widgets stripped (we draw our own HUD),
   a base imagery layer, sensible camera defaults.
 - **Scene-mode toggle** (`SceneMode.SCENE3D | SCENE2D | COLUMBUS_VIEW`) bound to the design's
-  2D/3D/Split control; the mode is held in the store (added in 012; a local state stub for now).
+  2D/3D/Split control; the mode is held in local state here and wired to the store in 012.
 - **HUD chrome** (DOM overlay, not Cesium widgets): scale bar, lat/lon/elev readout, N compass,
   zoom controls, and the mini "global view" inset.
 - Resize/retina handling; `powerPreference` left at Cesium defaults (desktop target).

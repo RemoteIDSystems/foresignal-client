@@ -3,7 +3,7 @@
 **Goal.** The top-level shell every screen lives in — top-nav tabs, routing, dark theme, `ui/`
 primitives, layout grid, error boundaries — **and a styled Global Dashboard skeleton with
 placeholder data that matches the primary mockup.** This is the first visual review gate: the owner
-confirms the overall look here, on day one, before any real-data wiring.
+confirms the overall look here, before any real-data wiring.
 
 **Read first.** 003-CR; [Architecture.md](../docs/Architecture.md) §2, §5. Design: **all** mockups
 in [`design/`](../design/) share the top nav and dark theme — match them.

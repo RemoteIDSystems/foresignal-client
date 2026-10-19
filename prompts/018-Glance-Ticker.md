@@ -10,12 +10,12 @@ status strip and small activity widgets.
 - `GET /v1/glance` [`getGlance`] — compact status for widgets.
 - `GET /v1/stats/top` [`getStatsTop`] — top sources/kinds/cells/entities.
 - `GET /v1/stats/timeseries` [`getStatsTimeseries`] — activity time series.
-- `GET /v1/stats/grid` [`getStatsGrid`] — spatial activity grid (optional heat widget).
+- `GET /v1/stats/grid` [`getStatsGrid`] — spatial activity grid (heat widget).
 
 **Build.**
 - A global ticker fed by `getGlance`, refreshed on a light interval and on stream activity (011).
-- Small widgets: top sources/kinds (`getStatsTop`) and an activity sparkline (`getStatsTimeseries`)
-  using the chart lib. Aggregates only.
+- Small widgets: top sources/kinds (`getStatsTop`), an activity sparkline (`getStatsTimeseries`),
+  and a spatial activity heat widget (`getStatsGrid`), using the chart lib. Aggregates only.
 
 **Done when.** The ticker shows live counts and the widgets render current top/series data; they
 update as activity changes. Playwright: ticker and a sparkline render with data.

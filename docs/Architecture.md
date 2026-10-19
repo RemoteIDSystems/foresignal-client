@@ -133,6 +133,7 @@ mechanism:
 |---|---|---|
 | **Record vector tiles** (MVT) | `GET /v1/tiles.json` [`listTileLayers`], `/v1/tiles/{layer}.json` [`getTileJson`], `/v1/tiles/{layer}/{z}/{x}/{y}.mvt` [`getTile`] | deck.gl `MVTLayer` over Cesium (batched), or Cesium primitives from decoded tiles |
 | **Raster / weather products** | `GET /v1/products` [`listProducts`], `/{id}/tilejson` [`getProductTileJson`], `/{id}/frames/latest` [`getLatestProductFrame`], `/{id}/tiles/{frameKey}/{z}/{x}/{y}.png` [`getProductTile`], `/{id}/legend` [`getProductLegend`] | Cesium **imagery layers** (`UrlTemplateImageryProvider`), animated by swapping frame templates; legend from JSON |
+| **Wind fields** | `/{id}/vectors/{frameKey}/…mvt` [`getProductVectorTile`] (barbs); `/{id}/fields/{frameKey}.png-uv` [`getProductFieldPngUv`] / `.velocity-json` [`getProductFieldVelocityJson`] | barb symbol layer, speed raster, and an animated WebGL particle layer |
 | **Vector overlay style** | `GET /v1/map/style.json` [`getMapStyle`], sprites `/v1/map/sprites/{file}` [`getMapSprite`], icons `/v1/map/icons/{name}.png` [`getMapIcon`] | source of per-kind colors, icons and `aggBelowZoom`; drives deck/primitive styling (Cesium does not consume the MapLibre style directly) |
 | **Records as features** | `GET /v1/records` [`listRecords`] (GeoJSON), `/v1/kinds` [`listKinds`], `/v1/kinds/{kind}/schema` [`getKindSchema`] | GeoJSON → batched `BillboardCollection`/`PolylineCollection`, or deck layers |
 
@@ -310,8 +311,8 @@ Both are prompt 030. Native APNs/FCM push is for the future Flutter app, not thi
 ## 14. Search, saved state, widgets
 
 - **Search** — `GET /v1/search` [`search`] backs the top search bar (records, briefings, alerts);
-  `search/status` for semantic-search readiness. `POST /v1/ask` [`ask`] / `ask/stream` backs an
-  optional "Ask ForeSignal" panel.
+  `search/status` for semantic-search readiness. `POST /v1/ask` [`ask`] / `ask/stream` backs the
+  "Ask ForeSignal" panel (built in 017).
 - **Places / views / watchlists** — `listPlaces`/`createPlace`, `listViews`/`createView`
   (+ `getViewRecords`, `getViewTileJson`, `streamView`), `listWatchlists`/`addWatchlistItems`.
   Saved views carry their own tiles and stream, so a saved layer set is one source.

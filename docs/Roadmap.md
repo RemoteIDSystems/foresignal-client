@@ -16,7 +16,7 @@ reference is the ForeSignal repo's `docs/OpenAPI.json`.** Date: 2026-10-18.
 2. Claude Code runs them in order. **The default is attended: run one prompt, then stop at its
    review gate for the owner to look before starting the next**
    ([`prompts/000-Run-Sequence.md`](../prompts/000-Run-Sequence.md)). Unattended batch running is
-   opt-in and only for an owner-named range of later, non-visual prompts. UI work is iterative early
+   opt-in and only for an owner-named range of prompts. UI work is iterative early
    on — the gates exist so the owner never runs for days and then first sees something wrong.
 3. Each prompt starts by reading the earlier completion reports and adapting to what was actually
    built.
@@ -56,7 +56,7 @@ client matches the layout and behavior shown there; visual details may be adjust
 panels, their data, and their interactions come from the designs and the backend.
 
 **Front-load the look.** Prompt 004 stands up a **styled dashboard skeleton** — the primary mockup's
-full layout with placeholder data — so the overall look is validated on day one, *before* real-data
+full layout with placeholder data — so the overall look is validated immediately, *before* real-data
 wiring. Each later screen prompt (019 situation view, 024 workbench, 027 satellite) likewise builds
 its screen skeleton first, then wires its data. Combined with the review gates, you see the target
 shape early and approve each increment against the mockup.
@@ -65,7 +65,13 @@ shape early and approve each increment against the mockup.
 
 ## 4. The prompts
 
-### Phase 0 — Foundation
+**One build, one pass.** All 34 prompts ship together — there is no later phase, no v2, no TODO, and
+nothing is deferred, delayed, or marked optional (Charter §6.7, §8). The headings below are
+**dependency/build order only** (the shell before the panels, the map before its layers; the 3D
+globe is built in 005). Every feature in the designs and every backend capability a screen needs is
+in this list.
+
+### Foundation — prompts 001–004
 | # | Prompt | What it delivers |
 |---|---|---|
 | 001 | Project-Scaffold | Vite + React 19 + TS project, lint/format/test config, `src/` layout, env config, `design/` and `openapi/` vendored |
@@ -73,62 +79,62 @@ shape early and approve each increment against the mockup.
 | 003 | Auth-And-Access | Open reads; bearer-token store; stream tickets (`createStreamTicket`); tile keys (`createTileKey`); capabilities (`getSystem`, `getContract`) |
 | 004 | App-Shell & Dashboard-Skeleton | Top-nav, routing, dark theme + `ui/` primitives, layout grid, error boundaries, **and a styled Global Dashboard skeleton with placeholder data — the first visual review gate** |
 
-### Phase 1 — Map core
+### Map — prompts 005–010
 | # | Prompt | What it delivers |
 |---|---|---|
 | 005 | Cesium-Viewer | Resium `<Viewer>`, 2D/3D/split scene-mode toggle, `CESIUM_BASE_URL`, base imagery, HUD (scale bar, lat/lon/elev, compass, zoom, mini inset) |
 | 006 | Map-Overlay-Style | `getMapStyle` + sprites/icons as the per-kind styling source; legend panel |
 | 007 | Record-Layers | Record vector tiles (`listTileLayers`/`getTileJson`/`getTile`) via deck.gl `MVTLayer`; left LAYERS rail with toggles |
 | 008 | Aggregation-And-Viewport | Hex aggregation below `aggBelowZoom`; viewport bbox+zoom scoping; `summarizeContext` counts |
-| 009 | Raster-Products | Products (`listProducts`/`getProductTileJson`/`getLatestProductFrame`/`getProductTile`/`getProductLegend`) as Cesium imagery layers; loop animation |
+| 009 | Raster-Products & Wind | Weather/raster products as Cesium imagery layers + loop animation; **wind — barbs (`getProductVectorTile`), speed raster, animated particles (`getProductFieldPngUv`/`getProductFieldVelocityJson`)** |
 | 010 | Dense-Layer-Rendering | deck.gl batching for high-cardinality layers; enable the full catalog without a client cap |
 
-### Phase 2 — Live and time
+### Live and time — prompts 011–013
 | # | Prompt | What it delivers |
 |---|---|---|
 | 011 | Live-Stream | One multiplexed SSE (`streamEvents` + `updateEventStreamFilter`), `streamChanges`, tickets, `Last-Event-ID` resume, `listChanges` catch-up, backoff, `410` resync |
 | 012 | State-Store | `useSyncExternalStore` singleton (viewport, layers, selection, time, inbox); SSE deltas applied per key |
 | 013 | Time-Machine | Scrubber histogram (`getTimeline`), playback (`getHistoryFrames`), trails (`getRecordTrack`), asOf tiles |
 
-### Phase 3 — Selection and panels
+### Selection and panels — prompts 014–018
 | # | Prompt | What it delivers |
 |---|---|---|
 | 014 | Selection-And-Dossier | `getObject`/`resolveObjects`/`getObjectDossier`; right-hand selected-entity panel; action buttons from the envelope |
 | 015 | Context-Insights | `summarizeContext` → Analytics & Insights + Activity Timeline panels |
 | 016 | Related-Entities | `listRelatedObjects` → Related Entities panel |
-| 017 | Search | `search`/`getSearchStatus` top search bar + results; find/locate bar |
-| 018 | Glance-Ticker | `getGlance` + `getStatsTop`/`getStatsTimeseries` global ticker and status widgets |
+| 017 | Search & Ask | `search`/`getSearchStatus` search bar + find/locate; **Ask ForeSignal Q&A (`ask`/`askStream`, cited, threaded)** |
+| 018 | Glance-Ticker | `getGlance` + `getStatsTop`/`getStatsTimeseries`/`getStatsGrid` global ticker, status and activity-heat widgets |
 
-### Phase 4 — Intelligence views
+### Intelligence views — prompts 019–023
 | # | Prompt | What it delivers |
 |---|---|---|
-| 019 | Situations | `listSituations`/`getSituation`/`getSituationTimeline`/`getSituationChanges`; Conflict full-analysis view |
+| 019 | Situations & Investigations | situations + **investigations** (`listInvestigations`/`getInvestigation`/`addInvestigationItem`) — Conflict full-analysis + Tropical-Storm investigation workspace |
 | 020 | Findings-Analytics | `listFindings`/`listProjectedImpacts`/`listImpactRates`/`listAnalysisSeries` + metric charts |
 | 021 | Hypotheses-ACH | `getHypothesisSet`/`getAchMatrix`/`getInformationValue`; competing-hypotheses panel |
 | 022 | Forecasts | `listForecastQuestions`/`getForecastQuestionHistory`/`getForecastScorecard`; Forecasts & Predictions with trend charts |
 | 023 | Assessments | `listAssessments`/`getLatestAssessment`/`listSituationAssessments`; AI-analysis tabs; on-demand `createSituationAssessment` |
 
-### Phase 5 — Investigations and collaboration
+### Investigations and collaboration — prompts 024–026
 | # | Prompt | What it delivers |
 |---|---|---|
 | 024 | Relationship-Graph | `queryGraph`/`findCommonDependencies` → sigma.js WebGL evidence graph (Analyst Workbench) |
 | 025 | Workspaces-Deep-Links | `getWorkspace`/`patchWorkspaceContext`/`putWorkspaceLayout`/`getWorkspaceSummary`, `createContextLink`; shared selection + deep-link restore |
 | 026 | Annotations-Relations | `createAnnotation`/`listObjectAnnotations`/`createRelation`; notes and evidence tagging |
 
-### Phase 6 — Satellite operations
+### Satellite operations — prompts 027–028
 | # | Prompt | What it delivers |
 |---|---|---|
 | 027 | Satellite-Constellation | `listSensors` + satellite records + CZML/SGP4 orbits, ground tracks, passes, time-dynamic playback |
-| 028 | Imagery-And-Comparison | `getMedia`/`getMediaThumbnail` + product imagery; before/after change-detection swipe |
+| 028 | Imagery & Change-Detection | `getMedia`/`getMediaThumbnail` + product imagery; before/after swipe with metrics and run action |
 
-### Phase 7 — Alerts and saved state
+### Alerts and saved state — prompts 029–031
 | # | Prompt | What it delivers |
 |---|---|---|
 | 029 | Alerts-Notifications | `listAlerts`/`streamAlerts`/`acknowledgeAlert`/`snoozeAlert`/`resolveAlert`; inbox `listNotifications`/`streamNotifications`/`getNotificationBadge`/`markNotificationsRead`; toasts; device id; `updatePresence` |
 | 030 | Alert-Rules-And-Web-Push | Author trigger rules scoped to view/situation/watchlist (`createTrigger`/`updateTrigger`/`testTrigger`/`muteTrigger`); route to channels; subscribe the browser to Web Push (`getVapidPublicKey`/`createPushSubscription`) |
 | 031 | Saved-State | `listPlaces`/`listViews` (+ `getViewTileJson`/`streamView`)/`listWatchlists`; persisted layer & filter sets |
 
-### Phase 8 — Deploy and hardening
+### Deploy and hardening — prompts 032–034
 | # | Prompt | What it delivers |
 |---|---|---|
 | 032 | Build-And-Deploy | `vite build` → static; served same-origin by the backend web root; Cesium assets; config; immutable-tile caching |
@@ -139,5 +145,5 @@ shape early and approve each increment against the mockup.
 
 ## 5. Status
 
-Not started. 34 prompts across 8 phases. The owner reviews the roadmap and each prompt before and
-after it runs.
+Not started. 34 prompts, built in one pass (dependency order, no phasing). The owner reviews the
+roadmap and each prompt before and after it runs.

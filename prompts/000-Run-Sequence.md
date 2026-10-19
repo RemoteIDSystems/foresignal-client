@@ -3,7 +3,7 @@
 > Give this file to a Claude Code session at the repository root
 > (`~/Documents/GitLab/foresignal-client`) to run the roadmap. **Default mode is attended: run one
 > prompt, then stop at its review gate so the owner can look before the next.** Unattended batch
-> running is opt-in and only for an owner-named range of later, non-visual prompts.
+> running is opt-in and only for an owner-named range of prompts.
 > The backend is the sibling repo `~/Documents/GitLab/foresignal`; its `docs/OpenAPI.json` is the
 > **only** reference for how the client talks to the backend.
 

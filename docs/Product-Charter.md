@@ -118,6 +118,14 @@ strength; and a static SPA served by the backend keeps the whole solution to **t
 5. **US English** everywhere — prose, identifiers, UI strings, comments, commit messages.
 6. **Verify, don't guess.** Endpoints, schemas, versions and behaviors come from
    `docs/OpenAPI.json` and are checked, never assumed.
+7. **One pass, no phasing.** This is an AI-first build. **Every** feature in the designs and every
+   backend capability a screen needs is built in this single pass — the 3D globe, wind (barbs,
+   speed raster, particles), every panel, every detail view, situations and investigations, the
+   relationship graph, satellite orbits, imagery and change-detection, alerts and rule authoring.
+   Nothing is deferred to a later phase, marked optional, or left as a TODO. There is no v1/v2 and
+   no backlog. The only exclusions are the owner-set boundaries in §8. Prompt ordering is
+   dependency/build order, never prioritization. If something genuinely cannot be built, it is
+   surfaced as an owner question — never silently deferred or stubbed.
 
 ---
 
@@ -133,8 +141,14 @@ strength; and a static SPA served by the backend keeps the whole solution to **t
 
 ---
 
-## 8. Deferred (later, not out)
+## 8. Out of scope — the only two things not built
 
-- The mobile **Flutter** companion (separate project, no 3D, different UI).
-- Progressive-enhancement extras (animated wind particles, cinematic camera, advanced
-  change-detection tooling) beyond what the designs require on day one.
+Nothing in the designs or in the backend capabilities a screen needs is deferred (§6.7). The build
+is excluded from exactly two things, both the owner's explicit decision:
+
+- **A mobile app.** If one is built later it is a **separate Flutter project** (different, simplified
+  UI, no 3D) — not this repository.
+- **Backend changes.** The client is presentation-only; a needed-but-missing backend capability is
+  raised as an owner question, never built into the client or a second service.
+
+Everything else is built in this one pass.
