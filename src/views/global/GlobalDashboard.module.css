@@ -104,39 +104,6 @@
 
 /* ---------- Map region ---------- */
 
-.mapRegion {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  background:
-    radial-gradient(ellipse at 50% 40%, rgba(30, 70, 120, 0.25), transparent 65%), #02060c;
-}
-
-.globe {
-  position: absolute;
-  top: 54%;
-  left: 50%;
-  width: auto;
-  height: 128%;
-  transform: translate(-50%, -50%);
-}
-
-.graticule {
-  fill: none;
-  stroke: rgba(120, 170, 220, 0.22);
-  stroke-width: 0.8;
-}
-
-.mapNote {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  color: rgba(160, 190, 220, 0.35);
-  font-size: var(--fs-font-size-sm);
-  letter-spacing: 0.04em;
-  transform: translate(-50%, -50%);
-}
-
 .hudBox {
   padding: 6px 10px;
   border: 1px solid var(--fs-color-border-strong);
@@ -148,6 +115,7 @@
 
 .hudTime {
   position: absolute;
+  z-index: 2;
   top: 10px;
   left: 10px;
   display: flex;
@@ -203,109 +171,19 @@
   font-size: var(--fs-font-size-xs);
 }
 
-.sceneToggle {
-  position: absolute;
-  top: 10px;
-  right: 14px;
-}
-
-.hudControls {
-  position: absolute;
-  top: 58px;
-  right: 18px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.hudControls button {
-  border-color: var(--fs-color-border-strong);
-  background: rgba(6, 12, 20, 0.85);
-}
-
-.zoomGroup {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--fs-color-border-strong);
-  border-radius: var(--fs-radius-md);
-  background: rgba(6, 12, 20, 0.85);
-}
-
-.zoomGroup button {
-  border: 0;
-  background: transparent;
-}
-
-.inset {
-  position: absolute;
-  bottom: 12px;
-  left: 10px;
-  width: 196px;
-  padding: 8px;
-  border: 1px solid var(--fs-color-border-strong);
-  border-radius: var(--fs-radius-md);
-  background: rgba(6, 12, 20, 0.88);
-}
-
-.insetTitle {
-  margin-bottom: 6px;
-  color: var(--fs-color-text-secondary);
-  font-size: var(--fs-font-size-xs);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.insetMap {
-  height: 104px;
-  border-radius: var(--fs-radius-sm);
-  background:
-    radial-gradient(ellipse 22% 26% at 24% 42%, #2a3644 60%, transparent 62%),
-    radial-gradient(ellipse 10% 22% at 33% 72%, #2a3644 60%, transparent 62%),
-    radial-gradient(ellipse 26% 22% at 62% 36%, #2a3644 60%, transparent 62%),
-    radial-gradient(ellipse 9% 16% at 56% 66%, #2a3644 60%, transparent 62%),
-    radial-gradient(ellipse 8% 8% at 82% 76%, #2a3644 60%, transparent 62%), #0c1822;
-}
-
 .placeholderChip {
   position: absolute;
-  bottom: 14px;
+  z-index: 2;
+  top: 14px;
   left: 50%;
   padding: 3px 9px;
+  background: rgba(6, 12, 20, 0.85);
   border: 1px dashed #5a6878;
   border-radius: 10px;
   color: var(--fs-color-text-muted);
   font-size: var(--fs-font-size-xs);
   letter-spacing: 0.04em;
   transform: translateX(-50%);
-}
-
-.coords {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 5px 10px;
-  border-radius: var(--fs-radius-md);
-  background: rgba(6, 12, 20, 0.88);
-  color: var(--fs-color-text-secondary);
-  font-size: var(--fs-font-size-xs);
-  font-variant-numeric: tabular-nums;
-}
-
-.scale {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.scaleBar {
-  width: 70px;
-  height: 5px;
-  border: 1px solid var(--fs-color-text-secondary);
-  border-top: 0;
 }
 
 /* ---------- Selected entity ---------- */

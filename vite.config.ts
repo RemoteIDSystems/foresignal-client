@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import cesium from 'vite-plugin-cesium';
 import { readFileSync } from 'node:fs';
 
 const packageJson = JSON.parse(
@@ -28,7 +29,7 @@ export default defineConfig(({ mode }) => {
   const backend = env.VITE_FORESIGNAL_BACKEND || DEFAULT_BACKEND;
   const proxied = { target: backend, changeOrigin: true, ws: true };
   return {
-    plugins: [react()],
+    plugins: [react(), cesium()],
     define: {
       __APP_VERSION__: JSON.stringify(packageJson.version),
     },

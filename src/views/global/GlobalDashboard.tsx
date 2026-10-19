@@ -6,7 +6,8 @@ import {
   RelatedEntitiesPanel,
 } from './BottomPanels';
 import { LayersRail } from './LayersRail';
-import { MapPlaceholder } from './MapPlaceholder';
+import { MapViewer } from '../../map/Viewer';
+import { TimeHudPlaceholder } from './TimeHudPlaceholder';
 import { SelectedEntityPanel } from './SelectedEntityPanel';
 
 /** The Global Dashboard's panels and the slots they dock into. */
@@ -54,5 +55,14 @@ const PANELS: readonly DockPanel[] = [
  * data; later prompts wire each panel to the backend.
  */
 export function GlobalDashboard() {
-  return <DashboardLayout map={<MapPlaceholder />} panels={PANELS} />;
+  return (
+    <DashboardLayout
+      map={
+        <MapViewer>
+          <TimeHudPlaceholder />
+        </MapViewer>
+      }
+      panels={PANELS}
+    />
+  );
 }
