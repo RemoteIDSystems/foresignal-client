@@ -14,9 +14,25 @@ export interface ForesignalClientOptions {
   getToken?: () => string | null | undefined;
   /** Retry settings for idempotent requests, or `false` to disable retrying. */
   retry?: RetryOptions | false;
+  /** Returns this browser's device id, sent as `Foresignal-Device-Id` on the operations that take it. */
+  getDeviceId?: () => string;
   /** The underlying fetch; defaults to `globalThis.fetch`. */
   fetch?: (request: Request) => Promise<Response>;
 }
+
+/**
+ * The operations whose spec declares a `Foresignal-Device-Id` header, as `METHOD schemaPath`:
+ * the inbox (`listNotifications`, `getNotification`, `markNotificationsRead`,
+ * `getNotificationBadge`, `streamNotifications`) and `updatePresence`.
+ */
+export const DEVICE_ID_OPERATIONS: ReadonlySet<string> = new Set([
+  'GET /v1/notifications',
+  'GET /v1/notifications/{notificationId}',
+  'POST /v1/notifications/read',
+  'GET /v1/notifications/badge',
+  'GET /v1/notifications/stream',
+  'POST /v1/clients/presence',
+]);
 
 /** Media types the client accepts: JSON results and RFC 9457 problems. */
 const ACCEPT = 'application/json, application/problem+json';
@@ -25,7 +41,8 @@ const ACCEPT = 'application/json, application/problem+json';
  * Creates the backend API client.
  *
  * Every request gets `Accept` (unless the caller set one) and, when `getToken` returns a token,
- * `Authorization: Bearer <token>`. Idempotent requests are retried per `Retry-After` on `429`
+ * `Authorization: Bearer <token>`. The operations in {@link DEVICE_ID_OPERATIONS} also get
+ * `Foresignal-Device-Id` when `getDeviceId` is given. Idempotent requests are retried per `Retry-After` on `429`
  * and `503`. Failed responses are left as openapi-fetch reports them; use {@link unwrap} to turn
  * them into an {@link FsError}.
  */
@@ -37,13 +54,16 @@ export function createForesignalClient(options: ForesignalClientOptions): Foresi
   });
 
   const headers: Middleware = {
-    onRequest({ request }) {
+    onRequest({ request, schemaPath }) {
       if (!request.headers.has('Accept')) {
         request.headers.set('Accept', ACCEPT);
       }
       const token = options.getToken?.();
       if (token) {
         request.headers.set('Authorization', `Bearer ${token}`);
+      }
+      if (options.getDeviceId && DEVICE_ID_OPERATIONS.has(`${request.method} ${schemaPath}`)) {
+        request.headers.set('Foresignal-Device-Id', options.getDeviceId());
       }
       return request;
     },

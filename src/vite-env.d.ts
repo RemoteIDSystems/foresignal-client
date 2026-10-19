@@ -9,3 +9,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+/** This build's version, from `package.json`. */
+declare const __APP_VERSION__: string;
