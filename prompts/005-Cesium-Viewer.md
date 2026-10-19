@@ -27,7 +27,10 @@ Dashboard and Tropical-Storm mockups (map region, scene toggle, HUD, mini inset)
   gives **raised relief in 3D mode** (mountains and seafloor stand up) and feeds the **ELEV** readout
   (terrain height under the pointer; "—" when off-map). Pick a global resolution that shows real
   relief at globe and regional scale while keeping the bundle reasonable; 2D renders flat. Imagery
-  drapes over the terrain.
+  drapes over the terrain. Apply **~2× vertical exaggeration** (Cesium `verticalExaggeration`) so
+  relief reads at globe scale, with ELEV still showing **true** heights. Keep the terrain at **tile
+  level 6** (~37 MB). **Do not re-add dynamic terrain normals** — they break the day/night imagery
+  blend; relief reads from the 3D shape plus the imagery's own shading.
 - Resize/retina handling; `powerPreference` left at Cesium defaults (desktop target).
 
 **Done when.** The map renders in a production build, **2D by default**; the 2D/3D toggle switches
