@@ -121,9 +121,10 @@ Two layers, clearly separated:
 - **UI layer (React).** Everything that is not the map: the top nav, left layer rail, right
   dossier/detail panels, bottom timeline/insights, modals, toasts, search, charts and the entity
   graph. Ordinary DOM/SVG/Canvas — not GPU-bound.
-- **Map engine (Cesium).** One `<Viewer>` (Resium) hosting the map/globe. Scene mode switches at
-  runtime: `SceneMode.SCENE3D` (globe), `SCENE2D` (flat map), `COLUMBUS_VIEW` (2.5D) — this is the
-  design's **2D Map / 3D Globe / Split** toggle. The same layers render in every mode.
+- **Map engine (Cesium).** One `<Viewer>` (Resium) hosting the map/globe. The design's **2D Map / 3D Globe / Split** toggle maps to:
+  **2D Map** → `SceneMode.SCENE2D`; **3D Globe** → `SceneMode.SCENE3D`; **Split** → a 2D map and the
+  3D globe shown **side by side in two synchronized panes** (linked camera and selection) — not
+  Cesium's 2.5D Columbus view. The same layers render in every mode.
 
 ### 5.1 Layer pipeline
 
