@@ -1,9 +1,11 @@
-# 000 — Run Sequence (attended driver with review gates)
+# 000 — Run Sequence (continuous session with review gates)
 
-> Give this file to a Claude Code session at the repository root
-> (`~/Documents/GitLab/foresignal-client`) to run the roadmap. **Default mode is attended: run one
-> prompt, then stop at its review gate so the owner can look before the next.** Unattended batch
-> running is opt-in and only for an owner-named range of prompts.
+> Give this file to **one** Claude Code session at the repository root
+> (`~/Documents/GitLab/foresignal-client`). That single session runs the roadmap end to end — many
+> prompts in a row, as with the backend build — **pausing after each prompt at a review gate** so the
+> owner can look, then continuing in the same session when the owner approves. The owner approves by
+> replying in the session (e.g. "continue"); the owner never runs a command. Unattended batches
+> (no pause) are opt-in for an owner-named range.
 > The backend is the sibling repo `~/Documents/GitLab/foresignal`; its `docs/OpenAPI.json` is the
 > **only** reference for how the client talks to the backend.
 
@@ -34,11 +36,14 @@
      any **owner questions** (things the OpenAPI did not express — never invented, never worked
      around with a second service);
    - commit the report as `NNN: completion report`; push to `origin main`.
-5. **Stop at the review gate (default).** Unless the owner has waived gates for this range, **stop
-   after the prompt** and tell the owner what to look at: run `npm run dev` or open
-   `review/NNN-<name>.png`. Do **not** start the next prompt until the owner approves (they remove
-   `completion-reports/REVIEW-REQUIRED.md`, or say continue). Write a one-line
-   `completion-reports/REVIEW-REQUIRED.md` naming the prompt and its screenshot.
+5. **Pause at the review gate (default).** Unless the owner has waived gates for this range, after
+   the prompt show the owner the screenshot (`review/NNN-<name>.png`) and a one-line summary, and
+   ask: *approve NNN and continue?* **Wait for the owner's reply in this same session**, then
+   continue to the next prompt on approval — do not start a new session. The owner approves by
+   replying (e.g. "continue", "approved") — never by running a command. Write
+   `completion-reports/REVIEW-REQUIRED.md` as a crash-safe marker and **delete it yourself once the
+   owner approves**. If instead this session has ended and a later one starts while that marker
+   exists, re-ask the owner and proceed on their reply (deleting the marker then).
 6. **Guardrails every time:** OpenAPI is the only backend reference; two components only
    (no backend change, no BFF/Node/proxy, no native wrapper); US English; dense layers rendered
    batched over server-aggregated, viewport-scoped data; generated code never hand-edited; every
@@ -46,16 +51,17 @@
 
 ## Review gates and unattended mode
 
-- **Attended (default):** stop after every prompt (step 5); the owner looks, then approves the next.
+- **Attended (default):** one session runs prompt after prompt, pausing at each gate (step 5); the
+  owner looks and replies "continue" to go on. A single session can run the whole roadmap this way.
 - **Unattended range (opt-in):** only when the owner says, in that message, "run prompts X–Y without
-  stopping" — then skip the per-prompt gate for that range, still capture each screenshot, and stop
+  pausing" — then skip the per-prompt pause for that range, still capture each screenshot, and pause
   at the end of the range (and on any failure).
-- `REVIEW-REQUIRED.md` present means a prompt is awaiting the owner's look — do not proceed.
 
 ## Stop conditions
 
-- `RUN-STATUS.md` or `REVIEW-REQUIRED.md` exists, or the previous report is `Blocked`, or a prompt
-  needs an owner decision.
+- `RUN-STATUS.md` exists, or the previous report is `Blocked`, or a prompt needs an owner decision
+  the session cannot answer.
+- The owner declines a review gate or asks to stop.
 - `npm run typecheck`/`build`/`lint` cannot be made to pass.
 - Two sessions in a row make no commits.
 
