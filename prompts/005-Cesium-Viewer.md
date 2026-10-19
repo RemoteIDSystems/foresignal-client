@@ -10,8 +10,12 @@ Dashboard and Tropical-Storm mockups (map region, scene toggle, HUD, mini inset)
 - Add **CesiumJS** + **Resium** and the Vite Cesium plugin (`vite-plugin-cesium` or
   `-cesium-engine`) so Cesium's static assets are copied and `CESIUM_BASE_URL` is set. Verify the
   globe renders in `vite build` output, not just dev.
-- `map/Viewer.tsx`: a Resium `<Viewer>` with the default widgets stripped (we draw our own HUD),
-  a base imagery layer, sensible camera defaults.
+- `map/Viewer.tsx`: a Resium `<Viewer>` with the default widgets stripped (we draw our own HUD) and
+  sensible camera defaults.
+- **Base imagery** (matches the mock, self-hosted, public domain, no account, no external tile
+  service): **NASA Blue Marble** (daytime true color) as the base, with **NASA Black Marble** night
+  lights shown on the night side via Cesium's day/night lighting (terminator between them). Weather
+  clouds are a separate backend overlay (009), not the basemap.
 - **2D / 3D toggle** — `SceneMode.SCENE2D` is the **default**; `SCENE3D` is the other option. **No
   Split, no Columbus view.** The mode is held in local state here and wired to the store in 012.
 - **HUD chrome** (DOM overlay, not Cesium widgets): scale bar, lat/lon/elev readout, N compass,
