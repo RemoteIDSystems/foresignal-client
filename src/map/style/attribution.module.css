@@ -1,0 +1,17 @@
+.attribution {
+  position: absolute;
+  bottom: 52px;
+  right: 12px;
+  z-index: 2;
+  max-width: 60%;
+  padding: 2px 6px;
+  border-radius: var(--fs-radius-sm);
+  background: rgba(6, 12, 20, 0.75);
+  color: var(--fs-color-text-secondary);
+  font-size: var(--fs-font-size-xs);
+  text-align: right;
+}
+
+.attribution a {
+  color: inherit;
+}

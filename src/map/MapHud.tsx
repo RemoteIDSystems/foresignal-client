@@ -1,4 +1,4 @@
-import { Crosshair, Minus, Plus } from 'lucide-react';
+import { Crosshair, List, Minus, Plus } from 'lucide-react';
 import { IconButton } from '../ui/Button';
 import { Tabs } from '../ui/Tabs';
 import {
@@ -51,6 +51,8 @@ export interface MapHudActions {
   onZoom: (direction: 1 | -1) => void;
   /** Returns to the default view. */
   onHome: () => void;
+  /** Opens or closes the legend; without it the HUD has no legend button. */
+  onToggleLegend?: () => void;
 }
 
 /** Props for {@link MapHud}. */
@@ -61,6 +63,8 @@ export interface MapHudProps extends MapHudActions {
   camera: CameraState | undefined;
   /** West and east level-0 tile URLs for the inset background. */
   insetTiles: [string, string];
+  /** Whether the legend is open, for the legend button's pressed state. */
+  legendOpen?: boolean;
 }
 
 /** Why the elevation readout shows a dash: elevation is read only under the pointer. */
@@ -76,8 +80,8 @@ const INSET_HEIGHT = 90;
 
 /**
  * The map's HUD, drawn as DOM over the canvas (not Cesium widgets): the 2D Map / 3D Globe toggle,
- * compass and zoom, the global-view inset with the visible area, and the lat/lon/elevation
- * readout with a scale bar.
+ * compass and zoom, the legend button, the global-view inset with the visible area, and the
+ * lat/lon/elevation readout with a scale bar.
  */
 export function MapHud({
   mode,
@@ -87,6 +91,8 @@ export function MapHud({
   onResetNorth,
   onZoom,
   onHome,
+  onToggleLegend,
+  legendOpen = false,
 }: MapHudProps) {
   const ground = camera?.ground;
   return (
@@ -132,6 +138,15 @@ export function MapHud({
           icon={<Crosshair size={15} />}
           onClick={onHome}
         />
+        {onToggleLegend && (
+          <IconButton
+            variant="bordered"
+            label={legendOpen ? 'Hide legend' : 'Show legend'}
+            aria-pressed={legendOpen}
+            icon={<List size={15} />}
+            onClick={onToggleLegend}
+          />
+        )}
       </div>
 
       <div className={`${styles.panel} ${styles.inset}`}>

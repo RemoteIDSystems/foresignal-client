@@ -1,0 +1,554 @@
+{
+  "version": 8,
+  "name": "Foresignal overlay",
+  "metadata": {
+    "foresignal": {
+      "layers": [
+        {
+          "id": "acled",
+          "kinds": ["conflict-event"],
+          "attribution": "Armed Conflict Location & Event Data (ACLED), acleddata.com",
+          "minzoom": 0,
+          "aggBelowZoom": null
+        },
+        {
+          "id": "adsbfi-mil",
+          "kinds": ["aircraft"],
+          "attribution": "adsb.fi (https://adsb.fi)",
+          "minzoom": 0,
+          "aggBelowZoom": 7
+        },
+        {
+          "id": "aprs-is",
+          "kinds": ["aprs-station", "aprs-message"],
+          "attribution": "APRS-IS (aprs2.net servers) and the stations heard",
+          "minzoom": 0,
+          "aggBelowZoom": null
+        },
+        {
+          "id": "awc-gairmets",
+          "kinds": ["aviation-hazard"],
+          "attribution": "NOAA/NWS Aviation Weather Center",
+          "minzoom": 0,
+          "aggBelowZoom": null
+        },
+        {
+          "id": "gdelt-events",
+          "kinds": ["conflict-event"],
+          "attribution": "The GDELT Project (https://www.gdeltproject.org)",
+          "minzoom": 0,
+          "aggBelowZoom": null
+        },
+        {
+          "id": "ucdp-ged",
+          "kinds": ["conflict-event"],
+          "attribution": "UCDP Georeferenced Event Dataset (candidate), Uppsala Conflict Data Program",
+          "minzoom": 0,
+          "aggBelowZoom": null
+        }
+      ],
+      "theme": "dark",
+      "generatedAt": "2026-10-18T22:38:23.229787036Z"
+    }
+  },
+  "sources": {
+    "acled": {
+      "type": "vector",
+      "url": "http://localhost:8080/v1/tiles/acled.json",
+      "attribution": "Armed Conflict Location & Event Data (ACLED), acleddata.com"
+    },
+    "adsbfi-mil": {
+      "type": "vector",
+      "url": "http://localhost:8080/v1/tiles/adsbfi-mil.json",
+      "attribution": "adsb.fi (https://adsb.fi)"
+    },
+    "adsbfi-mil--agg": {
+      "type": "vector",
+      "tiles": ["http://localhost:8080/v1/tiles/adsbfi-mil/{z}/{x}/{y}.mvt?agg=hex"],
+      "minzoom": 0,
+      "maxzoom": 7,
+      "attribution": "adsb.fi (https://adsb.fi)"
+    },
+    "aprs-is": {
+      "type": "vector",
+      "url": "http://localhost:8080/v1/tiles/aprs-is.json",
+      "attribution": "APRS-IS (aprs2.net servers) and the stations heard"
+    },
+    "awc-gairmets": {
+      "type": "vector",
+      "url": "http://localhost:8080/v1/tiles/awc-gairmets.json",
+      "attribution": "NOAA/NWS Aviation Weather Center"
+    },
+    "gdelt-events": {
+      "type": "vector",
+      "url": "http://localhost:8080/v1/tiles/gdelt-events.json",
+      "attribution": "The GDELT Project (https://www.gdeltproject.org)"
+    },
+    "ucdp-ged": {
+      "type": "vector",
+      "url": "http://localhost:8080/v1/tiles/ucdp-ged.json",
+      "attribution": "UCDP Georeferenced Event Dataset (candidate), Uppsala Conflict Data Program"
+    }
+  },
+  "sprite": "http://localhost:8080/v1/map/sprites/foresignal-1b0f0988",
+  "layers": [
+    {
+      "id": "acled--conflict-event--point",
+      "type": "symbol",
+      "source": "acled",
+      "source-layer": "acled",
+      "filter": ["match", ["geometry-type"], ["Point", "MultiPoint"], true, false],
+      "layout": {
+        "icon-image": "danger",
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true
+      },
+      "paint": {
+        "icon-color": "#C92A2A",
+        "icon-halo-color": "#1D1F23",
+        "icon-halo-width": 1
+      }
+    },
+    {
+      "id": "acled--conflict-event--line",
+      "type": "line",
+      "source": "acled",
+      "source-layer": "acled",
+      "filter": ["match", ["geometry-type"], ["LineString", "MultiLineString"], true, false],
+      "paint": {
+        "line-color": "#C92A2A",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 0, 1, 10, 2.5]
+      }
+    },
+    {
+      "id": "acled--conflict-event--fill",
+      "type": "fill",
+      "source": "acled",
+      "source-layer": "acled",
+      "filter": ["match", ["geometry-type"], ["Polygon", "MultiPolygon"], true, false],
+      "paint": {
+        "fill-color": "#C92A2A",
+        "fill-opacity": 0.25
+      }
+    },
+    {
+      "id": "acled--conflict-event--outline",
+      "type": "line",
+      "source": "acled",
+      "source-layer": "acled",
+      "filter": ["match", ["geometry-type"], ["Polygon", "MultiPolygon"], true, false],
+      "paint": {
+        "line-color": "#C92A2A",
+        "line-width": 1.5
+      }
+    },
+    {
+      "id": "adsbfi-mil--agg",
+      "type": "fill",
+      "source": "adsbfi-mil--agg",
+      "source-layer": "adsbfi-mil",
+      "minzoom": 0,
+      "maxzoom": 7,
+      "paint": {
+        "fill-color": [
+          "interpolate",
+          ["linear"],
+          ["coalesce", ["get", "count"], 0],
+          1,
+          "#1C3D5A",
+          10,
+          "#1C7ED6",
+          100,
+          "#74C0FC",
+          1000,
+          "#E7F5FF"
+        ],
+        "fill-opacity": 0.6,
+        "fill-outline-color": "#1D1F23"
+      }
+    },
+    {
+      "id": "adsbfi-mil--aircraft--point",
+      "type": "symbol",
+      "source": "adsbfi-mil",
+      "source-layer": "adsbfi-mil",
+      "minzoom": 7,
+      "filter": ["match", ["geometry-type"], ["Point", "MultiPoint"], true, false],
+      "layout": {
+        "icon-image": "fighter-jet",
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true,
+        "icon-rotate": ["coalesce", ["to-number", ["get", "track"]], 0],
+        "icon-rotation-alignment": "map"
+      },
+      "paint": {
+        "icon-color": "#5C940D",
+        "icon-halo-color": "#1D1F23",
+        "icon-halo-width": 1
+      }
+    },
+    {
+      "id": "adsbfi-mil--aircraft--line",
+      "type": "line",
+      "source": "adsbfi-mil",
+      "source-layer": "adsbfi-mil",
+      "minzoom": 7,
+      "filter": ["match", ["geometry-type"], ["LineString", "MultiLineString"], true, false],
+      "paint": {
+        "line-color": "#5C940D",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 0, 1, 10, 2.5]
+      }
+    },
+    {
+      "id": "adsbfi-mil--aircraft--fill",
+      "type": "fill",
+      "source": "adsbfi-mil",
+      "source-layer": "adsbfi-mil",
+      "minzoom": 7,
+      "filter": ["match", ["geometry-type"], ["Polygon", "MultiPolygon"], true, false],
+      "paint": {
+        "fill-color": "#5C940D",
+        "fill-opacity": 0.25
+      }
+    },
+    {
+      "id": "adsbfi-mil--aircraft--outline",
+      "type": "line",
+      "source": "adsbfi-mil",
+      "source-layer": "adsbfi-mil",
+      "minzoom": 7,
+      "filter": ["match", ["geometry-type"], ["Polygon", "MultiPolygon"], true, false],
+      "paint": {
+        "line-color": "#5C940D",
+        "line-width": 1.5
+      }
+    },
+    {
+      "id": "aprs-is--aprs-station--point",
+      "type": "symbol",
+      "source": "aprs-is",
+      "source-layer": "aprs-is",
+      "filter": [
+        "all",
+        ["==", ["get", "kind"], "aprs-station"],
+        ["match", ["geometry-type"], ["Point", "MultiPoint"], true, false]
+      ],
+      "layout": {
+        "icon-image": "antenna",
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true
+      },
+      "paint": {
+        "icon-color": "#2B8A3E",
+        "icon-halo-color": "#1D1F23",
+        "icon-halo-width": 1
+      }
+    },
+    {
+      "id": "aprs-is--aprs-station--line",
+      "type": "line",
+      "source": "aprs-is",
+      "source-layer": "aprs-is",
+      "filter": [
+        "all",
+        ["==", ["get", "kind"], "aprs-station"],
+        ["match", ["geometry-type"], ["LineString", "MultiLineString"], true, false]
+      ],
+      "paint": {
+        "line-color": "#2B8A3E",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 0, 1, 10, 2.5]
+      }
+    },
+    {
+      "id": "aprs-is--aprs-station--fill",
+      "type": "fill",
+      "source": "aprs-is",
+      "source-layer": "aprs-is",
+      "filter": [
+        "all",
+        ["==", ["get", "kind"], "aprs-station"],
+        ["match", ["geometry-type"], ["Polygon", "MultiPolygon"], true, false]
+      ],
+      "paint": {
+        "fill-color": "#2B8A3E",
+        "fill-opacity": 0.25
+      }
+    },
+    {
+      "id": "aprs-is--aprs-station--outline",
+      "type": "line",
+      "source": "aprs-is",
+      "source-layer": "aprs-is",
+      "filter": [
+        "all",
+        ["==", ["get", "kind"], "aprs-station"],
+        ["match", ["geometry-type"], ["Polygon", "MultiPolygon"], true, false]
+      ],
+      "paint": {
+        "line-color": "#2B8A3E",
+        "line-width": 1.5
+      }
+    },
+    {
+      "id": "aprs-is--aprs-message--point",
+      "type": "symbol",
+      "source": "aprs-is",
+      "source-layer": "aprs-is",
+      "filter": [
+        "all",
+        ["==", ["get", "kind"], "aprs-message"],
+        ["match", ["geometry-type"], ["Point", "MultiPoint"], true, false]
+      ],
+      "layout": {
+        "icon-image": "information",
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true
+      },
+      "paint": {
+        "icon-color": "#495057",
+        "icon-halo-color": "#1D1F23",
+        "icon-halo-width": 1
+      }
+    },
+    {
+      "id": "aprs-is--aprs-message--line",
+      "type": "line",
+      "source": "aprs-is",
+      "source-layer": "aprs-is",
+      "filter": [
+        "all",
+        ["==", ["get", "kind"], "aprs-message"],
+        ["match", ["geometry-type"], ["LineString", "MultiLineString"], true, false]
+      ],
+      "paint": {
+        "line-color": "#495057",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 0, 1, 10, 2.5]
+      }
+    },
+    {
+      "id": "aprs-is--aprs-message--fill",
+      "type": "fill",
+      "source": "aprs-is",
+      "source-layer": "aprs-is",
+      "filter": [
+        "all",
+        ["==", ["get", "kind"], "aprs-message"],
+        ["match", ["geometry-type"], ["Polygon", "MultiPolygon"], true, false]
+      ],
+      "paint": {
+        "fill-color": "#495057",
+        "fill-opacity": 0.25
+      }
+    },
+    {
+      "id": "aprs-is--aprs-message--outline",
+      "type": "line",
+      "source": "aprs-is",
+      "source-layer": "aprs-is",
+      "filter": [
+        "all",
+        ["==", ["get", "kind"], "aprs-message"],
+        ["match", ["geometry-type"], ["Polygon", "MultiPolygon"], true, false]
+      ],
+      "paint": {
+        "line-color": "#495057",
+        "line-width": 1.5
+      }
+    },
+    {
+      "id": "awc-gairmets--aviation-hazard--point",
+      "type": "symbol",
+      "source": "awc-gairmets",
+      "source-layer": "awc-gairmets",
+      "filter": ["match", ["geometry-type"], ["Point", "MultiPoint"], true, false],
+      "layout": {
+        "icon-image": "warning",
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true
+      },
+      "paint": {
+        "icon-color": [
+          "match",
+          ["downcase", ["to-string", ["coalesce", ["get", "severity"], ""]]],
+          ["extreme", "critical"],
+          "#C92A2A",
+          ["severe", "warning", "high"],
+          "#E8590C",
+          ["moderate", "watch", "medium"],
+          "#F08C00",
+          ["minor", "advisory", "low", "info"],
+          "#1971C2",
+          "#F59F00"
+        ],
+        "icon-halo-color": "#1D1F23",
+        "icon-halo-width": 1
+      }
+    },
+    {
+      "id": "awc-gairmets--aviation-hazard--line",
+      "type": "line",
+      "source": "awc-gairmets",
+      "source-layer": "awc-gairmets",
+      "filter": ["match", ["geometry-type"], ["LineString", "MultiLineString"], true, false],
+      "paint": {
+        "line-color": [
+          "match",
+          ["downcase", ["to-string", ["coalesce", ["get", "severity"], ""]]],
+          ["extreme", "critical"],
+          "#C92A2A",
+          ["severe", "warning", "high"],
+          "#E8590C",
+          ["moderate", "watch", "medium"],
+          "#F08C00",
+          ["minor", "advisory", "low", "info"],
+          "#1971C2",
+          "#F59F00"
+        ],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 0, 1, 10, 2.5]
+      }
+    },
+    {
+      "id": "awc-gairmets--aviation-hazard--fill",
+      "type": "fill",
+      "source": "awc-gairmets",
+      "source-layer": "awc-gairmets",
+      "filter": ["match", ["geometry-type"], ["Polygon", "MultiPolygon"], true, false],
+      "paint": {
+        "fill-color": [
+          "match",
+          ["downcase", ["to-string", ["coalesce", ["get", "severity"], ""]]],
+          ["extreme", "critical"],
+          "#C92A2A",
+          ["severe", "warning", "high"],
+          "#E8590C",
+          ["moderate", "watch", "medium"],
+          "#F08C00",
+          ["minor", "advisory", "low", "info"],
+          "#1971C2",
+          "#F59F00"
+        ],
+        "fill-opacity": 0.25
+      }
+    },
+    {
+      "id": "awc-gairmets--aviation-hazard--outline",
+      "type": "line",
+      "source": "awc-gairmets",
+      "source-layer": "awc-gairmets",
+      "filter": ["match", ["geometry-type"], ["Polygon", "MultiPolygon"], true, false],
+      "paint": {
+        "line-color": [
+          "match",
+          ["downcase", ["to-string", ["coalesce", ["get", "severity"], ""]]],
+          ["extreme", "critical"],
+          "#C92A2A",
+          ["severe", "warning", "high"],
+          "#E8590C",
+          ["moderate", "watch", "medium"],
+          "#F08C00",
+          ["minor", "advisory", "low", "info"],
+          "#1971C2",
+          "#F59F00"
+        ],
+        "line-width": 1.5
+      }
+    },
+    {
+      "id": "gdelt-events--conflict-event--point",
+      "type": "circle",
+      "source": "gdelt-events",
+      "source-layer": "gdelt-events",
+      "filter": ["match", ["geometry-type"], ["Point", "MultiPoint"], true, false],
+      "paint": {
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 0, 2, 8, 4, 14, 6],
+        "circle-color": "#4DABF7",
+        "circle-opacity": 0.9,
+        "circle-stroke-color": "#1D1F23",
+        "circle-stroke-width": 1
+      }
+    },
+    {
+      "id": "gdelt-events--conflict-event--line",
+      "type": "line",
+      "source": "gdelt-events",
+      "source-layer": "gdelt-events",
+      "filter": ["match", ["geometry-type"], ["LineString", "MultiLineString"], true, false],
+      "paint": {
+        "line-color": "#4DABF7",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 0, 1, 10, 2.5]
+      }
+    },
+    {
+      "id": "gdelt-events--conflict-event--fill",
+      "type": "fill",
+      "source": "gdelt-events",
+      "source-layer": "gdelt-events",
+      "filter": ["match", ["geometry-type"], ["Polygon", "MultiPolygon"], true, false],
+      "paint": {
+        "fill-color": "#4DABF7",
+        "fill-opacity": 0.25
+      }
+    },
+    {
+      "id": "gdelt-events--conflict-event--outline",
+      "type": "line",
+      "source": "gdelt-events",
+      "source-layer": "gdelt-events",
+      "filter": ["match", ["geometry-type"], ["Polygon", "MultiPolygon"], true, false],
+      "paint": {
+        "line-color": "#4DABF7",
+        "line-width": 1.5
+      }
+    },
+    {
+      "id": "ucdp-ged--conflict-event--point",
+      "type": "symbol",
+      "source": "ucdp-ged",
+      "source-layer": "ucdp-ged",
+      "filter": ["match", ["geometry-type"], ["Point", "MultiPoint"], true, false],
+      "layout": {
+        "icon-image": "danger",
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true
+      },
+      "paint": {
+        "icon-color": "#A61E4D",
+        "icon-halo-color": "#1D1F23",
+        "icon-halo-width": 1
+      }
+    },
+    {
+      "id": "ucdp-ged--conflict-event--line",
+      "type": "line",
+      "source": "ucdp-ged",
+      "source-layer": "ucdp-ged",
+      "filter": ["match", ["geometry-type"], ["LineString", "MultiLineString"], true, false],
+      "paint": {
+        "line-color": "#A61E4D",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 0, 1, 10, 2.5]
+      }
+    },
+    {
+      "id": "ucdp-ged--conflict-event--fill",
+      "type": "fill",
+      "source": "ucdp-ged",
+      "source-layer": "ucdp-ged",
+      "filter": ["match", ["geometry-type"], ["Polygon", "MultiPolygon"], true, false],
+      "paint": {
+        "fill-color": "#A61E4D",
+        "fill-opacity": 0.25
+      }
+    },
+    {
+      "id": "ucdp-ged--conflict-event--outline",
+      "type": "line",
+      "source": "ucdp-ged",
+      "source-layer": "ucdp-ged",
+      "filter": ["match", ["geometry-type"], ["Polygon", "MultiPolygon"], true, false],
+      "paint": {
+        "line-color": "#A61E4D",
+        "line-width": 1.5
+      }
+    }
+  ]
+}

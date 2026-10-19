@@ -108,4 +108,26 @@ describe('MapHud', () => {
     expect(actions.onResetNorth).toHaveBeenCalledOnce();
     expect(actions.onHome).toHaveBeenCalledOnce();
   });
+
+  it('offers a legend toggle only when given one, with its pressed state', async () => {
+    const { unmount } = render(
+      <MapHud
+        mode="3d"
+        camera={camera}
+        insetTiles={['/w.jpg', '/e.jpg']}
+        onSceneMode={vi.fn()}
+        onResetNorth={vi.fn()}
+        onZoom={vi.fn()}
+        onHome={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: 'Show legend' })).toBeNull();
+    unmount();
+    const onToggleLegend = vi.fn();
+    renderHud(camera, { onToggleLegend, legendOpen: true });
+    const button = screen.getByRole('button', { name: 'Hide legend' });
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(button);
+    expect(onToggleLegend).toHaveBeenCalledOnce();
+  });
 });

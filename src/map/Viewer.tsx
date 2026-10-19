@@ -10,7 +10,12 @@ import {
   type Cartographic,
   type Viewer as CesiumViewer,
 } from 'cesium';
+import type { ForesignalClient } from '../api/client';
+import { useTheme } from '../app/theme';
 import { createBaseLayers, insetTileUrls } from './imagery';
+import { MapAttribution } from './style/attribution';
+import { MapLegend } from './style/legend';
+import { useOverlayStyle } from './style/useOverlayStyle';
 import { createTerrainProvider, TerrainSampler } from './terrain';
 import { MapHud, type CameraState, type GroundPoint } from './MapHud';
 import { niceScale } from './readout';
@@ -199,6 +204,8 @@ function SceneBridge({
 export interface MapViewerProps {
   /** Extra overlays drawn above the map (e.g. the time HUD). */
   children?: ReactNode;
+  /** Backend client for the overlay style, legend and attribution; without it the map has none. */
+  api?: ForesignalClient;
 }
 
 /**
@@ -208,15 +215,20 @@ export interface MapViewerProps {
  * the DOM HUD (compass, zoom, inset, pointer lat/lon/elevation readout, scale bar). Renders at
  * device pixel ratio for sharp output. The clock runs in real time so the terminator moves; 013's
  * time machine takes it over. Cesium's credits go to a detached element: they are shown on the
- * About page instead of over the map.
+ * About page instead of over the map. With an API client it loads the backend's overlay style for
+ * the theme, offers its legend from the HUD, and shows the attributions the data licenses require.
  */
-export function MapViewer({ children }: MapViewerProps) {
+export function MapViewer({ children, api }: MapViewerProps) {
   const [webgl] = useState(supportsWebGL);
   const [viewer, setViewer] = useState<CesiumViewer>();
   const [camera, setCamera] = useState<CameraState>();
   const [mode, setMode] = useState<SceneModeKey>(DEFAULT_SCENE_MODE);
   const insetTiles = useMemo(() => insetTileUrls(), []);
   const [creditContainer] = useState(() => document.createElement('div'));
+  const theme = useTheme();
+  const overlayStyle = useOverlayStyle(api, theme.name);
+  const [legendOpen, setLegendOpen] = useState(false);
+  const onToggleLegend = useCallback(() => setLegendOpen((open) => !open), []);
 
   // The latest camera state, read when switching mode without re-creating the callback each frame.
   const cameraRef = useRef<CameraState>(undefined);
@@ -301,7 +313,13 @@ export function MapViewer({ children }: MapViewerProps) {
         onResetNorth={onResetNorth}
         onZoom={onZoom}
         onHome={onHome}
+        onToggleLegend={api ? onToggleLegend : undefined}
+        legendOpen={legendOpen}
       />
+      {legendOpen && (
+        <MapLegend state={overlayStyle} api={api} onClose={() => setLegendOpen(false)} />
+      )}
+      <MapAttribution api={api} />
       {children}
     </div>
   );

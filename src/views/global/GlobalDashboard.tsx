@@ -1,3 +1,4 @@
+import type { ForesignalClient } from '../../api/client';
 import { DashboardLayout, type DockPanel } from '../../app/DashboardLayout';
 import {
   ActivityTimelinePanel,
@@ -52,13 +53,13 @@ const PANELS: readonly DockPanel[] = [
 /**
  * The Global Intelligence Dashboard (primary mockup): layers rail, map, selected-entity panel and
  * the bottom row of imagery, activity, insights and related entities. Skeleton with placeholder
- * data; later prompts wire each panel to the backend.
+ * data; later prompts wire each panel to the backend. The map gets `api` for its overlay style.
  */
-export function GlobalDashboard() {
+export function GlobalDashboard({ api }: { api?: ForesignalClient }) {
   return (
     <DashboardLayout
       map={
-        <MapViewer>
+        <MapViewer api={api}>
           <TimeHudPlaceholder />
         </MapViewer>
       }

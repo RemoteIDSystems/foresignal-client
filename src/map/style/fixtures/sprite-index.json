@@ -1,0 +1,42 @@
+{
+  "danger": {
+    "height": 21,
+    "pixelRatio": 1,
+    "width": 21,
+    "x": 203,
+    "y": 63,
+    "sdf": true
+  },
+  "fighter-jet": {
+    "height": 54,
+    "pixelRatio": 1,
+    "width": 54,
+    "x": 56,
+    "y": 0,
+    "sdf": true
+  },
+  "antenna": {
+    "height": 21,
+    "pixelRatio": 1,
+    "width": 21,
+    "x": 206,
+    "y": 0,
+    "sdf": true
+  },
+  "warning": {
+    "height": 21,
+    "pixelRatio": 1,
+    "width": 21,
+    "x": 210,
+    "y": 168,
+    "sdf": true
+  },
+  "circle": {
+    "height": 21,
+    "pixelRatio": 1,
+    "width": 21,
+    "x": 0,
+    "y": 56,
+    "sdf": true
+  }
+}
