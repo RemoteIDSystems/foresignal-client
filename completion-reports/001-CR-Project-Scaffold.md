@@ -1,12 +1,12 @@
 # 001 — Completion Report: Project Scaffold
 
-| Field | Value |
-|---|---|
-| Status | Complete |
-| Implementation commit | `c47fa7b3f5992edcc39f80939a10fb5e674e97fe` |
-| Vendored OpenAPI version | `1.0.0` (`info.version`; OpenAPI 3.1.0, 638 paths, 808 operations incl. 1 `options`, 1094 schemas) |
-| Spec source | `~/Documents/GitLab/foresignal/docs/OpenAPI.json`, last changed in backend commit `a2314ad605b88ab80a8e6be8d593e3c3e1fd3978`; sha256 `78182ed6224e26da4b8bc138f3767658b3b72f24d25b7f91167aa70c869e8cd9`; `cmp` against the vendored copy: identical |
-| Screenshot | `review/001-project-scaffold.png` |
+| Field                    | Value                                                                                                                                                                                                                                               |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Status                   | Complete                                                                                                                                                                                                                                            |
+| Implementation commit    | `c47fa7b3f5992edcc39f80939a10fb5e674e97fe`                                                                                                                                                                                                          |
+| Vendored OpenAPI version | `1.0.0` (`info.version`; OpenAPI 3.1.0, 638 paths, 808 operations incl. 1 `options`, 1094 schemas)                                                                                                                                                  |
+| Spec source              | `~/Documents/GitLab/foresignal/docs/OpenAPI.json`, last changed in backend commit `a2314ad605b88ab80a8e6be8d593e3c3e1fd3978`; sha256 `78182ed6224e26da4b8bc138f3767658b3b72f24d25b7f91167aa70c869e8cd9`; `cmp` against the vendored copy: identical |
+| Screenshot               | `review/001-project-scaffold.png`                                                                                                                                                                                                                   |
 
 ## What was built
 
@@ -48,7 +48,7 @@ styled screen.
    current release is 7.0.2; 5.9.3 is the latest 5.x and is what is installed. typescript-eslint
    8.71.2 only supports `<6.1.0`, so moving up would also wait on that.
 2. **Mockup files don't match the Charter's table.** `design/` contains six files:
-   Global, Conflict, Tropical Storm, *Intelligence Dashboard Split-Screen*,
+   Global, Conflict, Tropical Storm, _Intelligence Dashboard Split-Screen_,
    `ForeSignal_Analyst_Workbench.png` and `ForeSignal_Analysis_View.png`. The Charter lists five
    views and names one "Satellite Operations / Analysis View"; there is no file with that name, and
    the Split-Screen file isn't in the table.
