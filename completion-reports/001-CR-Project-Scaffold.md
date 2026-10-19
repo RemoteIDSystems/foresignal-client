@@ -56,8 +56,9 @@ styled screen.
    `docs/Client-Contract.md`" and that the material is "not part of the broker build". The Charter
    makes OpenAPI the only reference. It was copied unchanged; should it be replaced?
 4. **British spellings in planner files**, left untouched because they are the planner's:
-   `docs/Roadmap.md:147` and `prompts/032-RF-And-Sensors.md` lines 3, 22, 28, 29 ("catalogue").
-   The vendored spec has 831 hits (catalogue, licence, honour, synchronised, labelled…). It comes
-   from the backend, so it cannot be changed here.
+   `docs/Roadmap.md:147` and `prompts/032-RF-And-Sensors.md` lines 3, 22, 28 and 29 (the British
+   spelling of "catalog"). The vendored spec has 831 hits across 37 distinct words (the two most common account for 637). It comes from the
+   backend, so it cannot be changed here. To list them all, run
+   `python3 ~/Documents/GitLab/meshdtn/style/check_us_english.py ~/Documents/GitLab/foresignal-client`.
 5. **Playwright** was added (Architecture §3/§17 names it) to take the screenshot. No e2e test
    suite exists yet.
