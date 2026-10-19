@@ -126,7 +126,10 @@ Two layers, clearly separated:
   has an applicable 3D view (an aircraft's altitude track, a satellite's orbit, a storm's structure,
   …) **switches the scene to `SCENE3D` and flies to the item's location**; selecting an item with no
   3D view keeps the 2D map and focuses it. Per-kind 3D applicability is declared with each layer
-  (built alongside that layer's data). The same record layers render in 2D and 3D.
+  (built alongside that layer's data). The same record layers render in 2D and 3D. The 3D globe uses
+  **self-hosted quantized-mesh terrain** (from a public-domain DEM) for raised relief, with base
+  imagery (NASA Blue Marble day + Black Marble night) draped over it; the elevation readout reads
+  terrain height. No Cesium Ion, no account, no external tile service.
 
 ### 5.1 Layer pipeline
 

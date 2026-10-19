@@ -22,9 +22,12 @@ Dashboard and Tropical-Storm mockups (map region, scene toggle, HUD, mini inset)
 - **HUD chrome** (DOM overlay, not Cesium widgets): scale bar, a **lat/lon/elev readout that follows
   the mouse pointer** (the ground point; falls back to the view center when the pointer is off the
   map), N compass, zoom controls, and the mini "global view" inset.
-- **Elevation:** ELEV reads ground height from a **bundled public-domain global relief grid** (NOAA
-  ETOPO or similar), self-hosted, used for the readout only — the globe stays smooth (no 3D terrain
-  mesh). Shows "—" when the pointer is off the map.
+- **3D terrain (raised relief):** self-hosted **quantized-mesh terrain** generated from a
+  public-domain DEM (GEBCO / SRTM / ETOPO), served from the app — **no Cesium Ion, no account**. It
+  gives **raised relief in 3D mode** (mountains and seafloor stand up) and feeds the **ELEV** readout
+  (terrain height under the pointer; "—" when off-map). Pick a global resolution that shows real
+  relief at globe and regional scale while keeping the bundle reasonable; 2D renders flat. Imagery
+  drapes over the terrain.
 - Resize/retina handling; `powerPreference` left at Cesium defaults (desktop target).
 
 **Done when.** The map renders in a production build, **2D by default**; the 2D/3D toggle switches
