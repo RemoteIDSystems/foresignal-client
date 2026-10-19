@@ -23,8 +23,9 @@
 The client is a **static single-page app**. In production the backend serves it (Operator Guide
 "web" profile: everything not under `/v1`, `/mcp`, `/actuator` is served from the web build with a
 single-page-app fallback), so the client is **same-origin** with the API and makes no CORS
-preflights. In development, Vite's dev server runs the app and points at a backend base URL via
-config (§16); dev cross-origin requests use the backend's CORS support.
+preflights. In development, Vite's dev server serves the app and **proxies `/v1`, `/mcp` and `/actuator` to the
+backend** (§16), so the browser is **same-origin in dev exactly as in prod** — the client never
+relies on cross-origin CORS. The proxy is Vite dev tooling only; it is not a runtime component.
 
 ---
 
@@ -340,8 +341,10 @@ The practical ceiling becomes whatever the backend hits first — not the client
 
 ## 16. Build, config and deployment
 
-- **Dev:** `vite dev`; backend base URL from an env var (e.g. `VITE_FORESIGNAL_BASE_URL`,
-  default `/`); dev uses the backend's CORS.
+- **Dev:** `vite dev` with a **dev-server proxy** forwarding `/v1`, `/mcp` and `/actuator` to the
+  backend (target from `VITE_FORESIGNAL_BACKEND`). The app always calls same-origin `/v1/…`, in dev
+  and prod alike (base URL stays `/`), so the client never depends on cross-origin CORS. The proxy
+  is Vite dev tooling only — prod is served by the backend, no proxy, no frontend process.
 - **Prod:** `vite build` → `dist/`. Copied into the backend's web root (`./deploy/web`) and served
   same-origin behind the backend's reverse proxy. No frontend server.
 - **Cesium assets:** the Vite Cesium plugin copies Cesium's `Workers`/`Assets`/`ThirdParty` and
