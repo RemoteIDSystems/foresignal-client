@@ -1,196 +1,195 @@
 # 005 — Completion Report: Cesium Viewer
 
-| Field                 | Value                                                                     |
-| --------------------- | ------------------------------------------------------------------------- |
-| Status                | Complete — reworked to the 2D-default map model (owner, 2026-10-19)       |
-| Implementation commit | `5a800dbadc4dd7719ecfb7e5d7b16922f3bc8dca` (on top of `df7acf0`)          |
-| Screenshot            | `review/005-cesium-viewer.png` (1672×941, production build, opens in 2D)  |
-| 2D and 3D             | `review/005-cesium-viewer-2d-3d.png` (the same place in 2D Map, 3D Globe) |
+| Field                 | Value                                                                    |
+| --------------------- | ------------------------------------------------------------------------ |
+| Status                | Complete — third pass, applying the owner's decisions of 2026-10-19      |
+| Implementation commit | `e1146271f6f223b50f6a32192816912784fded63`                               |
+| Earlier commits       | `df7acf0` (first viewer), `5a800db` (2D by default, no Split)            |
+| Screenshot            | `review/005-cesium-viewer.png` (1672×941, production build, opens in 2D) |
+| 2D and 3D             | `review/005-cesium-viewer-2d-3d.png` (the same place in each mode)       |
+| About page            | `review/005-about.png`                                                   |
 
 ## History of this prompt
 
-1. **`df7acf0`.** The first version shipped a 2D / 3D / Split toggle that opened in 3D, with
-   Split as Cesium's Columbus view.
-2. **Owner decision, then `33cf4ff`.** The owner decided there is no Split view: the map is 2D
-   normally, and selecting an item whose kind has a 3D view switches to 3D and flies to it. The
-   planner committed that as `33cf4ff` ("Map model: 2D by default, no Split, contextual 3D on
-   selection"). It rewrote this prompt and Architecture §5, and moved the selection behavior to 014.
-3. **`5a800db`.** Reworks the map to match, and this report replaces the first one whole.
+1. **`df7acf0`: the first viewer.**
+   - It had a 2D / 3D / Split toggle, opened in 3D and used a Natural Earth II base map.
+2. **`5a800db`: the first rework.**
+   - The map opens in 2D, the toggle is 2D / 3D only, and switching keeps the user's place.
+   - It followed the planner's `33cf4ff`.
+3. **`e114627`: this pass.** It applies the owner's answers to the 005 questions and the
+   planner's `c336639` (the basemap decision):
+   - **Toggle:** the manual 2D / 3D toggle stays. It is how the user returns to 2D after a
+     contextual jump to 3D (014).
+   - **Basemap:** NASA Blue Marble by day and Black Marble night lights, blended by the day/night
+     lighting.
+   - **Cesium logo:** moved off the map to an About and credits page.
+   - **Readout:** follows the mouse pointer and shows ground lat/lon plus terrain elevation.
+   - **Map plugin:** `vite-plugin-cesium` is kept.
 
-## What was built
+## What was built in this pass
 
-- **Packages.** `cesium` 1.146.0, `resium` 1.27.0 and `vite-plugin-cesium` 1.2.23, all pinned
-  exactly.
-  - In `vite build`, the plugin loads Cesium as a global from `/cesium/Cesium.js` and copies
-    `Assets`, `ThirdParty`, `Workers` and `Widgets` into `dist/cesium` (14 MB). It also sets the
-    base URL.
-  - In dev it serves `/cesium/` from `node_modules`.
-- **The viewer (`MapViewer`, in `src/map/Viewer.tsx`).**
-  - It is a Resium `<Viewer>` with every built-in widget turned off: animation, timeline,
-    base-layer picker, geocoder, home, scene-mode picker, help, fullscreen, info box, selection
-    indicator, VR and sky box.
-  - It is constructed in `SCENE2D`, so the map opens as a 2D map.
-  - It renders at device pixel ratio (`useBrowserRecommendedResolution={false}`). `powerPreference`
-    is left at Cesium's default.
-  - When WebGL is unavailable, it shows a plain alert instead of the viewer.
-- **Base imagery (`src/map/imagery.ts`).**
-  - The base map is Cesium's bundled Natural Earth II tiles, dimmed for the dark theme.
-  - The tiles ship in the build, so there is no Cesium ion token and no third-party service.
-  - The backend's map style has overlays only and no basemap, so the client supplies this base
-    layer.
-  - Each viewer instance adds its own layer. React StrictMode mounts the viewer twice, and a
-    shared layer was destroyed along with the first viewer.
-- **Modes (`src/map/sceneMode.ts`).**
-  - There are two modes: 2D Map (`SCENE2D`, the default) and 3D Globe (`SCENE3D`).
-  - There is no Split and no Columbus view.
-    `grep -rn -i "split\|columbus" src`, outside the generated schema, finds only:
-    - the logo's "split triangle" comment
-    - the antimeridian test in `readout.test.ts`
-    - the comments in `sceneMode.ts` that say there is no Split
-    - the test that Columbus view reads back as no mode
-- **Switching keeps the user's place (`switchSceneMode`, in `src/map/view.ts`).**
-  - Cesium's morph resets the camera to a whole-world view. The first version did this: 2D over
-    Florida became a 3D globe over Africa.
-  - Now the camera goes back over the same ground point, at the same height, once the morph
-    completes.
-  - 014 builds on this. Its contextual 3D-on-selection is a switch plus a fly-to.
-- **HUD (`src/map/MapHud.tsx`).** It is DOM drawn over the canvas, not Cesium widgets.
-  - **Toggle:** 2D Map / 3D Globe, using the `Tabs` pill variant. The mode is local state until
-    012 moves it to the store.
-  - **Compass:** the needle turns against the camera heading. Clicking it resets north.
-  - **Zoom:** in and out step 40% of the camera height.
-  - **Home:** returns to 28°N, 80°W at 13,000 km.
-  - **GLOBAL VIEW inset:** the level-0 tiles with the visible area outlined. An area that
-    crosses the antimeridian is drawn as two boxes.
-  - **Readout:** LAT / LON / ELEV and a scale bar.
-    - LAT and LON are the ground point under the view center. When the center is in space, the
-      camera position is used.
-    - ELEV is the camera height.
-    - The scale bar is a round 1, 2 or 5 × 10ⁿ measured across the view center.
-- **Time HUD (`src/views/global/TimeHudPlaceholder.tsx`).**
-  - The 004 time box, LIVE badge, scrubber and "Placeholder panel data" chip now sit over the
-    real map, until 012 and 013 replace them.
-  - The 004 `MapPlaceholder` is deleted.
+### Day/night basemap: `src/map/imagery.ts` and `public/basemap/`
 
-### Fixed along the way
+- **Day:** NASA Blue Marble: Next Generation, topography and bathymetry, September 2004.
+  - It was cut from the 21600×10800 JPEG.
+  - I picked September to match the mockup's 2025-09-18 timestamp.
+- **Night:** NASA Black Marble 2016 color night lights, cut from the 13500×6750 (3 km) JPEG.
+- **Downloads:** both came from the NASA download pages listed in `public/basemap/README.md`.
+  That README also records the exact URLs, byte sizes and SHA-256 checksums. The source JPEGs are
+  not in the repository.
+- **Tiles:**
+  - Each product is a pyramid in Cesium's geographic tiling scheme: levels 0–5, 256 px WebP at
+    quality 80, 2,730 tiles each.
+  - Level 5 covers the world at 16384×8192 px, about 2.4 km per pixel at the equator.
+  - The bytes are 10,012,466 for Blue Marble and 4,035,726 for Black Marble, measured with
+    `du -sb --apparent-size`.
+  - I measured the alternatives before choosing: Blue Marble as JPEG at quality 85 would be
+    19,271,057 B, and Black Marble stopping at level 4 would be 1,220,228 B.
+  - `scripts/tile-basemap.py` (Pillow) rebuilds the tiles deterministically. The README has the
+    commands.
+- **Serving:** Vite copies `public/` into `dist/`, so the tiles are served from the client's own
+  origin. `dist/basemap` measured 14,051,105 B.
+- **Layers:**
+  - Blue Marble is the base. Black Marble sits over it with `dayAlpha: 0` and `nightAlpha: 1`.
+  - `globe.enableLighting` is on, so Cesium blends the two across the terminator.
+  - The clock runs in real time (`shouldAnimate`), so the terminator moves. The 013 time machine
+    takes the clock over.
+- **Night brightness:**
+  - With day/night shading on, Cesium lights the night side at 0.3. The floor is in
+    `@cesium/engine` `Source/Shaders/GlobeFS.glsl:435`.
+  - That made the city lights barely visible in my first capture.
+  - The night layer's brightness is `1 / 0.3`, so the lights show at the brightness NASA
+    published.
+- **Inset:** the GLOBAL VIEW inset now uses the two level-0 Blue Marble tiles.
 
-1. **The mode switch lost the user's place.** Fixed by `switchSceneMode`, above.
-2. **The readout first used the camera's own position.** A tilted camera showed latitude
-   `-202.5712°`. It now uses the ground point under the view center.
-3. **The scale bar was first measured near the bottom edge.** On the flat map, that edge is close
-   to the pole, where the projection stretches distance. It is now measured across the center.
+### Pointer readout: `src/map/Viewer.tsx` and `MapHud.tsx`
+
+- **What it shows:**
+  - LAT and LON are the ground point under the mouse pointer.
+  - When the pointer is off the map, or over space in 3D, the readout shows the ground point at
+    the view center.
+  - The readout element's `data-source` says which (`pointer` or `center`).
+- **ELEV:**
+  - ELEV is ground elevation from the globe's terrain, in whole meters (`0 m`, `8,849 m`).
+  - The map has no terrain source, so Cesium's globe is the plain ellipsoid. Every point would
+    read `0 m`, including mountains, and that is not a measurement.
+  - So until there is a terrain source, ELEV shows `—`, with the tooltip "No terrain elevation
+    source is loaded". See question 1.
+- **Unchanged:** the 2D/3D switch still keeps the view center and camera height, as before. Only
+  the readout changed.
+
+### About and credits: `src/app/AboutView.tsx` and `credits.ts`
+
+- **Off the map:** Cesium's credits now render into a detached element (`creditContainer`), so
+  nothing is drawn over the map.
+- **`/about`:** linked from Settings ("About and credits"). It shows:
+  - the client version
+  - the Cesium logo (served from `/cesium/Assets/Images/cesium_credit.png`), with the CesiumJS
+    version and its Apache License 2.0
+  - both NASA imagery products with their source pages
+  - every runtime package with its pinned version and license
+- **Source of the list:** the versions come from `package.json` at build time
+  (`__APP_DEPENDENCIES__`). A test checks that the list matches `package.json` and each package's
+  own declared license.
 
 ## Verification
 
 - **Checks.** `npm run typecheck`, `npm run lint`, `npx prettier --check .` and `npm run build`
   pass.
-- **Tests.** `npm test` passes: 22 files, 95 tests. The map tests cover:
-  - **`sceneMode.test.ts`:**
-    - 2D is the default, and only 2D and 3D exist.
-    - Columbus view and morphing read back as no mode.
-    - A morph is called with its duration, and not called when the scene is already in that mode.
-  - **`view.test.ts`:**
-    - The home destination round-trips to 28°N, 80°W, 13,000 km, and the scene gets the theme
-      colors.
-    - `switchSceneMode` puts the camera back at the same longitude, latitude and height after the
-      morph completes, and only then.
-    - It leaves no listener behind, whether the morph happens or the scene is already in that
-      mode.
-    - With no place to keep, it morphs without moving the camera.
-  - **`readout.test.ts`:** degree and height formatting, the scale steps (4,073 km across 100 px
-    gives 2,000 km at 49 px), non-positive input, inset placement and the antimeridian split.
+- **Tests.** `npm test` passes: 24 files, 113 tests. New or changed in this pass:
+  - **`imagery.test.ts`:**
+    - the tile URL templates under the base URL, and the inset tiles
+    - Blue Marble is shown by day and night, Black Marble only at night
+    - the night brightness × 0.3 = 1
+    - every tile of both pyramids exists on disk for levels 0–5, and no level 6 exists
+  - **`readout.test.ts`:** elevation formatting, including below sea level and no "-0 m".
   - **`MapHud.test.tsx`:**
-    - Dashes show before the camera is known; then the live values, scale and inset box.
-    - The compass rotates against the heading.
-    - Exactly two tabs, 2D Map and 3D Globe, with the current one marked and a change reported.
-    - The zoom, reset-north and home callbacks fire.
-  - **`Viewer.test.tsx`:** the no-WebGL path. jsdom has no WebGL, so the WebGL path is proven in
-    the browser below.
+    - the readout shows the ground point and elevation, not the camera
+    - `data-source` is set
+    - a dash with the tooltip shows when there is no terrain
+  - **`view.test.ts`:** the scene setup turns on globe lighting.
+  - **`credits.test.ts`:**
+    - every runtime dependency is credited and nothing else is
+    - each license matches `node_modules/<package>/package.json`
+    - the build-time versions equal `package.json`
+  - **`App.test.tsx`:** Settings → "About and credits" opens the page. It shows the Cesium logo,
+    both NASA products and the `cesium 1.146.0 Apache-2.0` row.
 - **In a real browser.** Playwright and headless Chromium (SwiftShader WebGL) ran against
-  `vite preview` of the production build, at 1672×941.
+  `vite preview` of the production build, at 1672×941, at 2026-10-19 21:49 UTC.
 
-  | Step                             | Mode | LAT      | LON       | ELEV      | Scale    |
-  | -------------------------------- | ---- | -------- | --------- | --------- | -------- |
-  | Load                             | 2D   | 28.0000° | -80.0000° | 13,000 km | 1,000 km |
-  | Click 3D Globe                   | 3D   | 27.7804° | -80.0000° | 13,000 km | 1,000 km |
-  | Click 2D Map                     | 2D   | 27.7804° | -80.0000° | 13,000 km | 1,000 km |
-  | Zoom in                          | 2D   | 27.7804° | -80.0000° | 7,800 km  | 500 km   |
-  | Drag 150 px right and 60 px down | 2D   | 32.0529° | -90.6812° | 7,800 km  | 500 km   |
-  | Home view                        | 2D   | 28.0000° | -80.0000° | 13,000 km | 1,000 km |
-  - The toggle's tabs read exactly `2D Map`, `3D Globe`, and the selected tab follows the mode.
-  - The place is kept across both switches. Latitude reads 27.78° in 3D because it is the point
-    under the canvas center, not the camera's nadir. Switching back to 2D keeps that value
-    without drifting.
-  - Zoom in cut the height from 13,000 to 7,800 km, which is −40%.
-  - **Retina:** at `deviceScaleFactor` 2 the canvas is 1968×1054 backing pixels for 984×527 CSS
-    pixels.
-  - **Resize:** after resizing the viewport to 1280×800, the canvas is 1184×772 for 592×386.
-  - **Requests:** none went to another origin. No ion and no external tiles.
+  | Step                                       | Mode | Source  | LAT      | LON        | ELEV |
+  | ------------------------------------------ | ---- | ------- | -------- | ---------- | ---- |
+  | Load, no pointer                           | 2D   | center  | 28.0000° | -80.0000°  | —    |
+  | Pointer at canvas center                   | 2D   | pointer | 28.0000° | -80.0000°  | —    |
+  | Pointer 200 px left, 100 px up             | 2D   | pointer | 39.8680° | -103.7360° | —    |
+  | Pointer moved off the map                  | 2D   | center  | 28.0000° | -80.0000°  | —    |
+  | Click 3D Globe                             | 3D   | center  | 27.7804° | -80.0000°  | —    |
+  | Pointer over space at the canvas left edge | 3D   | center  | 27.7804° | -80.0000°  | —    |
+  - **Pointer:** 200 px left and 100 px up moved the readout by −23.736° and +11.868°, which is
+    0.1187° per pixel on both axes, as an equirectangular 2D map should.
+  - **Basemap:** in both modes the Americas are in daylight and the night side shows Black Marble
+    lights: the US East Coast, the Gulf coast and the Caribbean islands. 21:49 UTC is 17:49 EDT, close
+    to sunset on the East Coast. The lights begin before sunset because Cesium starts the night
+    blend while the sun is still low (`GlobeFS.glsl:344`).
+  - **Captures:** I checked that the map region of the full-page capture is pixel-identical to the
+    canvas capture (mean absolute difference 0.0 on all three channels).
+  - **Credits:** no Cesium credit element is inside the map (`.cesium-widget-credits` count 0).
+  - **About page:** the Cesium logo loads at 118×30 px.
+  - **Requests:** none left the client's origin. Basemap tiles came from `/basemap/blue-marble`
+    and `/basemap/black-marble`.
   - There were no page or console errors or warnings.
-  - I viewed both review images before committing.
+  - I viewed all three review images before committing.
 
 - **US English** (`check_us_english.py`):
-  - Over a copy of `src`, `completion-reports`, `README.md` and `review`, the only hits are the
-    777 in the generated schema.
-  - Over the whole repository, the other hits are:
-    - the vendored `openapi/OpenAPI.json`
-    - Cesium's own code in the gitignored `dist/`
-    - one sha512 hash in `package-lock.json`
-
-    None of these were changed.
+  - I ran it over a copy of `src`, `completion-reports`, `scripts`, `README.md`, `vite.config.ts`
+    and `public/basemap/README.md`.
+  - The only hits are the 777 in the generated schema, which are left as they are.
 
 ## Compared to the mockup
 
 `design/Foresignal Global Intelligence Dashboard.png` against `review/005-cesium-viewer.png`.
 
-**What matches.** These are all in the mockup's positions:
+**What now matches:**
 
-- the mode toggle at top right
-- the compass, zoom and home controls on the right
-- the time box and scrubber at top left
+- the night-lights Earth with a lit day side
+- no logo on the map
+- the toggle, compass, zoom and home at top right
+- the time box at top left
 - the GLOBAL VIEW inset at bottom left
 - the readout and scale bar at bottom right
 
 **Known differences:**
 
-1. **2D, not a globe.** The mockup draws a 3D globe, but by the owner's decision the map now opens
-   in 2D.
-2. **Imagery.** The mockup shows a night-lights Earth with clouds and radar. The build shows
-   daytime Natural Earth II, which is low-resolution up close. See question 1.
-3. **No overlays yet.** Aircraft, ships, satellites, events and the storm come in later prompts.
-4. **Tool buttons.** The mockup's five extra tool buttons below zoom are not here. They belong to
-   the prompts that give them something to do.
-5. **The Cesium credit** shows at bottom left, small and dim. See question 2.
-
-## Documents that still say Split
-
-The map model changed in Architecture §5 and prompts 005 and 014, but these still describe a Split
-mode. I have not edited them; they are yours and the planner's.
-
-- `docs/Roadmap.md:88`: "2D/3D/split scene-mode toggle"
-- `docs/Product-Charter.md:60`, `:93` and `:136`: "2D map, 3D globe and split"
-- `docs/Architecture.md:17` (the diagram): "Cesium map/globe (2D/3D/split)"
-- `prompts/027-Satellite-Constellation.md:24`: "2D/3D/Split reuse the 005 scene toggle"
-
-I found these with `grep -rn -i "split\|columbus" docs prompts design/README.md`.
+1. **2D, not a globe.** The map opens in 2D, as decided. The mockup draws a 3D globe.
+2. **Clouds and radar.** The mockup has clouds and weather radar. Those are backend rasters (009),
+   not the basemap.
+3. **ELEV.** The mockup reads `ELEV 0 m`; the build reads `—` until there is a terrain source.
+   See question 1.
+4. **Night-side placement.** The mockup's lights are over North America at night; the build's
+   follow the real clock, so where the night side falls depends on when you look.
+5. **Overlays and tool buttons.** Aircraft, ships, satellites, events, the storm and the five
+   extra tool buttons come in later prompts.
 
 ## Owner questions
 
-1. **Base imagery.** The bundled Natural Earth II is the only base map that needs no outside
-   service. Is there a higher-resolution or night-lights tile source on your LAN, or from the
-   backend, that the client should use?
-2. **Cesium credit.** Cesium draws its logo credit by default, and I left it visible.
-   `grep -i credit` in `node_modules/cesium/README.md` and `LICENSE.md` found no credit
-   requirement, so it is your call: keep it on the map, or move it to an About view?
-3. **What the readout tracks.** The mockup reads `28.3921°, -76.5123°, ELEV 0 m`, which looks like
-   a point on the ground near Florence, not the camera. I show the view center and the camera
-   height. Should the readout follow the mouse pointer instead, with ELEV as ground height?
-4. **The map plugin.** `vite-plugin-cesium` was last published on 2024-08-06 (`npm view
-vite-plugin-cesium time.modified`). It works with Vite 8.3.4, as verified above. Keep it, or
-   switch to `vite-plugin-cesium-engine`?
-5. **The manual toggle.** Architecture §5 keeps a manual 2D / 3D toggle alongside the contextual
-   switch, so I kept it. Do you want it on the map, or should 3D be reached only by selecting an
-   item?
+1. **Terrain elevation needs a source.**
+   - The backend has no elevation operation. I searched every path, summary and operation in
+     `openapi/OpenAPI.json` for `elevation`, `terrain`, `dem` and `height`. The only match was
+     `createSituationAssessment`, which is not about elevation.
+   - The client has no terrain either, so ELEV shows `—` rather than a false `0 m`.
+   - Options:
+     - **(a)** Bundle a public-domain elevation grid (for example NOAA's ETOPO), downsampled and
+       self-hosted like the basemap, and use it only for the readout.
+     - **(b)** Self-host quantized-mesh terrain, which also gives 3D relief. It is much larger.
+     - **(c)** A backend elevation endpoint.
+
+   Which do you want, and in which prompt?
+
+2. **Blue Marble month.** I used September 2004, to match the mockup's date. NASA publishes one
+   per month. Should the basemap follow the time machine's month in 013, or stay fixed?
+3. **Credit wording.** The NASA download pages state no credit line (I checked both), so the
+   About page names each product, "NASA Earth Observatory", and the source page. Is that the
+   wording you want?
 
 Earlier questions still open, with defaults in place:
 
