@@ -3,14 +3,15 @@ import { Viewer as ResiumViewer, useCesium } from 'resium';
 import {
   Cartesian2,
   EllipsoidGeodesic,
-  EllipsoidTerrainProvider,
   Math as CesiumMath,
+  SceneMode,
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
   type Cartographic,
   type Viewer as CesiumViewer,
 } from 'cesium';
 import { createBaseLayers, insetTileUrls } from './imagery';
+import { createTerrainProvider, TerrainSampler } from './terrain';
 import { MapHud, type CameraState, type GroundPoint } from './MapHud';
 import { niceScale } from './readout';
 import { DEFAULT_SCENE_MODE, SCENE_MODES, type SceneModeKey } from './sceneMode';
@@ -24,19 +25,20 @@ const MORPH_SECONDS = 1;
 const SCALE_MAX_PIXELS = 100;
 
 /**
- * Ground elevation at a point, in meters, from the globe's terrain. Undefined when the globe has no
- * terrain (Cesium's plain ellipsoid), because every point would read 0 m and that is not a
- * measurement. The client has no terrain source yet.
+ * The ground point at a canvas position, or undefined where the position shows space. In 3D it is
+ * where the view ray meets the rendered terrain, so over raised relief the readout names the place
+ * the user sees, not the sea-level point behind it; before terrain is drawn there, and in the flat
+ * 2D map, it is where the ray meets the ellipsoid.
  */
-function groundElevation(viewer: CesiumViewer, point: Cartographic): number | undefined {
-  if (viewer.terrainProvider instanceof EllipsoidTerrainProvider) return undefined;
-  return viewer.scene.globe.getHeight(point);
-}
-
-/** The ground point at a canvas position, or undefined where the position shows space. */
 function groundAt(viewer: CesiumViewer, position: Cartesian2): Cartographic | undefined {
-  const ellipsoid = viewer.scene.globe.ellipsoid;
-  const hit = viewer.camera.pickEllipsoid(position, ellipsoid);
+  const { camera, scene } = viewer;
+  const ellipsoid = scene.globe.ellipsoid;
+  if (scene.mode === SceneMode.SCENE3D) {
+    const ray = camera.getPickRay(position);
+    const surface = ray && scene.globe.pick(ray, scene);
+    if (surface) return ellipsoid.cartesianToCartographic(surface);
+  }
+  const hit = camera.pickEllipsoid(position, ellipsoid);
   return hit ? ellipsoid.cartesianToCartographic(hit) : undefined;
 }
 
@@ -47,9 +49,14 @@ function groundAt(viewer: CesiumViewer, position: Cartesian2): Cartographic | un
  *   canvas (or the camera's own position when the center shows space) and the camera height. A
  *   2D/3D switch keeps this place.
  * - `ground` is what the readout shows: the ground point under the mouse pointer and its terrain
- *   elevation; when the pointer is off the map or over space, the ground point at the view center.
+ *   elevation (from `sampler`, the most detailed terrain; undefined until it loads); when the
+ *   pointer is off the map or over space, the ground point at the view center with no elevation.
  */
-function readCamera(viewer: CesiumViewer, pointer: Cartesian2 | undefined): CameraState {
+function readCamera(
+  viewer: CesiumViewer,
+  pointer: Cartesian2 | undefined,
+  sampler: TerrainSampler | undefined,
+): CameraState {
   const { camera, scene } = viewer;
   const position = camera.positionCartographic;
   const centerPixel = new Cartesian2(scene.canvas.clientWidth / 2, scene.canvas.clientHeight / 2);
@@ -68,7 +75,8 @@ function readCamera(viewer: CesiumViewer, pointer: Cartesian2 | undefined): Came
       longitude: CesiumMath.toDegrees(point.longitude),
       source: underPointer ? 'pointer' : 'center',
     };
-    const elevation = groundElevation(viewer, point);
+    // Elevation is read only under the pointer; with the pointer off the map it shows a dash.
+    const elevation = underPointer ? sampler?.heightAt(underPointer) : undefined;
     if (elevation !== undefined) ground.elevation = elevation;
     state.ground = ground;
   }
@@ -123,9 +131,9 @@ function stateKey(s: CameraState): string {
 }
 
 /**
- * Lives inside the Resium viewer: applies the theme and day/night lighting, adds the basemap, sets
- * the home view, tracks the mouse pointer over the canvas, and reports camera state after each
- * render, only when a displayed value changed.
+ * Lives inside the Resium viewer: applies the theme and day/night lighting, adds the basemap and
+ * the self-hosted terrain, sets the home view, tracks the mouse pointer over the canvas, and
+ * reports camera state after each render, only when a displayed value changed.
  */
 function SceneBridge({
   onReady,
@@ -141,6 +149,18 @@ function SceneBridge({
     // Base layers per viewer instance: destroying a viewer destroys its layers.
     const baseLayers = createBaseLayers();
     baseLayers.forEach((layer, index) => viewer.imageryLayers.add(layer, index));
+    let active = true;
+    let sampler: TerrainSampler | undefined;
+    createTerrainProvider()
+      .then((terrain) => {
+        if (!active || viewer.isDestroyed()) return;
+        viewer.terrainProvider = terrain;
+        sampler = new TerrainSampler(terrain);
+      })
+      .catch((error: unknown) => {
+        // The map still works on the plain ellipsoid; the readout then shows no elevation.
+        console.error('Terrain failed to load', error);
+      });
     viewer.camera.setView({
       destination: homeDestination(),
     });
@@ -156,7 +176,7 @@ function SceneBridge({
     viewer.scene.canvas.addEventListener('pointerleave', onLeave);
     let last = '';
     const remove = viewer.scene.postRender.addEventListener(() => {
-      const state = readCamera(viewer, pointer);
+      const state = readCamera(viewer, pointer, sampler);
       const key = stateKey(state);
       if (key !== last) {
         last = key;
@@ -164,6 +184,7 @@ function SceneBridge({
       }
     });
     return () => {
+      active = false;
       remove();
       handler.destroy();
       viewer.scene.canvas.removeEventListener('pointerleave', onLeave);
@@ -182,7 +203,8 @@ export interface MapViewerProps {
 
 /**
  * The map engine: a Resium viewer with Cesium's own widgets removed, the self-hosted NASA
- * Blue Marble / Black Marble day/night basemap, the 2D Map / 3D Globe toggle (2D by default), and
+ * Blue Marble / Black Marble day/night basemap draped over self-hosted ETOPO terrain (raised in
+ * 3D, flat in 2D), the 2D Map / 3D Globe toggle (2D by default), and
  * the DOM HUD (compass, zoom, inset, pointer lat/lon/elevation readout, scale bar). Renders at
  * device pixel ratio for sharp output. The clock runs in real time so the terminator moves; 013's
  * time machine takes it over. Cesium's credits go to a detached element: they are shown on the

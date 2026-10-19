@@ -48,15 +48,33 @@ describe('MapHud', () => {
     expect(screen.getByTestId('readout-elev')).toHaveTextContent('0 m');
   });
 
-  it('shows a dash with a reason for elevation when there is no terrain source', () => {
+  it('shows a dash for elevation with the pointer off the map, and says why', () => {
     renderHud({ ...camera, ground: { latitude: 39.5, longitude: -105, source: 'center' } });
     expect(screen.getByTestId('camera-readout')).toHaveAttribute('data-source', 'center');
     expect(screen.getByTestId('readout-lat')).toHaveTextContent('39.5000°');
     expect(screen.getByTestId('readout-elev')).toHaveTextContent('—');
     expect(screen.getByTestId('readout-elev').parentElement).toHaveAttribute(
       'title',
-      'No terrain elevation source is loaded',
+      'Point at the map to read ground elevation',
     );
+  });
+
+  it('shows a dash under the pointer until the terrain there has loaded', () => {
+    renderHud({ ...camera, ground: { latitude: 27.99, longitude: 86.93, source: 'pointer' } });
+    expect(screen.getByTestId('readout-elev')).toHaveTextContent('—');
+    expect(screen.getByTestId('readout-elev').parentElement).toHaveAttribute(
+      'title',
+      'Terrain under the pointer has not loaded yet',
+    );
+  });
+
+  it('shows terrain elevation under the pointer, including below sea level', () => {
+    renderHud({
+      ...camera,
+      ground: { latitude: 11.35, longitude: 142.2, elevation: -10_912.4, source: 'pointer' },
+    });
+    expect(screen.getByTestId('readout-elev')).toHaveTextContent('-10,912 m');
+    expect(screen.getByTestId('readout-elev').parentElement).not.toHaveAttribute('title');
   });
 
   it('shows the scale and the inset view box', () => {

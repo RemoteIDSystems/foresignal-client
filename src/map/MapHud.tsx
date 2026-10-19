@@ -17,7 +17,7 @@ export interface GroundPoint {
   latitude: number;
   /** Longitude, degrees. */
   longitude: number;
-  /** Terrain elevation, meters; absent when the map has no terrain source. */
+  /** Terrain elevation under the pointer, meters; absent off the map or before terrain loads. */
   elevation?: number;
   /** Whether the point is under the mouse pointer or, with the pointer off the map, the view center. */
   source: 'pointer' | 'center';
@@ -63,8 +63,13 @@ export interface MapHudProps extends MapHudActions {
   insetTiles: [string, string];
 }
 
-/** Tooltip on the elevation readout while the map has no terrain source. */
-const NO_TERRAIN = 'No terrain elevation source is loaded';
+/** Why the elevation readout shows a dash: elevation is read only under the pointer. */
+function elevationNote(ground: GroundPoint): string | undefined {
+  if (ground.elevation !== undefined) return undefined;
+  return ground.source === 'pointer'
+    ? 'Terrain under the pointer has not loaded yet'
+    : 'Point at the map to read ground elevation';
+}
 
 const INSET_WIDTH = 180;
 const INSET_HEIGHT = 90;
@@ -165,7 +170,7 @@ export function MapHud({
           <b>LON</b>
           <span data-testid="readout-lon">{ground ? formatDegrees(ground.longitude) : '—'}</span>
         </span>
-        <span title={ground && ground.elevation === undefined ? NO_TERRAIN : undefined}>
+        <span title={ground && elevationNote(ground)}>
           <b>ELEV</b>
           <span data-testid="readout-elev">
             {ground?.elevation !== undefined ? formatElevation(ground.elevation) : '—'}

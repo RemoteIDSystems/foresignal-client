@@ -27,7 +27,7 @@ export function AboutView() {
           License 2.0.
         </p>
 
-        <h3>Imagery</h3>
+        <h3>Imagery and terrain</h3>
         <ul data-testid="data-credits">
           {DATA_CREDITS.map((credit) => (
             <li key={credit.name}>

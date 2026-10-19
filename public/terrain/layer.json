@@ -1,0 +1,79 @@
+{
+  "tilejson": "2.1.0",
+  "name": "foresignal-terrain",
+  "description": "NOAA ETOPO 2022 60 arc-second ice surface elevation, quantized-mesh",
+  "version": "1.0.0",
+  "format": "quantized-mesh-1.0",
+  "attribution": "NOAA National Centers for Environmental Information, ETOPO 2022",
+  "scheme": "tms",
+  "tiles": [
+    "{z}/{x}/{y}.terrain"
+  ],
+  "projection": "EPSG:4326",
+  "bounds": [
+    -180,
+    -90,
+    180,
+    90
+  ],
+  "minzoom": 0,
+  "maxzoom": 6,
+  "available": [
+    [
+      {
+        "startX": 0,
+        "startY": 0,
+        "endX": 1,
+        "endY": 0
+      }
+    ],
+    [
+      {
+        "startX": 0,
+        "startY": 0,
+        "endX": 3,
+        "endY": 1
+      }
+    ],
+    [
+      {
+        "startX": 0,
+        "startY": 0,
+        "endX": 7,
+        "endY": 3
+      }
+    ],
+    [
+      {
+        "startX": 0,
+        "startY": 0,
+        "endX": 15,
+        "endY": 7
+      }
+    ],
+    [
+      {
+        "startX": 0,
+        "startY": 0,
+        "endX": 31,
+        "endY": 15
+      }
+    ],
+    [
+      {
+        "startX": 0,
+        "startY": 0,
+        "endX": 63,
+        "endY": 31
+      }
+    ],
+    [
+      {
+        "startX": 0,
+        "startY": 0,
+        "endX": 127,
+        "endY": 63
+      }
+    ]
+  ]
+}

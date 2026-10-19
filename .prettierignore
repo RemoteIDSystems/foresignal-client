@@ -7,3 +7,5 @@ docs/
 prompts/
 src/api/generated/
 package-lock.json
+# Written by scripts/build-terrain.mjs; reformatting it would change the recorded checksum.
+public/terrain/layer.json

@@ -40,3 +40,4 @@ export {
   insetTileUrls,
   type BasemapKey,
 } from './imagery';
+export { createTerrainProvider, TerrainSampler, terrainUrl, type SampledTerrain } from './terrain';

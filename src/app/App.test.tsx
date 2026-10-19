@@ -152,6 +152,7 @@ describe('About', () => {
     expect(screen.getByRole('img', { name: 'Cesium' })).toBeVisible();
     expect(screen.getByTestId('data-credits')).toHaveTextContent('Blue Marble');
     expect(screen.getByTestId('data-credits')).toHaveTextContent('Black Marble');
+    expect(screen.getByTestId('data-credits')).toHaveTextContent('ETOPO 2022');
     expect(screen.getByRole('row', { name: /cesium 1\.146\.0 Apache-2\.0/ })).toBeVisible();
   });
 });

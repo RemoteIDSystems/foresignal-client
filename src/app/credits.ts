@@ -1,4 +1,4 @@
-/** Attribution for everything the client ships: map imagery and open-source packages. */
+/** Attribution for everything the client ships: map imagery, terrain and open-source packages. */
 
 /** A credited data source shown on the map. */
 export interface DataCredit {
@@ -13,8 +13,9 @@ export interface DataCredit {
 }
 
 /**
- * The map's imagery. Both are NASA products downloaded once and served from the client's own
- * origin; `public/basemap/README.md` records the exact files and checksums.
+ * The map's data: NASA imagery and NOAA terrain, each downloaded once and served from the client's
+ * own origin. `public/basemap/README.md` and `public/terrain/README.md` record the exact files and
+ * checksums.
  */
 export const DATA_CREDITS: readonly DataCredit[] = [
   {
@@ -29,6 +30,12 @@ export const DATA_CREDITS: readonly DataCredit[] = [
     use: 'Map basemap, night side',
     provider: 'NASA Earth Observatory',
     source: 'https://science.nasa.gov/earth/earth-observatory/earth-at-night/maps',
+  },
+  {
+    name: 'ETOPO 2022 Global Relief Model (60 arc-second, ice surface)',
+    use: 'Map terrain in 3D and the elevation readout',
+    provider: 'NOAA National Centers for Environmental Information',
+    source: 'https://www.ncei.noaa.gov/products/etopo-global-relief-model',
   },
 ];
 
