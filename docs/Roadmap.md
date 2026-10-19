@@ -53,7 +53,10 @@ reference is the ForeSignal repo's `docs/OpenAPI.json`.** Date: 2026-10-18.
 
 Every screen-building prompt is implemented against the mockups in [`design/`](../design/). The
 client matches the layout and behavior shown there; visual details may be adjusted to fit, but the
-panels, their data, and their interactions come from the designs and the backend.
+panels, their data, and their interactions come from the designs and the backend. Two nav
+destinations — **RF / Sensors** and **Operations** — have no dedicated mockup; they are built from
+the backend's capabilities in the same design language (prompts 032–033), review-gated so the owner
+shapes them. Every other screen has a mockup.
 
 **Front-load the look.** Prompt 004 stands up a **styled dashboard skeleton** — the primary mockup's
 full layout with placeholder data — so the overall look is validated immediately, *before* real-data
@@ -65,7 +68,7 @@ shape early and approve each increment against the mockup.
 
 ## 4. The prompts
 
-**One build, one pass.** All 34 prompts ship together — there is no later phase, no v2, no TODO, and
+**One build, one pass.** All 36 prompts ship together — there is no later phase, no v2, no TODO, and
 nothing is deferred, delayed, or marked optional (Charter §6.7, §8). The headings below are
 **dependency/build order only** (the shell before the panels, the map before its layers; the 3D
 globe is built in 005). Every feature in the designs and every backend capability a screen needs is
@@ -134,16 +137,26 @@ in this list.
 | 030 | Alert-Rules-And-Web-Push | Author trigger rules scoped to view/situation/watchlist (`createTrigger`/`updateTrigger`/`testTrigger`/`muteTrigger`); route to channels; subscribe the browser to Web Push (`getVapidPublicKey`/`createPushSubscription`) |
 | 031 | Saved-State | `listPlaces`/`listViews` (+ `getViewTileJson`/`streamView`)/`listWatchlists`; persisted layer & filter sets |
 
-### Deploy and hardening — prompts 032–034
+### RF, sensors and operations — prompts 032–033
+
+*(No dedicated mockup for these two nav spaces; built from backend capabilities in the established
+design language, review-gated.)*
+
 | # | Prompt | What it delivers |
 |---|---|---|
-| 032 | Build-And-Deploy | `vite build` → static; served same-origin by the backend web root; Cesium assets; config; immutable-tile caching |
-| 033 | Scale-And-Performance | Full-catalog (~300–500 layer) stress; batched-render + aggregation verification; frame-budget check; raster restraint |
-| 034 | Accessibility-Shortcuts-Onboarding | Keyboard-shortcuts overlay, onboarding, a11y, theming polish, error-boundary coverage |
+| 032 | RF-And-Sensors | RF/spectrum/SIGINT map layers, sensor catalogue (`listSensors`), ground-station polar plots (`getGroundStationPolarplot`), selected-sensor dossier |
+| 033 | Operations | Tasks/Assets/Workflows console: alert & job/export queue, source-health + channels + sinks + devices, trigger rules + briefings + escalations + cycles + chronicles |
+
+### Deploy and hardening — prompts 034–036
+| # | Prompt | What it delivers |
+|---|---|---|
+| 034 | Build-And-Deploy | `vite build` → static; served same-origin by the backend web root; Cesium assets; config; immutable-tile caching |
+| 035 | Scale-And-Performance | Full-catalog (~300–500 layer) stress; batched-render + aggregation verification; frame-budget check; raster restraint |
+| 036 | Accessibility-Shortcuts-Onboarding | Keyboard-shortcuts overlay, onboarding, a11y, theming polish, error-boundary coverage |
 
 ---
 
 ## 5. Status
 
-Not started. 34 prompts, built in one pass (dependency order, no phasing). The owner reviews the
-roadmap and each prompt before and after it runs.
+Not started. 36 prompts across 11 groups, built in one pass (dependency order, no phasing). The
+owner reviews the roadmap and each prompt before and after it runs.

@@ -1,9 +1,9 @@
-# 032 — Build And Deploy
+# 034 — Build And Deploy
 
 **Goal.** Produce the static build the backend serves same-origin, with Cesium assets and correct
 caching — keeping the solution to two components.
 
-**Read first.** 031-CR; [Architecture.md](../docs/Architecture.md) §16; Charter §2.
+**Read first.** 033-CR; [Architecture.md](../docs/Architecture.md) §16; Charter §2.
 
 **Build.**
 - `vite build` → `dist/` with the Cesium static assets (`Workers`/`Assets`/`ThirdParty`) copied and
@@ -20,4 +20,4 @@ caching — keeping the solution to two components.
 and panels working; opening it needs only the backend + the static files. Verify from a clean
 `vite preview` or the backend-served copy.
 
-**Commit.** `032: Build And Deploy`; `completion-reports/032-CR-Build-And-Deploy.md` (hash + owner questions).
+**Commit.** `034: Build And Deploy`; `completion-reports/034-CR-Build-And-Deploy.md` (hash + owner questions).

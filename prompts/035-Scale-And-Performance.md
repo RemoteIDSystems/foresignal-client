@@ -1,4 +1,4 @@
-# 033 — Scale And Performance
+# 035 — Scale And Performance
 
 **Goal.** Prove the client is not the limiting factor: enable a very large number of layers (toward
 the backend's full catalog) and confirm it stays interactive, relying on batching and server-side
@@ -20,4 +20,4 @@ aggregation.
 **Done when.** With the large layer set enabled the client stays interactive within the frame budget,
 holds one SSE connection, and draws only in-view/aggregated data. Numbers recorded in the report.
 
-**Commit.** `033: Scale And Performance`; `completion-reports/033-CR-Scale-And-Performance.md` (hash + numbers + owner questions).
+**Commit.** `035: Scale And Performance`; `completion-reports/035-CR-Scale-And-Performance.md` (hash + numbers + owner questions).

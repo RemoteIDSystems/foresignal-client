@@ -1,9 +1,9 @@
-# 034 — Accessibility, Shortcuts, Onboarding
+# 036 — Accessibility, Shortcuts, Onboarding
 
 **Goal.** Finish the experience: keyboard shortcuts, onboarding, accessibility, theming polish and
 error-boundary coverage across the app.
 
-**Read first.** 033-CR; [Architecture.md](../docs/Architecture.md) §5, §17. Design: the keyboard
+**Read first.** 035-CR; [Architecture.md](../docs/Architecture.md) §5, §17. Design: the keyboard
 shortcuts overlay and first-run affordances implied across the mockups.
 
 **Build.**
@@ -20,5 +20,5 @@ shortcuts overlay and first-run affordances implied across the mockups.
 screen-reader-navigable for the core flows; every view recovers from an error. Playwright: shortcut
 toggles a layer; keyboard navigates the rail.
 
-**Commit.** `034: Accessibility, Shortcuts, Onboarding`;
-`completion-reports/034-CR-Accessibility-Shortcuts-Onboarding.md` (hash + owner questions).
+**Commit.** `036: Accessibility, Shortcuts, Onboarding`;
+`completion-reports/036-CR-Accessibility-Shortcuts-Onboarding.md` (hash + owner questions).

@@ -121,7 +121,8 @@ strength; and a static SPA served by the backend keeps the whole solution to **t
 7. **One pass, no phasing.** This is an AI-first build. **Every** feature in the designs and every
    backend capability a screen needs is built in this single pass — the 3D globe, wind (barbs,
    speed raster, particles), every panel, every detail view, situations and investigations, the
-   relationship graph, satellite orbits, imagery and change-detection, alerts and rule authoring.
+   relationship graph, satellite orbits, imagery and change-detection, alerts and rule authoring, and
+   the RF/sensors and operations workspaces.
    Nothing is deferred to a later phase, marked optional, or left as a TODO. There is no v1/v2 and
    no backlog. The only exclusions are the owner-set boundaries in §8. Prompt ordering is
    dependency/build order, never prioritization. If something genuinely cannot be built, it is
