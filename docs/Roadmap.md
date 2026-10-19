@@ -144,7 +144,7 @@ design language, review-gated.)*
 
 | # | Prompt | What it delivers |
 |---|---|---|
-| 032 | RF-And-Sensors | RF/spectrum/SIGINT map layers, sensor catalogue (`listSensors`), ground-station polar plots (`getGroundStationPolarplot`), selected-sensor dossier |
+| 032 | RF-And-Sensors | RF/spectrum/SIGINT map layers, sensor catalog (`listSensors`), ground-station polar plots (`getGroundStationPolarplot`), selected-sensor dossier |
 | 033 | Operations | Tasks/Assets/Workflows console: alert & job/export queue, source-health + channels + sinks + devices, trigger rules + briefings + escalations + cycles + chronicles |
 
 ### Deploy and hardening — prompts 034–036

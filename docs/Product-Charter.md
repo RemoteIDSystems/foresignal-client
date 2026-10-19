@@ -20,13 +20,14 @@ re-implements what the backend owns.
 The authoritative picture of what it looks like is the set of design mockups in
 [`design/`](../design/) (originally `foresignal/client screen ideas/`):
 
-| Mockup | View |
+| File | View |
 |---|---|
-| Global Intelligence Dashboard | **Primary.** Layers rail, live 2D/3D globe, selected-entity dossier, activity timeline, insights, related entities |
-| Conflict Intelligence Dashboard | Situation "full analysis": conflict layers, AI analysis tabs, timeline, territorial change, metrics, evidence, competing hypotheses, forecasts |
-| Tropical Storm Intelligence Dashboard | Investigation workspace: key findings, filters, map with official track and cone, evidence, hypotheses, forecasts |
-| Analyst Workbench | Evidence/relationship graph, timeline, hypotheses, notes |
-| Satellite Operations / Analysis View | Constellation (3D globe with live orbits), passes, imagery, change-detection comparison |
+| `Foresignal Global Intelligence Dashboard.png` | **Primary.** Layers rail, live 2D/3D globe, selected-entity dossier, activity timeline, insights, related entities |
+| `Foresignal Conflict Intelligence Dashboard.png` | Situation "full analysis": conflict layers, AI analysis tabs, timeline, territorial change, metrics, evidence, competing hypotheses, forecasts |
+| `Foresignal Tropical Storm Intelligence Dashboard.png` | Investigation workspace: key findings, filters, map with official track and cone, evidence, hypotheses, forecasts |
+| `ForeSignal_Analyst_Workbench.png` | Evidence/relationship graph, timeline, hypotheses, notes |
+| `ForeSignal_Analysis_View.png` | Satellite operations / analysis: constellation (3D globe, live orbits), passes, imagery, change-detection |
+| `Foresignal Intelligence Dashboard Split-Screen.png` | Split view: the Analyst Workbench and satellite operations side by side (same components as the two rows above) |
 
 ---
 
