@@ -15,11 +15,16 @@ Dashboard and Tropical-Storm mockups (map region, scene toggle, HUD, mini inset)
 - **Base imagery** (matches the mock, self-hosted, public domain, no account, no external tile
   service): **NASA Blue Marble** (daytime true color) as the base, with **NASA Black Marble** night
   lights shown on the night side via Cesium's day/night lighting (terminator between them). Weather
-  clouds are a separate backend overlay (009), not the basemap.
+  clouds are a separate backend overlay (009), not the basemap. A single Blue Marble month is used;
+  the basemap is **not** tied to the time machine (the clock governs data layers, not base imagery).
 - **2D / 3D toggle** — `SceneMode.SCENE2D` is the **default**; `SCENE3D` is the other option. **No
   Split, no Columbus view.** The mode is held in local state here and wired to the store in 012.
-- **HUD chrome** (DOM overlay, not Cesium widgets): scale bar, lat/lon/elev readout, N compass,
-  zoom controls, and the mini "global view" inset.
+- **HUD chrome** (DOM overlay, not Cesium widgets): scale bar, a **lat/lon/elev readout that follows
+  the mouse pointer** (the ground point; falls back to the view center when the pointer is off the
+  map), N compass, zoom controls, and the mini "global view" inset.
+- **Elevation:** ELEV reads ground height from a **bundled public-domain global relief grid** (NOAA
+  ETOPO or similar), self-hosted, used for the readout only — the globe stays smooth (no 3D terrain
+  mesh). Shows "—" when the pointer is off the map.
 - Resize/retina handling; `powerPreference` left at Cesium defaults (desktop target).
 
 **Done when.** The map renders in a production build, **2D by default**; the 2D/3D toggle switches
