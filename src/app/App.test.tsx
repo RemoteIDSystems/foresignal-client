@@ -141,3 +141,17 @@ describe('App routing', () => {
     expect(await screen.findByRole('heading', { name: 'Settings' })).toBeInTheDocument();
   });
 });
+
+describe('About', () => {
+  it('opens from Settings and credits Cesium, the NASA imagery and every package', async () => {
+    backend();
+    const user = userEvent.setup();
+    render(<App session={session()} initialPath="/settings" />);
+    await user.click(await screen.findByRole('link', { name: 'About and credits' }));
+    expect(await screen.findByRole('heading', { name: 'About ForeSignal Client' })).toBeVisible();
+    expect(screen.getByRole('img', { name: 'Cesium' })).toBeVisible();
+    expect(screen.getByTestId('data-credits')).toHaveTextContent('Blue Marble');
+    expect(screen.getByTestId('data-credits')).toHaveTextContent('Black Marble');
+    expect(screen.getByRole('row', { name: /cesium 1\.146\.0 Apache-2\.0/ })).toBeVisible();
+  });
+});

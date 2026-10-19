@@ -1,17 +1,13 @@
 /** Formatting and scale helpers for the map HUD. Pure functions; no Cesium dependency. */
 
-/** Formats a latitude in degrees with four decimals and a degree sign, e.g. `28.3921°`. */
+/** Formats a latitude or longitude in degrees with four decimals and a degree sign, e.g. `28.3921°`. */
 export function formatDegrees(degrees: number): string {
   return `${degrees.toFixed(4)}°`;
 }
 
-/**
- * Formats a height in meters for the ELEV readout: meters below 10 km, whole kilometers above,
- * with thousands separators (`850 m`, `12,400 km`).
- */
-export function formatHeight(meters: number): string {
-  if (Math.abs(meters) < 10_000) return `${Math.round(meters).toLocaleString('en-US')} m`;
-  return `${Math.round(meters / 1000).toLocaleString('en-US')} km`;
+/** Formats a ground elevation in whole meters with thousands separators (`0 m`, `-28 m`, `1,234 m`). */
+export function formatElevation(meters: number): string {
+  return `${(Math.round(meters) || 0).toLocaleString('en-US')} m`;
 }
 
 /** A scale bar: its length in pixels and the distance it stands for. */

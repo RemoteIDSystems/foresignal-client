@@ -10,18 +10,6 @@
   inset: 0;
 }
 
-/* Keep Cesium's required data attribution, small and out of the HUD's way. */
-.region :global(.cesium-widget-credits) {
-  bottom: 44px !important;
-  left: 214px !important;
-  opacity: 0.55;
-  font-size: 9px;
-}
-
-.region :global(.cesium-credit-logoContainer img) {
-  height: 14px;
-}
-
 .fallback {
   position: absolute;
   inset: 0;

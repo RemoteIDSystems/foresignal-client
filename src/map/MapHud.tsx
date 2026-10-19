@@ -3,7 +3,7 @@ import { IconButton } from '../ui/Button';
 import { Tabs } from '../ui/Tabs';
 import {
   formatDegrees,
-  formatHeight,
+  formatElevation,
   insetBoxes,
   type DegreeRectangle,
   type ScaleBar,
@@ -11,11 +11,23 @@ import {
 import type { SceneModeKey } from './sceneMode';
 import styles from './MapHud.module.css';
 
-/** What the HUD shows about the camera. */
-export interface CameraState {
-  /** Camera latitude, degrees. */
+/** A point on the ground for the readout. */
+export interface GroundPoint {
+  /** Latitude, degrees. */
   latitude: number;
-  /** Camera longitude, degrees. */
+  /** Longitude, degrees. */
+  longitude: number;
+  /** Terrain elevation, meters; absent when the map has no terrain source. */
+  elevation?: number;
+  /** Whether the point is under the mouse pointer or, with the pointer off the map, the view center. */
+  source: 'pointer' | 'center';
+}
+
+/** What the HUD shows about the camera and the pointer. */
+export interface CameraState {
+  /** Latitude of the view center, degrees. */
+  latitude: number;
+  /** Longitude of the view center, degrees. */
   longitude: number;
   /** Camera height above the ellipsoid, meters. */
   height: number;
@@ -25,6 +37,8 @@ export interface CameraState {
   view?: DegreeRectangle;
   /** Scale bar for the current view, when it can be measured. */
   scale?: ScaleBar;
+  /** The readout's ground point, when the pointer or the view center is on the globe. */
+  ground?: GroundPoint;
 }
 
 /** Callbacks the HUD's controls drive. */
@@ -49,6 +63,9 @@ export interface MapHudProps extends MapHudActions {
   insetTiles: [string, string];
 }
 
+/** Tooltip on the elevation readout while the map has no terrain source. */
+const NO_TERRAIN = 'No terrain elevation source is loaded';
+
 const INSET_WIDTH = 180;
 const INSET_HEIGHT = 90;
 
@@ -66,6 +83,7 @@ export function MapHud({
   onZoom,
   onHome,
 }: MapHudProps) {
+  const ground = camera?.ground;
   return (
     <>
       <Tabs
@@ -134,18 +152,24 @@ export function MapHud({
         </div>
       </div>
 
-      <div className={`${styles.panel} ${styles.coords}`} data-testid="camera-readout">
+      <div
+        className={`${styles.panel} ${styles.coords}`}
+        data-testid="camera-readout"
+        data-source={ground?.source}
+      >
         <span>
           <b>LAT</b>
-          <span data-testid="readout-lat">{camera ? formatDegrees(camera.latitude) : '—'}</span>
+          <span data-testid="readout-lat">{ground ? formatDegrees(ground.latitude) : '—'}</span>
         </span>
         <span>
           <b>LON</b>
-          <span data-testid="readout-lon">{camera ? formatDegrees(camera.longitude) : '—'}</span>
+          <span data-testid="readout-lon">{ground ? formatDegrees(ground.longitude) : '—'}</span>
         </span>
-        <span>
+        <span title={ground && ground.elevation === undefined ? NO_TERRAIN : undefined}>
           <b>ELEV</b>
-          <span data-testid="readout-elev">{camera ? formatHeight(camera.height) : '—'}</span>
+          <span data-testid="readout-elev">
+            {ground?.elevation !== undefined ? formatElevation(ground.elevation) : '—'}
+          </span>
         </span>
         {camera?.scale && (
           <span className={styles.scale} data-testid="scale">

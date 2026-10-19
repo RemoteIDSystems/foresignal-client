@@ -1,4 +1,4 @@
-import { formatDegrees, formatHeight, insetBoxes, niceScale } from './readout';
+import { formatDegrees, formatElevation, insetBoxes, niceScale } from './readout';
 
 describe('formatDegrees', () => {
   it('shows four decimals and a degree sign', () => {
@@ -7,12 +7,12 @@ describe('formatDegrees', () => {
   });
 });
 
-describe('formatHeight', () => {
-  it('shows meters below 10 km and whole kilometers from 10 km, with separators', () => {
-    expect(formatHeight(850.4)).toBe('850 m');
-    expect(formatHeight(9_999)).toBe('9,999 m');
-    expect(formatHeight(10_000)).toBe('10 km');
-    expect(formatHeight(13_000_000)).toBe('13,000 km');
+describe('formatElevation', () => {
+  it('shows whole meters with separators, including below sea level', () => {
+    expect(formatElevation(0)).toBe('0 m');
+    expect(formatElevation(-0.4)).toBe('0 m');
+    expect(formatElevation(-27.6)).toBe('-28 m');
+    expect(formatElevation(8848.86)).toBe('8,849 m');
   });
 });
 

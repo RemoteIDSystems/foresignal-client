@@ -12,3 +12,6 @@ interface ImportMeta {
 
 /** This build's version, from `package.json`. */
 declare const __APP_VERSION__: string;
+
+/** This build's runtime dependencies and their exact versions, from `package.json`. */
+declare const __APP_DEPENDENCIES__: Record<string, string>;

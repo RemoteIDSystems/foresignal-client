@@ -66,3 +66,30 @@
 .card [role='alert'] {
   color: var(--fs-tone-danger-fg);
 }
+
+.card a {
+  color: var(--fs-color-accent);
+}
+
+.card ul {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.6;
+}
+
+.card table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.card th,
+.card td {
+  padding: 4px 8px 4px 0;
+  border-bottom: 1px solid var(--fs-color-border);
+  text-align: left;
+}
+
+.card th {
+  color: var(--fs-color-text-muted);
+  font-weight: 500;
+}

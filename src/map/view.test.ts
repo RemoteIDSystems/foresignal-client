@@ -16,11 +16,17 @@ describe('view', () => {
     expect(home.height).toBeCloseTo(HOME_VIEW.height, 0);
   });
 
-  it('colors space and the bare globe with the dark theme', () => {
-    const viewer = { scene: { backgroundColor: Color.WHITE, globe: { baseColor: Color.WHITE } } };
+  it('colors space and the bare globe with the dark theme and lights the globe by the sun', () => {
+    const viewer = {
+      scene: {
+        backgroundColor: Color.WHITE,
+        globe: { baseColor: Color.WHITE, enableLighting: false },
+      },
+    };
     styleScene(viewer as unknown as CesiumViewer);
     expect(viewer.scene.backgroundColor.toCssHexString()).toBe('#02060c');
     expect(viewer.scene.globe.baseColor.toCssHexString()).toBe('#0b1a2a');
+    expect(viewer.scene.globe.enableLighting).toBe(true);
   });
 });
 

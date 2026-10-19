@@ -29,6 +29,7 @@ const camera: CameraState = {
   heading: 30,
   view: { west: -120, south: 0, east: -40, north: 50 },
   scale: { pixels: 49, meters: 2_000_000, label: '2,000 km' },
+  ground: { latitude: 28.3921, longitude: -76.5123, elevation: 0, source: 'pointer' },
 };
 
 describe('MapHud', () => {
@@ -39,11 +40,27 @@ describe('MapHud', () => {
     expect(screen.queryByTestId('scale')).toBeNull();
   });
 
-  it('shows lat, lon, elevation, scale and the inset view box', () => {
+  it('reads out the ground point and its elevation, not the camera', () => {
     renderHud(camera);
-    expect(screen.getByTestId('readout-lat')).toHaveTextContent('28.0000°');
-    expect(screen.getByTestId('readout-lon')).toHaveTextContent('-80.0000°');
-    expect(screen.getByTestId('readout-elev')).toHaveTextContent('13,000 km');
+    expect(screen.getByTestId('camera-readout')).toHaveAttribute('data-source', 'pointer');
+    expect(screen.getByTestId('readout-lat')).toHaveTextContent('28.3921°');
+    expect(screen.getByTestId('readout-lon')).toHaveTextContent('-76.5123°');
+    expect(screen.getByTestId('readout-elev')).toHaveTextContent('0 m');
+  });
+
+  it('shows a dash with a reason for elevation when there is no terrain source', () => {
+    renderHud({ ...camera, ground: { latitude: 39.5, longitude: -105, source: 'center' } });
+    expect(screen.getByTestId('camera-readout')).toHaveAttribute('data-source', 'center');
+    expect(screen.getByTestId('readout-lat')).toHaveTextContent('39.5000°');
+    expect(screen.getByTestId('readout-elev')).toHaveTextContent('—');
+    expect(screen.getByTestId('readout-elev').parentElement).toHaveAttribute(
+      'title',
+      'No terrain elevation source is loaded',
+    );
+  });
+
+  it('shows the scale and the inset view box', () => {
+    renderHud(camera);
     expect(screen.getByTestId('scale')).toHaveTextContent('2,000 km');
     expect(screen.getAllByTestId('inset-box')).toHaveLength(1);
   });

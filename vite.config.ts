@@ -8,6 +8,7 @@ const packageJson = JSON.parse(
   readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
 ) as {
   version: string;
+  dependencies: Record<string, string>;
 };
 
 /**
@@ -32,6 +33,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), cesium()],
     define: {
       __APP_VERSION__: JSON.stringify(packageJson.version),
+      __APP_DEPENDENCIES__: JSON.stringify(packageJson.dependencies),
     },
     server: {
       proxy: {

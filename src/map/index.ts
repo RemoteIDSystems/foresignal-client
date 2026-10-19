@@ -9,7 +9,13 @@ export {
   type GroundView,
   type SwitchableViewer,
 } from './view';
-export { MapHud, type CameraState, type MapHudActions, type MapHudProps } from './MapHud';
+export {
+  MapHud,
+  type CameraState,
+  type GroundPoint,
+  type MapHudActions,
+  type MapHudProps,
+} from './MapHud';
 export {
   applySceneMode,
   DEFAULT_SCENE_MODE,
@@ -20,10 +26,17 @@ export {
 } from './sceneMode';
 export {
   formatDegrees,
-  formatHeight,
+  formatElevation,
   insetBoxes,
   niceScale,
   type DegreeRectangle,
   type ScaleBar,
 } from './readout';
-export { createBaseLayer, insetTileUrls, naturalEarthUrl } from './imagery';
+export {
+  BASEMAP_MAX_LEVEL,
+  BASEMAPS,
+  basemapTemplate,
+  createBaseLayers,
+  insetTileUrls,
+  type BasemapKey,
+} from './imagery';

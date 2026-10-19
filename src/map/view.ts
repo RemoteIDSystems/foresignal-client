@@ -19,8 +19,12 @@ export function supportsWebGL(): boolean {
   }
 }
 
-/** Applies the dark theme to a viewer's scene: space and the globe's no-imagery color. */
+/**
+ * Applies the dark theme to a viewer's scene (space and the globe's no-imagery color) and turns on
+ * the globe's sun lighting, which drives the day/night basemap blend.
+ */
 export function styleScene(viewer: CesiumViewer): void {
+  viewer.scene.globe.enableLighting = true;
   viewer.scene.backgroundColor = Color.fromCssColorString('#02060c');
   viewer.scene.globe.baseColor = Color.fromCssColorString('#0b1a2a');
 }
