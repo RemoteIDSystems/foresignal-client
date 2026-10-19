@@ -30,12 +30,16 @@ npm install
 npm run dev          # Vite dev server
 ```
 
-The backend base URL comes from `VITE_FORESIGNAL_BASE_URL` (default `/`, same-origin). To point
-the dev server at a backend elsewhere:
+The app always calls the backend same-origin at `/v1/…`, in development and production alike.
+In development the Vite dev server proxies `/v1`, `/mcp` and `/actuator` to the backend; the target
+comes from `VITE_FORESIGNAL_BACKEND` (default `http://localhost:8080`, the spec's `servers[0]`):
 
 ```sh
-VITE_FORESIGNAL_BASE_URL=http://localhost:8080 npm run dev
+VITE_FORESIGNAL_BACKEND=http://backend-host:8080 npm run dev
 ```
+
+The proxy is dev tooling only. In production the backend serves `dist/` itself; there is no proxy
+and no frontend process.
 
 ## Scripts
 

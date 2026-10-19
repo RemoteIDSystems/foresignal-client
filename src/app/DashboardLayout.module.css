@@ -1,0 +1,109 @@
+.layout {
+  display: grid;
+  grid-template-areas:
+    'left map right'
+    'bottom bottom bottom';
+  grid-template-columns: 262px minmax(0, 1fr) 400px;
+  grid-template-rows: minmax(0, 1fr) 338px;
+  gap: 6px;
+  height: 100%;
+  padding: 6px;
+}
+
+.noLeft {
+  grid-template-areas:
+    'map map right'
+    'bottom bottom bottom';
+}
+
+.noRight {
+  grid-template-areas:
+    'left map map'
+    'bottom bottom bottom';
+}
+
+.noLeft.noRight {
+  grid-template-areas:
+    'map map map'
+    'bottom bottom bottom';
+}
+
+.noBottom {
+  grid-template-rows: minmax(0, 1fr) 0;
+  row-gap: 0;
+}
+
+.left,
+.right {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+}
+
+.left {
+  grid-area: left;
+}
+
+.right {
+  grid-area: right;
+}
+
+.left > *,
+.right > * {
+  flex: 1;
+}
+
+.map {
+  position: relative;
+  grid-area: map;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-md);
+}
+
+.bottom {
+  display: flex;
+  grid-area: bottom;
+  gap: 6px;
+  min-height: 0;
+}
+
+.bottomCell {
+  display: flex;
+  flex-basis: 0;
+  min-width: 0;
+}
+
+.bottomCell > * {
+  flex: 1;
+}
+
+.restore {
+  position: absolute;
+  bottom: 44px;
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  gap: 6px;
+  transform: translateX(-50%);
+}
+
+.restore button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--fs-color-border-strong);
+  border-radius: var(--fs-radius-md);
+  background: rgba(8, 16, 24, 0.9);
+  color: var(--fs-color-text-secondary);
+  font-size: var(--fs-font-size-xs);
+  cursor: pointer;
+}
+
+.restore button:hover {
+  color: var(--fs-color-text);
+}

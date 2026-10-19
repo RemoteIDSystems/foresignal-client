@@ -1,0 +1,51 @@
+/* Global base styles. Colors come from the theme's CSS custom properties (ThemeProvider). */
+@import '@fontsource-variable/inter';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--fs-color-page, #01050b);
+  color: var(--fs-color-text, #e6edf5);
+  font-family: var(--fs-font-family, system-ui, sans-serif);
+  font-size: var(--fs-font-size-md, 12.5px);
+  line-height: 1.35;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--fs-color-accent);
+  outline-offset: 1px;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--fs-color-border-strong);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}

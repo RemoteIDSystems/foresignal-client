@@ -1,0 +1,68 @@
+.view {
+  height: 100%;
+  padding: 20px;
+  overflow: auto;
+}
+
+.card {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 4px 22px 18px;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-lg);
+  background: var(--fs-color-panel);
+}
+
+.card h2 {
+  font-size: var(--fs-font-size-xl);
+  font-weight: 600;
+}
+
+.card h3 {
+  margin: 18px 0 8px;
+  color: var(--fs-color-text-secondary);
+  font-size: var(--fs-font-size-xs);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.card dl {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 6px 12px;
+  margin: 0;
+}
+
+.card dt {
+  color: var(--fs-color-text-muted);
+}
+
+.card dd {
+  margin: 0;
+}
+
+.card input {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--fs-color-border-strong);
+  border-radius: var(--fs-radius-md);
+  background: var(--fs-color-panel-alt);
+}
+
+.card button {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--fs-color-border-strong);
+  border-radius: var(--fs-radius-md);
+  background: var(--fs-color-raised);
+  cursor: pointer;
+}
+
+.card button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.card [role='alert'] {
+  color: var(--fs-tone-danger-fg);
+}

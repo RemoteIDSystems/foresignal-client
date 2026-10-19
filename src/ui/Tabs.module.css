@@ -1,0 +1,78 @@
+.tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  border-bottom: 1px solid var(--fs-color-border);
+}
+
+.tab {
+  position: relative;
+  padding: 7px 11px;
+  border: 0;
+  background: transparent;
+  color: var(--fs-color-text-secondary);
+  font-size: var(--fs-font-size-sm);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--fs-color-text);
+}
+
+.tab[aria-selected='true'] {
+  color: var(--fs-color-text);
+}
+
+.tab[aria-selected='true']::after {
+  content: '';
+  position: absolute;
+  right: 6px;
+  bottom: -1px;
+  left: 6px;
+  height: 2px;
+  background: var(--fs-color-accent);
+}
+
+/* Boxed variant: filled tabs, as the LAYERS / ENTITIES / FILTERS strip. */
+.boxed {
+  gap: 0;
+  border-bottom: 0;
+  background: var(--fs-color-panel-alt);
+}
+
+.boxed .tab {
+  flex: 1;
+  padding: 8px 6px;
+  font-size: var(--fs-font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.boxed .tab[aria-selected='true'] {
+  background: var(--fs-color-raised);
+}
+
+/* Pill variant: segmented control, as the 2D Map / 3D Globe / Split toggle. */
+.pill {
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-md);
+  background: rgba(8, 16, 24, 0.85);
+}
+
+.pill .tab {
+  padding: 5px 16px;
+  border-radius: var(--fs-radius-sm);
+}
+
+.pill .tab[aria-selected='true'] {
+  background: var(--fs-color-selected);
+}
+
+.pill .tab[aria-selected='true']::after,
+.boxed .tab[aria-selected='true']::after {
+  display: none;
+}

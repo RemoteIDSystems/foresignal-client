@@ -1,19 +1,59 @@
-import { Settings } from './Settings';
-import { VersionBanner } from './VersionBanner';
+import type { ReactNode } from 'react';
+import { BrowserRouter, MemoryRouter, Navigate, Route, Routes } from 'react-router';
+import { ThemeProvider } from './theme';
+import { ToastHost } from '../ui/ToastHost';
+import {
+  AnalystView,
+  GlobalDashboard,
+  ImageryView,
+  IntelligenceView,
+  MapView,
+  OperationsView,
+  RfSensorsView,
+  SatellitesView,
+} from '../views';
+import { AppShell } from './AppShell';
+import { DEFAULT_ROUTE } from './routes';
+import { SettingsView } from './SettingsView';
 import type { Session } from './session';
 
+/** Props for {@link App}. */
+export interface AppProps {
+  /** The backend session. */
+  session: Session;
+  /** Start in an in-memory router at this path instead of the browser URL (tests). */
+  initialPath?: string;
+}
+
 /**
- * Root component of the ForeSignal Client.
- *
- * Until prompt 004 builds the shell and dashboard, it shows the version banner and the Settings
- * panel.
+ * Root component: theme, toast host and client-side routing. Every primary tab is a route under
+ * the shell; unknown paths and `/` go to the Global dashboard. There are no server routes.
  */
-export function App({ session }: { session: Session }) {
+export function App({ session, initialPath }: AppProps) {
+  const routes = (
+    <Routes>
+      <Route element={<AppShell session={session} />}>
+        <Route path="/global" element={<GlobalDashboard />} />
+        <Route path="/analyst" element={<AnalystView />} />
+        <Route path="/map" element={<MapView />} />
+        <Route path="/imagery" element={<ImageryView />} />
+        <Route path="/satellites" element={<SatellitesView />} />
+        <Route path="/rf-sensors" element={<RfSensorsView />} />
+        <Route path="/intelligence" element={<IntelligenceView />} />
+        <Route path="/operations" element={<OperationsView />} />
+        <Route path="/settings" element={<SettingsView session={session} />} />
+        <Route path="*" element={<Navigate to={DEFAULT_ROUTE} replace />} />
+      </Route>
+    </Routes>
+  );
+  const router: ReactNode = initialPath ? (
+    <MemoryRouter initialEntries={[initialPath]}>{routes}</MemoryRouter>
+  ) : (
+    <BrowserRouter>{routes}</BrowserRouter>
+  );
   return (
-    <main>
-      <h1>ForeSignal Client</h1>
-      <VersionBanner store={session.capabilities} />
-      <Settings session={session} />
-    </main>
+    <ThemeProvider>
+      <ToastHost>{router}</ToastHost>
+    </ThemeProvider>
   );
 }

@@ -1,0 +1,21 @@
+.fallback {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--fs-tone-danger-bg);
+  border-radius: var(--fs-radius-md);
+  background: var(--fs-color-panel);
+  color: var(--fs-tone-danger-fg);
+}
+
+.title {
+  color: var(--fs-color-text);
+  font-weight: 600;
+}
+
+.detail {
+  color: var(--fs-color-text-secondary);
+  font-size: var(--fs-font-size-sm);
+}

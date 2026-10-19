@@ -1,0 +1,23 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.banner {
+  flex: none;
+}
+
+.banner p {
+  margin: 0;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--fs-tone-warning-bg);
+  background: #241a10;
+  color: var(--fs-tone-warning-fg);
+  font-size: var(--fs-font-size-sm);
+}
+
+.main {
+  flex: 1;
+  min-height: 0;
+}

@@ -36,10 +36,10 @@ function backend(apiVersion = '1.0.0') {
 
 const session = () => createSession({ baseUrl: MOCK_BASE_URL, isolated: true, retry: false });
 
-describe('App', () => {
+describe('App settings', () => {
   it('reads the backend with no token (open reads)', async () => {
     const { authorization, devices } = backend();
-    render(<App session={session()} />);
+    render(<App session={session()} initialPath="/settings" />);
     expect(await screen.findByTestId('backend-version')).toHaveTextContent('1.0.0');
     expect(screen.getByTestId('token-state')).toHaveTextContent('No token: using open reads.');
     expect(screen.queryByTestId('version-mismatch')).not.toBeInTheDocument();
@@ -50,7 +50,7 @@ describe('App', () => {
   it('sends the bearer and reports the device once a token is saved', async () => {
     const { authorization, devices } = backend();
     const user = userEvent.setup();
-    render(<App session={session()} />);
+    render(<App session={session()} initialPath="/settings" />);
     await screen.findByTestId('backend-version');
     await user.type(screen.getByLabelText('Token'), 'fsr_secret');
     await user.click(screen.getByRole('button', { name: 'Save token' }));
@@ -62,7 +62,7 @@ describe('App', () => {
 
   it('shows a banner when the backend API version differs from the vendored spec', async () => {
     backend('9.9.9');
-    render(<App session={session()} />);
+    render(<App session={session()} initialPath="/settings" />);
     expect(await screen.findByTestId('version-mismatch')).toHaveTextContent(
       'built for API version 1.0.0, but the backend reports 9.9.9',
     );
@@ -86,11 +86,58 @@ describe('App', () => {
     );
     const user = userEvent.setup();
     const s = session();
-    render(<App session={s} />);
+    render(<App session={s} initialPath="/settings" />);
     await user.type(screen.getByLabelText('Pairing code'), 'ABCD-EFGH');
     await act(() => user.click(screen.getByRole('button', { name: 'Claim' })));
     expect(await screen.findByRole('status')).toHaveTextContent('Paired. Token fsr_pair… saved');
     expect(claimed).toMatchObject({ code: 'ABCD-EFGH', device: { platform: 'web' } });
     expect(s.tokens.get()).toBe('fsr_paired_token');
+  });
+});
+
+describe('App routing', () => {
+  it('opens on the Global dashboard and swaps the view on a tab change', async () => {
+    backend();
+    const user = userEvent.setup();
+    render(<App session={session()} initialPath="/" />);
+    expect(await screen.findByRole('region', { name: 'Selected entity' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Global' })).toHaveAttribute('aria-current', 'page');
+
+    await user.click(screen.getByRole('link', { name: 'Analyst' }));
+    expect(screen.getByRole('heading', { name: 'Analyst Workbench' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Selected entity' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Analyst' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('routes every primary tab to its own view', async () => {
+    backend();
+    const user = userEvent.setup();
+    render(<App session={session()} initialPath="/global" />);
+    const expected: Record<string, string> = {
+      Map: 'Map',
+      Imagery: 'Imagery',
+      Satellites: 'Satellite Operations',
+      'RF / Sensors': 'RF / Sensors',
+      Intelligence: 'Intelligence',
+      Operations: 'Operations',
+    };
+    for (const [tab, heading] of Object.entries(expected)) {
+      await user.click(screen.getByRole('link', { name: tab }));
+      expect(screen.getByRole('heading', { level: 1, name: heading })).toBeInTheDocument();
+    }
+  });
+
+  it('sends unknown paths to the Global dashboard', async () => {
+    backend();
+    render(<App session={session()} initialPath="/no-such-screen" />);
+    expect(await screen.findByRole('region', { name: 'Selected entity' })).toBeInTheDocument();
+  });
+
+  it('opens Settings from the gear button', async () => {
+    backend();
+    const user = userEvent.setup();
+    render(<App session={session()} initialPath="/global" />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    expect(await screen.findByRole('heading', { name: 'Settings' })).toBeInTheDocument();
   });
 });

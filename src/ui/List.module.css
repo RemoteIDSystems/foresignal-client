@@ -1,0 +1,31 @@
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--fs-space-md);
+  min-height: 30px;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--fs-color-border);
+}
+
+.item:last-child {
+  border-bottom: 0;
+}
+
+.interactive {
+  cursor: pointer;
+}
+
+.interactive:hover {
+  background: var(--fs-color-raised);
+}
+
+.dense .item {
+  min-height: 26px;
+  padding: 3px 10px;
+}

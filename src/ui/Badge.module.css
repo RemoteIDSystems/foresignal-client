@@ -1,0 +1,61 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 17px;
+  padding: 0 6px;
+  border-radius: var(--fs-radius-sm);
+  font-size: var(--fs-font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.count {
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 9px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 500;
+}
+
+.keepCase {
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 500;
+}
+
+.neutral {
+  background: var(--fs-tone-neutral-bg);
+  color: var(--fs-tone-neutral-fg);
+}
+.info {
+  background: var(--fs-tone-info-bg);
+  color: var(--fs-tone-info-fg);
+}
+.success {
+  background: var(--fs-tone-success-bg);
+  color: var(--fs-tone-success-fg);
+}
+.warning {
+  background: var(--fs-tone-warning-bg);
+  color: var(--fs-tone-warning-fg);
+}
+.danger {
+  background: var(--fs-tone-danger-bg);
+  color: var(--fs-tone-danger-fg);
+}
+.teal {
+  background: var(--fs-tone-teal-bg);
+  color: var(--fs-tone-teal-fg);
+}
+.violet {
+  background: var(--fs-tone-violet-bg);
+  color: var(--fs-tone-violet-fg);
+}
+.orange {
+  background: var(--fs-tone-orange-bg);
+  color: var(--fs-tone-orange-fg);
+}

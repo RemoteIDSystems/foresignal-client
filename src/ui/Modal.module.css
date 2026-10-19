@@ -1,0 +1,41 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 4, 10, 0.65);
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  border: 1px solid var(--fs-color-border-strong);
+  border-radius: var(--fs-radius-lg);
+  background: var(--fs-color-panel);
+  box-shadow: var(--fs-shadow-overlay);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  padding: 10px 10px 10px 16px;
+  border-bottom: 1px solid var(--fs-color-border);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--fs-font-size-lg);
+  font-weight: 600;
+}
+
+.close {
+  margin-left: auto;
+}
+
+.body {
+  padding: 16px;
+  overflow: auto;
+}
