@@ -20,10 +20,18 @@ export function supportsWebGL(): boolean {
 }
 
 /**
- * Applies the dark theme to a viewer's scene (space and the globe's no-imagery color) and turns on
- * the globe's sun lighting, which drives the day/night basemap blend.
+ * How much the 3D globe stretches terrain heights, so relief reads at globe scale. Only the drawing
+ * is stretched: the ELEV readout reads the terrain data, so it shows true heights.
+ */
+export const VERTICAL_EXAGGERATION = 2;
+
+/**
+ * Applies the dark theme to a viewer's scene (space and the globe's no-imagery color), turns on the
+ * globe's sun lighting, which drives the day/night basemap blend, and exaggerates terrain heights by
+ * {@link VERTICAL_EXAGGERATION}.
  */
 export function styleScene(viewer: CesiumViewer): void {
+  viewer.scene.verticalExaggeration = VERTICAL_EXAGGERATION;
   viewer.scene.globe.enableLighting = true;
   viewer.scene.backgroundColor = Color.fromCssColorString('#02060c');
   viewer.scene.globe.baseColor = Color.fromCssColorString('#0b1a2a');

@@ -6,6 +6,7 @@ export {
   styleScene,
   supportsWebGL,
   switchSceneMode,
+  VERTICAL_EXAGGERATION,
   type GroundView,
   type SwitchableViewer,
 } from './view';

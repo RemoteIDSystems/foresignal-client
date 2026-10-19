@@ -6,7 +6,13 @@ import {
   type Cartesian3,
   type Viewer as CesiumViewer,
 } from 'cesium';
-import { HOME_VIEW, homeDestination, styleScene, switchSceneMode } from './view';
+import {
+  HOME_VIEW,
+  homeDestination,
+  styleScene,
+  switchSceneMode,
+  VERTICAL_EXAGGERATION,
+} from './view';
 
 describe('view', () => {
   it('places the home destination at the home longitude, latitude and height', () => {
@@ -16,9 +22,10 @@ describe('view', () => {
     expect(home.height).toBeCloseTo(HOME_VIEW.height, 0);
   });
 
-  it('colors space and the bare globe with the dark theme and lights the globe by the sun', () => {
+  it('colors space and the bare globe with the dark theme, lights it by the sun and raises relief', () => {
     const viewer = {
       scene: {
+        verticalExaggeration: 1,
         backgroundColor: Color.WHITE,
         globe: { baseColor: Color.WHITE, enableLighting: false },
       },
@@ -27,6 +34,8 @@ describe('view', () => {
     expect(viewer.scene.backgroundColor.toCssHexString()).toBe('#02060c');
     expect(viewer.scene.globe.baseColor.toCssHexString()).toBe('#0b1a2a');
     expect(viewer.scene.globe.enableLighting).toBe(true);
+    expect(VERTICAL_EXAGGERATION).toBe(2);
+    expect(viewer.scene.verticalExaggeration).toBe(VERTICAL_EXAGGERATION);
   });
 });
 
