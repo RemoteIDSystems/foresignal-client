@@ -19,7 +19,7 @@ export function MapView() {
     <PlaceholderView
       icon={Map}
       title="Map"
-      description="The full 2D map / 3D globe / split view with every layer."
+      description="The full 2D map and 3D globe with every layer."
       builtIn="005–010"
     />
   );

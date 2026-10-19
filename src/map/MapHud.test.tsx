@@ -53,12 +53,13 @@ describe('MapHud', () => {
     expect(screen.getByTestId('compass-needle')).toHaveStyle({ transform: 'rotate(-30deg)' });
   });
 
-  it('marks the current mode and reports a mode change', async () => {
+  it('offers 2D Map and 3D Globe only, marks the current one and reports a change', async () => {
     const user = userEvent.setup();
-    const { onSceneMode } = renderHud(camera, { mode: 'split' });
-    expect(screen.getByRole('tab', { name: 'Split' })).toHaveAttribute('aria-selected', 'true');
-    await user.click(screen.getByRole('tab', { name: '2D Map' }));
-    expect(onSceneMode).toHaveBeenCalledWith('2d');
+    const { onSceneMode } = renderHud(camera, { mode: '2d' });
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['2D Map', '3D Globe']);
+    expect(screen.getByRole('tab', { name: '2D Map' })).toHaveAttribute('aria-selected', 'true');
+    await user.click(screen.getByRole('tab', { name: '3D Globe' }));
+    expect(onSceneMode).toHaveBeenCalledWith('3d');
   });
 
   it('drives zoom, reset north and home', async () => {

@@ -53,7 +53,7 @@ const INSET_WIDTH = 180;
 const INSET_HEIGHT = 90;
 
 /**
- * The map's HUD, drawn as DOM over the canvas (not Cesium widgets): the 2D/3D/Split toggle,
+ * The map's HUD, drawn as DOM over the canvas (not Cesium widgets): the 2D Map / 3D Globe toggle,
  * compass and zoom, the global-view inset with the visible area, and the lat/lon/elevation
  * readout with a scale bar.
  */
@@ -77,7 +77,6 @@ export function MapHud({
         items={[
           { key: '2d', label: '2D Map' },
           { key: '3d', label: '3D Globe' },
-          { key: 'split', label: 'Split' },
         ]}
       />
 

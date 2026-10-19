@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Viewer as ResiumViewer, useCesium } from 'resium';
 import {
   Cartesian2,
@@ -9,17 +9,20 @@ import {
 import { createBaseLayer, insetTileUrls } from './imagery';
 import { MapHud, type CameraState } from './MapHud';
 import { niceScale } from './readout';
-import { applySceneMode, type SceneModeKey } from './sceneMode';
-import { homeDestination, styleScene, supportsWebGL } from './view';
+import { DEFAULT_SCENE_MODE, SCENE_MODES, type SceneModeKey } from './sceneMode';
+import { homeDestination, styleScene, supportsWebGL, switchSceneMode } from './view';
 import styles from './Viewer.module.css';
+
+/** How long a 2D/3D switch animates, in seconds. */
+const MORPH_SECONDS = 1;
 
 /** Widest scale bar, in CSS pixels. */
 const SCALE_MAX_PIXELS = 100;
 
 /**
  * Reads the camera into HUD state. Latitude and longitude are the ground point under the center of
- * the view, which is what a reader expects in every mode: in Columbus view a tilted camera sits
- * beyond the edge of the map, so its own position is not a place. When the center misses the
+ * the view, read the same way in 2D and 3D: a tilted 3D camera looks at a place other than the one
+ * beneath it, and the readout follows what is looked at. When the center misses the
  * globe (space behind a 3D limb), the camera's own position is used. Elevation is the camera's
  * height above the ellipsoid.
  */
@@ -133,20 +136,27 @@ export interface MapViewerProps {
 
 /**
  * The map engine: a Resium viewer with Cesium's own widgets removed, the bundled Natural Earth II
- * base layer, the 2D Map / 3D Globe / Split toggle, and the DOM HUD (compass, zoom, inset,
+ * base layer, the 2D Map / 3D Globe toggle (2D by default), and the DOM HUD (compass, zoom, inset,
  * lat/lon/elevation readout, scale bar). Renders at device pixel ratio for sharp output.
  */
 export function MapViewer({ children }: MapViewerProps) {
   const [webgl] = useState(supportsWebGL);
   const [viewer, setViewer] = useState<CesiumViewer>();
   const [camera, setCamera] = useState<CameraState>();
-  const [mode, setMode] = useState<SceneModeKey>('3d');
+  const [mode, setMode] = useState<SceneModeKey>(DEFAULT_SCENE_MODE);
   const insetTiles = useMemo(() => insetTileUrls(), []);
+
+  // The latest camera state, read when switching mode without re-creating the callback each frame.
+  const cameraRef = useRef<CameraState>(undefined);
+  const onCamera = useCallback((state: CameraState) => {
+    cameraRef.current = state;
+    setCamera(state);
+  }, []);
 
   const onSceneMode = useCallback(
     (next: SceneModeKey) => {
       setMode(next);
-      if (viewer) applySceneMode(viewer.scene, next, 1);
+      if (viewer) switchSceneMode(viewer, next, cameraRef.current, MORPH_SECONDS);
     },
     [viewer],
   );
@@ -204,9 +214,10 @@ export function MapViewer({ children }: MapViewerProps) {
         selectionIndicator={false}
         vrButton={false}
         skyBox={false}
+        sceneMode={SCENE_MODES[DEFAULT_SCENE_MODE]}
         useBrowserRecommendedResolution={false}
       >
-        <SceneBridge onReady={setViewer} onCamera={setCamera} />
+        <SceneBridge onReady={setViewer} onCamera={onCamera} />
       </ResiumViewer>
       <MapHud
         mode={mode}

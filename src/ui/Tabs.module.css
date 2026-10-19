@@ -54,7 +54,7 @@
   background: var(--fs-color-raised);
 }
 
-/* Pill variant: segmented control, as the 2D Map / 3D Globe / Split toggle. */
+/* Pill variant: segmented control, as the 2D Map / 3D Globe toggle. */
 .pill {
   gap: 2px;
   padding: 2px;

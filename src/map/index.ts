@@ -1,9 +1,18 @@
 /** Map engine: the Cesium viewer, scene modes, base imagery and the HUD. */
 export { MapViewer, type MapViewerProps } from './Viewer';
-export { HOME_VIEW, homeDestination, styleScene, supportsWebGL } from './view';
+export {
+  HOME_VIEW,
+  homeDestination,
+  styleScene,
+  supportsWebGL,
+  switchSceneMode,
+  type GroundView,
+  type SwitchableViewer,
+} from './view';
 export { MapHud, type CameraState, type MapHudActions, type MapHudProps } from './MapHud';
 export {
   applySceneMode,
+  DEFAULT_SCENE_MODE,
   SCENE_MODES,
   sceneModeKey,
   type MorphableScene,
