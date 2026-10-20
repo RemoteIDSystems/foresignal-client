@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useNavigate } from 'react-router';
 import { ChevronRight, Ellipsis, ExternalLink, X } from 'lucide-react';
 import type { ForesignalClient } from '../../api/client';
 import { prettifyId } from '../../lib/labels';
@@ -14,13 +15,16 @@ import {
   SHOWN_ACTIONS,
   statusTone,
 } from '../../objects/dossierView';
-import type { Dossier, ObjectAction, SectionStatus } from '../../objects/objectApi';
+import type { Dossier, ObjectAction, ObjectEnvelope, SectionStatus } from '../../objects/objectApi';
+import { analysisPath } from '../../intel/analysisView';
+import { OPEN_INVESTIGATION_ACTION, openInvestigation } from '../../intel/openInvestigation';
 import { isStormLike } from '../../objects/threeD';
 import { loadTrack } from '../../time/timeApi';
 import { TRAIL_WINDOW_MS, trailOf, type Trail } from '../../time/trail';
 import { Badge } from '../../ui/Badge';
 import { Button, IconButton } from '../../ui/Button';
 import { Tabs } from '../../ui/Tabs';
+import { useToast } from '../../ui/toast-context';
 import { useRecordLayers } from './recordLayersContext';
 import { useSelectedDossier } from './useSelectedDossier';
 import styles from './GlobalDashboard.module.css';
@@ -28,10 +32,32 @@ import styles from './GlobalDashboard.module.css';
 type EntityTab = 'overview' | 'imagery' | 'forecast' | 'impacts' | 'related';
 
 /**
- * Actions this client carries out itself, by action id. The rest are shown, from the envelope, but
- * not yet wired: adding to a workspace comes with 025 and annotating with 026.
+ * Actions this client carries out itself, by action id: opening an investigation from the object
+ * (019), which then opens its workspace. The rest are shown, from the envelope, but not yet wired:
+ * adding to a workspace comes with 025 and annotating with 026.
  */
-const ACTION_HANDLERS: Readonly<Record<string, (action: ObjectAction) => void>> = {};
+function useActionHandlers(
+  envelope: ObjectEnvelope,
+): Readonly<Record<string, (action: ObjectAction) => void>> {
+  const api = useRecordLayers()?.api;
+  const navigate = useNavigate();
+  const toast = useToast();
+  return useMemo((): Readonly<Record<string, (action: ObjectAction) => void>> => {
+    if (!api) return {};
+    return {
+      [OPEN_INVESTIGATION_ACTION]: () =>
+        void openInvestigation(api, envelope).then(
+          (investigation) => navigate(analysisPath(`investigation:${investigation.id}`) ?? '/'),
+          (error: unknown) =>
+            toast.show({
+              title: 'The investigation was not opened',
+              detail: error instanceof Error ? error.message : undefined,
+              tone: 'danger',
+            }),
+        ),
+    };
+  }, [api, envelope, navigate, toast]);
+}
 
 /**
  * The right-hand selected-entity panel (014), as the Global mock draws it, from the selected
@@ -348,7 +374,7 @@ function Overview({
               )}
             </div>
           )}
-          <Actions actions={envelope.actions ?? []} />
+          <Actions envelope={envelope} />
         </div>
         <dl className={styles.facts} data-testid="entity-facts">
           {facts.key.map((fact) => (
@@ -399,12 +425,14 @@ function Overview({
  * {@link SHOWN_ACTIONS} as buttons, the rest under `…`. An action this client does not carry out
  * yet is shown disabled.
  */
-function Actions({ actions }: { actions: readonly ObjectAction[] }) {
+function Actions({ envelope }: { envelope: ObjectEnvelope }) {
+  const actions = envelope.actions ?? [];
+  const handlers = useActionHandlers(envelope);
   const [open, setOpen] = useState(false);
   const shown = actions.slice(0, SHOWN_ACTIONS);
   const more = actions.slice(SHOWN_ACTIONS);
   const button = (action: ObjectAction) => {
-    const handler = ACTION_HANDLERS[action.id];
+    const handler = handlers[action.id];
     return (
       <Button
         key={action.id}

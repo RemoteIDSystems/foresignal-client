@@ -41,6 +41,8 @@ import type { RecordLayerStatus } from './records/recordLayers';
 import { RecordMarker } from './records/RecordMarker';
 import { TrailBridge } from './records/TrailBridge';
 import { focusOn, locateTo } from './focus';
+import { AreaOutlines } from './AreaOutlines';
+import type { Geometry } from './areaOutline';
 import { threeDViewOf } from '../objects/threeD';
 import type { RecordFeature } from './records/decodeTile';
 import { frameFeature } from '../time/history';
@@ -334,6 +336,8 @@ export interface MapViewerProps {
   stream?: ChangeStream;
   /** The store holding the scene mode (012); the app's by default. */
   store?: Store<AppState>;
+  /** Areas outlined over the map, such as a situation's footprint (019). */
+  areas?: readonly (Geometry | null | undefined)[];
 }
 
 /** No record layers. */
@@ -386,6 +390,7 @@ export function MapViewer({
   onSelect,
   stream,
   store = appStore,
+  areas,
 }: MapViewerProps) {
   const [webgl] = useState(supportsWebGL);
   const [viewer, setViewer] = useState<CesiumViewer>();
@@ -693,6 +698,9 @@ export function MapViewer({
             asOf={asOf}
             frame={frame}
           />
+        )}
+        {areas && areas.length > 0 && (
+          <AreaOutlines areas={areas} color={theme.tokens.color.accent} />
         )}
         {api && (
           <TrailBridge

@@ -4,7 +4,6 @@ export { PlaceholderView, type PlaceholderViewProps } from './PlaceholderView';
 export {
   AnalystView,
   ImageryView,
-  IntelligenceView,
   MapView,
   OperationsView,
   RfSensorsView,

@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
 import type { ForesignalClient } from '../../api/client';
 import { RASTER_FRAME_KIND, type ChangeStream } from '../../api/stream/ChangeStream';
 import { DashboardLayout, type DockPanel } from '../../app/DashboardLayout';
@@ -21,6 +22,7 @@ import type { RecordHit } from '../../map/records/recordPicking';
 import { stressModeOn } from '../../map/stress/stressMode';
 import { useContextSummary } from '../../state/contextSummary';
 import { useGlance } from '../../glance/useGlance';
+import { analysisPath } from '../../intel/analysisView';
 import { parseObjectRef } from '../../lib/objectRef';
 import { hitForRef } from '../../objects/selectObject';
 import { useCommittedViewport, viewportOf } from '../../state/viewport';
@@ -276,8 +278,15 @@ export function GlobalDashboard({
   // An object chosen in a panel (an activity row, a related object, a search result) is selected
   // as if picked on the map, once its dossier says where it is; the map then brings it into view.
   // A dossier that does not load still selects the object by its ref, so the panel says why.
+  const navigate = useNavigate();
   const selectRef = useCallback(
     async (ref: string) => {
+      // A situation or investigation opens its full-analysis view (019).
+      const path = analysisPath(ref);
+      if (path) {
+        await navigate(path);
+        return;
+      }
       if (!api) return;
       try {
         store.set('selection', await hitForRef(api, ref, asOf));
@@ -292,7 +301,7 @@ export function GlobalDashboard({
         });
       }
     },
-    [api, store, asOf],
+    [api, store, asOf, navigate],
   );
   // The status strip and the inset's activity heat (018).
   const glance = useGlance(api, stream);

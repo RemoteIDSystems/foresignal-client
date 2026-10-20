@@ -5,6 +5,7 @@ import { prettifyId } from '../lib/labels';
 import { envelopePoint } from '../objects/dossierView';
 import { hitForRef } from '../objects/selectObject';
 import { askProblem } from '../search/askView';
+import { analysisPath } from '../intel/analysisView';
 import { locateRequest } from '../search/locate';
 import {
   groupResults,
@@ -111,6 +112,12 @@ export function SearchBox({ session }: { session: Session }) {
   const choose = async (result: SearchResult) => {
     setOpen(false);
     const ref = resultRef(result);
+    // A situation or investigation opens its full-analysis view (019).
+    const path = ref ? analysisPath(ref) : undefined;
+    if (path) {
+      await navigate(path);
+      return;
+    }
     const onGlobal = location.pathname.startsWith('/global');
     const fallback = result.geometry
       ? envelopePoint({ ref: '', type: 'record', title: '', geometry: result.geometry })

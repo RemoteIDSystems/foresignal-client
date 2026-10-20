@@ -6,12 +6,12 @@ import {
   AnalystView,
   GlobalDashboard,
   ImageryView,
-  IntelligenceView,
   MapView,
   OperationsView,
   RfSensorsView,
   SatellitesView,
 } from '../views';
+import { AnalysisView, IntelligenceHome } from '../views/analysis';
 import { AboutView } from './AboutView';
 import { AppShell } from './AppShell';
 import { DEFAULT_ROUTE } from './routes';
@@ -45,7 +45,29 @@ export function App({ session, initialPath }: AppProps) {
         <Route path="/imagery" element={<ImageryView />} />
         <Route path="/satellites" element={<SatellitesView />} />
         <Route path="/rf-sensors" element={<RfSensorsView />} />
-        <Route path="/intelligence" element={<IntelligenceView />} />
+        <Route path="/intelligence" element={<IntelligenceHome api={session.api} />} />
+        <Route
+          path="/intelligence/situations/:id"
+          element={
+            <AnalysisView
+              kind="situation"
+              api={session.api}
+              stream={session.stream}
+              store={session.store}
+            />
+          }
+        />
+        <Route
+          path="/intelligence/investigations/:id"
+          element={
+            <AnalysisView
+              kind="investigation"
+              api={session.api}
+              stream={session.stream}
+              store={session.store}
+            />
+          }
+        />
         <Route path="/operations" element={<OperationsView />} />
         <Route path="/settings" element={<SettingsView session={session} />} />
         <Route path="/about" element={<AboutView api={session.api} />} />

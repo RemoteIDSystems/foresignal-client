@@ -1,5 +1,6 @@
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
 import { createForesignalClient } from '../../api/client';
 import type { RecordHit } from '../../map/records/recordPicking';
 import type { Dossier } from '../../objects/objectApi';
@@ -102,9 +103,11 @@ function renderPanel(
     store,
   } as unknown as RecordLayersValue;
   render(
-    <RecordLayersContext.Provider value={value}>
-      <SelectedEntityPanel onClose={() => {}} />
-    </RecordLayersContext.Provider>,
+    <MemoryRouter>
+      <RecordLayersContext.Provider value={value}>
+        <SelectedEntityPanel onClose={() => {}} />
+      </RecordLayersContext.Provider>
+    </MemoryRouter>,
   );
   return store;
 }

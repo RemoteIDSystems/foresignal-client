@@ -1,4 +1,4 @@
-import { Crosshair, Image, Lightbulb, Map, RadioTower, Satellite, Workflow } from 'lucide-react';
+import { Crosshair, Image, Map, RadioTower, Satellite, Workflow } from 'lucide-react';
 import { PlaceholderView } from './PlaceholderView';
 
 /** Analyst Workbench (mockup `ForeSignal_Analyst_Workbench.png`). */
@@ -57,18 +57,6 @@ export function RfSensorsView() {
       title="RF / Sensors"
       description="RF and spectrum layers, the sensor catalog and ground-station passes."
       builtIn="032"
-    />
-  );
-}
-
-/** Intelligence: situations, findings, hypotheses, forecasts and assessments. */
-export function IntelligenceView() {
-  return (
-    <PlaceholderView
-      icon={Lightbulb}
-      title="Intelligence"
-      description="Situations and investigations with findings, hypotheses, forecasts and assessments."
-      builtIn="019–023"
     />
   );
 }
