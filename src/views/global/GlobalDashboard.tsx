@@ -285,6 +285,7 @@ export function GlobalDashboard({
       selection,
       sprite: overlay?.sprite,
       api,
+      store,
     }),
     [
       railCatalog,
@@ -300,6 +301,7 @@ export function GlobalDashboard({
       selection,
       overlay,
       api,
+      store,
     ],
   );
 

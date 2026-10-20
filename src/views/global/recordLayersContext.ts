@@ -6,6 +6,7 @@ import type { RecordLayerStatus } from '../../map/records/recordLayers';
 import type { RecordHit } from '../../map/records/recordPicking';
 import type { LayerCatalogState } from '../../map/records/useLayerCatalog';
 import type { SpriteSheet } from '../../map/style/sprite';
+import type { AppState, Store } from '../../state/store';
 
 /** What the rail reads and changes. The enabled set moves to the store in 012. */
 export interface RecordLayersValue {
@@ -34,6 +35,8 @@ export interface RecordLayersValue {
   /** The overlay style's sprite, for icons. */
   sprite?: SpriteSheet;
   api?: ForesignalClient;
+  /** The store the page reads (012), for the time cursor and the kinds' live state. */
+  store?: Store<AppState>;
 }
 
 /** What the rail reads and changes of the product layers. */

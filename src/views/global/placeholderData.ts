@@ -48,31 +48,6 @@ export const PLACEHOLDER_LAYERS: PlaceholderLayer[] = [
   { id: 'conflict', name: 'Conflicts / Security', icon: 'conflict', enabled: false, count: 89 },
 ];
 
-/** The selected entity. Replaced in 014 (`getObject` / `getObjectDossier`). */
-export const PLACEHOLDER_ENTITY = {
-  title: 'Tropical Storm Florence',
-  tags: [
-    { label: 'Weather', tone: 'info' as BadgeTone },
-    { label: 'Active', tone: 'success' as BadgeTone },
-  ],
-  id: 'wx-florence-2025',
-  relatedCount: 12,
-  facts: [
-    { label: 'Type', value: 'Tropical Storm' },
-    { label: 'Max Sustained Wind', value: '70 kt (80 mph)' },
-    { label: 'Pressure', value: '986 mb' },
-    { label: 'Movement', value: 'WNW at 12 kt' },
-    { label: 'Location', value: '28.4°N, 76.5°W' },
-    { label: 'Last Update', value: '2025-09-18 14:00Z' },
-  ],
-  forecastTrack: [
-    { label: 'Sun 14Z', wind: '75 kt' },
-    { label: 'Sat 14Z', wind: '90 kt' },
-    { label: 'Fri 14Z', wind: '90 kt' },
-    { label: 'Thu 14Z', wind: '70 kt' },
-  ],
-};
-
 /** Activity timeline rows. Replaced in 015 (`summarizeContext` activity). */
 export interface PlaceholderActivity {
   time: string;

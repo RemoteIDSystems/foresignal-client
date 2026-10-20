@@ -40,6 +40,8 @@ import { viewportStore, type CommittedViewport, type ViewportStore } from '../st
 import type { RecordLayerStatus } from './records/recordLayers';
 import { RecordMarker } from './records/RecordMarker';
 import { TrailBridge } from './records/TrailBridge';
+import { focusOn } from './focus';
+import { threeDViewOf } from '../objects/threeD';
 import type { RecordFeature } from './records/decodeTile';
 import { frameFeature } from '../time/history';
 import type { Trail } from '../time/trail';
@@ -512,6 +514,28 @@ export function MapViewer({
   }, [viewer, asOf]);
 
   const onSceneMode = useCallback((next: SceneModeKey) => store.set('sceneMode', next), [store]);
+
+  // Contextual 3D (014): a newly selected item with a 3D view switches the map to the globe and
+  // flies to it; any other is brought into view on the 2D map. The selection the map opens with
+  // (restored from the store) does not move it.
+  const selectionKey = shownSelection ? hitKey(shownSelection) : undefined;
+  const latestSelection = useRef(shownSelection);
+  useEffect(() => {
+    latestSelection.current = shownSelection;
+  }, [shownSelection]);
+  const [openingSelection] = useState(selectionKey);
+  const focused = useRef(openingSelection);
+  useEffect(() => {
+    const hit = latestSelection.current;
+    if (!hit) {
+      focused.current = undefined;
+      return;
+    }
+    if (!viewer || selectionKey === focused.current) return;
+    focused.current = selectionKey;
+    if (hit.id.source === undefined || hit.id.externalId === undefined) return;
+    return focusOn(viewer, hit, threeDViewOf(hit.id.kind) !== undefined, onSceneMode);
+  }, [viewer, selectionKey, onSceneMode]);
   // The store's mode, whoever set it, is the scene's: a change morphs the map, keeping its place.
   useEffect(() => {
     if (viewer) switchSceneMode(viewer, mode, cameraRef.current, MORPH_SECONDS);

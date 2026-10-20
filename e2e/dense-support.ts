@@ -68,10 +68,33 @@ function parseTileUrl(url: string) {
 /**
  * Stand-in earthquakes: the live earthquake layer's record tiles are answered with these records
  * (from `usgs-earthquakes`, so they take its live style), so a check knows where each one is. The
- * backend does not know them, so a selected one's track (013's trail) is answered too: the record
- * standing still, as a real earthquake's track is.
+ * backend does not know them, so a selected one's track (013's trail) is answered too, the record
+ * standing still as a real earthquake's track is, and so is its dossier (014): its envelope, with
+ * its properties as the overview's fields.
  */
 export async function standInQuakes(page: Page, records: readonly StandInRecord[]) {
+  await page.route(/\/v1\/objects\/[^/]+\/dossier/, async (route) => {
+    const ref = decodeURIComponent(new URL(route.request().url()).pathname.split('/')[3]!);
+    const record = records.find(
+      (candidate) => ref === `record:usgs-earthquakes/${String(candidate.properties.externalId)}`,
+    );
+    if (!record) return route.fallback();
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ref,
+        generatedAt: new Date().toISOString(),
+        envelope: {
+          ref,
+          type: 'record',
+          title: String(record.properties.title ?? ref),
+          geometry: { type: 'Point', coordinates: [record.longitude, record.latitude] },
+          actions: [],
+        },
+        sections: { overview: { status: 'ok', fields: record.properties } },
+      }),
+    });
+  });
   await page.route(/\/v1\/records\/usgs-earthquakes\/([^/]+)\/track/, async (route) => {
     const id = decodeURIComponent(
       /\/records\/usgs-earthquakes\/([^/]+)\/track/.exec(route.request().url())![1]!,
