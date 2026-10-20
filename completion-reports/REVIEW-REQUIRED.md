@@ -1,1 +1,0 @@
-006 Map Overlay Style, second pass (prettified kind labels, normalized icon size, mock-matched legend rows with tooltip/expand detail, all attributions on the About page) awaits owner review: review/006-map-overlay-style.png, review/006-legend.png, review/006-legend-severity.png, review/006-legend-expanded.png, review/006-about-credits.png
