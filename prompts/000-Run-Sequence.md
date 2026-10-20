@@ -11,13 +11,11 @@
 
 ## How to run
 
-1. **Pull:** `git pull --ff-only origin main`.
+1. **Start clean.** No `git pull` — this repo is single-machine and only the owner and this session
+   write it, so planner edits are already on disk and origin never diverges.
    - **Owner stop:** if `completion-reports/RUN-STATUS.md` exists, stop without changing anything.
-   - **Planner changes first:** if `git status` shows uncommitted changes **only** under `docs/`,
-     `prompts/`, `design/` or `openapi/`, they are planner updates — stage them, commit as
-     `Planner: update roadmap and prompts`, push, then continue.
-   - If there are uncommitted changes anywhere else, stop and write `RUN-STATUS.md` (a previous run
-     was interrupted mid-prompt).
+   - If `git status` shows uncommitted changes (a previous run was interrupted mid-prompt), stop and
+     write `RUN-STATUS.md`.
 2. **Find the next prompt.** List `prompts/NNN-*.md` (skip `000`). The next prompt is the
    lowest-numbered one with **no** matching `completion-reports/NNN-CR-*.md`.
 3. **Check the previous report.** If it says `Status | Blocked` or raises an owner question that
