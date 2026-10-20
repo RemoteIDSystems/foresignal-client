@@ -3,6 +3,7 @@ import type { ForesignalClient } from '../../api/client';
 import type { ProductEntry } from '../../map/products/productCatalog';
 import type { ProductLayerStatus } from '../../map/products/productLayers';
 import type { RecordLayerStatus } from '../../map/records/recordLayers';
+import type { RecordHit } from '../../map/records/recordPicking';
 import type { LayerCatalogState } from '../../map/records/useLayerCatalog';
 import type { SpriteSheet } from '../../map/style/sprite';
 
@@ -28,6 +29,8 @@ export interface RecordLayersValue {
   statuses: Readonly<Record<string, RecordLayerStatus>>;
   /** The backend's raster products and wind fields (009), listed under their categories. */
   products: ProductLayersValue;
+  /** The record selected on the map (010), for the selected-entity dossier (014). */
+  selection?: RecordHit;
   /** The overlay style's sprite, for icons. */
   sprite?: SpriteSheet;
   api?: ForesignalClient;

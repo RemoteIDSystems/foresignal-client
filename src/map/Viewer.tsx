@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
 import { Viewer as ResiumViewer, useCesium } from 'resium';
 import {
   Cartesian2,
@@ -26,8 +34,11 @@ import type { Attribution } from './style/attributionModel';
 import { ViewportTracker } from './ViewportTracker';
 import { viewportStore, type ViewportStore } from '../state/viewport';
 import type { RecordLayerStatus } from './records/recordLayers';
+import { RecordMarker } from './records/RecordMarker';
+import { hitKey } from './records/mapPointer';
+import type { RecordHit } from './records/recordPicking';
 import { createTerrainProvider, TerrainSampler } from './terrain';
-import { MapHud, type CameraState, type GroundPoint } from './MapHud';
+import { MapHud, type CameraState, type GroundPoint, type MapHudProps } from './MapHud';
 import { niceScale } from './readout';
 import { DEFAULT_SCENE_MODE, SCENE_MODES, type SceneModeKey } from './sceneMode';
 import {
@@ -211,6 +222,40 @@ function SceneBridge({
   return null;
 }
 
+/** The latest camera state, held outside React state so that only the HUD re-renders as it moves. */
+interface CameraStore {
+  get(): CameraState | undefined;
+  set(state: CameraState): void;
+  subscribe(listener: () => void): () => void;
+}
+
+/** A {@link CameraStore}. */
+function createCameraStore(): CameraStore {
+  let current: CameraState | undefined;
+  const listeners = new Set<() => void>();
+  return {
+    get: () => current,
+    set: (state) => {
+      current = state;
+      for (const listener of listeners) listener();
+    },
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+}
+
+/**
+ * The HUD, reading the camera from its store: the camera changes every frame while the map moves,
+ * and only the HUD shows it, so the rest of the map (the legend of a full catalog of kinds above
+ * all) does not re-render with it.
+ */
+function LiveHud({ store, ...props }: Omit<MapHudProps, 'camera'> & { store: CameraStore }) {
+  const camera = useSyncExternalStore(store.subscribe, store.get);
+  return <MapHud {...props} camera={camera} />;
+}
+
 /** Props for {@link MapViewer}. */
 export interface MapViewerProps {
   /** Extra overlays drawn above the map (e.g. the time HUD). */
@@ -238,6 +283,13 @@ export interface MapViewerProps {
   products?: readonly Product[];
   /** Product layers to draw, by key (`productLayerKey`), bottom first. */
   productLayers?: readonly string[];
+  /**
+   * The selected record, when the page holds the selection (for 014's dossier); the viewer holds
+   * it itself otherwise.
+   */
+  selected?: RecordHit;
+  /** Told when a record is clicked (undefined for a click on nothing, or Escape). */
+  onSelect?: (hit: RecordHit | undefined) => void;
   /** Told when a product layer's status changes. */
   onProductStatus?: (key: string, status: ProductLayerStatus) => void;
 }
@@ -263,7 +315,10 @@ const NO_PRODUCTS: readonly Product[] = [];
  * layers over the basemap, with their legends (and loop controls) at the top of the legend and their
  * attributions with the rest. `data-record-features` on the region is the number of records drawn
  * one by one, `data-record-cells` the number of hexagon cells drawn for layers below their
- * aggregation zoom, and `data-product-layers` the product layers drawn.
+ * aggregation zoom, and `data-product-layers` the product layers drawn. Records are picked on the
+ * CPU from the drawn tiles (010): hovering one shows its callout and a pointer cursor, clicking one
+ * selects it, marked as the Global mock marks the selected entity, and clicking nothing or pressing
+ * Escape clears it; `data-hovered` and `data-selected` name them.
  */
 export function MapViewer({
   children,
@@ -278,10 +333,12 @@ export function MapViewer({
   products = NO_PRODUCTS,
   productLayers = NO_LAYERS,
   onProductStatus,
+  selected: controlledSelection,
+  onSelect,
 }: MapViewerProps) {
   const [webgl] = useState(supportsWebGL);
   const [viewer, setViewer] = useState<CesiumViewer>();
-  const [camera, setCamera] = useState<CameraState>();
+  const [cameraStore] = useState(createCameraStore);
   const [mode, setMode] = useState<SceneModeKey>(DEFAULT_SCENE_MODE);
   const insetTiles = useMemo(() => insetTileUrls(), []);
   const [creditContainer] = useState(() => document.createElement('div'));
@@ -303,6 +360,36 @@ export function MapViewer({
   const drawnRecords = recordLayers.reduce((sum, id) => sum + (layerStatus[id]?.features ?? 0), 0);
   const drawnCells = recordLayers.reduce((sum, id) => sum + (layerStatus[id]?.cells ?? 0), 0);
   const onToggleLegend = useCallback(() => setLegendOpen((open) => !open), []);
+
+  // Hover and selection (010): picked from the drawn tiles by the record layers' pointer.
+  const [hovered, setHovered] = useState<RecordHit>();
+  const [ownSelection, setOwnSelection] = useState<RecordHit>();
+  const selectionListener = useRef(onSelect);
+  useEffect(() => {
+    selectionListener.current = onSelect;
+  }, [onSelect]);
+  const select = useCallback((hit: RecordHit | undefined) => {
+    setOwnSelection(hit);
+    selectionListener.current?.(hit);
+  }, []);
+  const selection = controlledSelection ?? ownSelection;
+  // A record whose layer is turned off is no longer on the map to be marked.
+  const shownSelection =
+    selection && recordLayers.includes(selection.id.layer) ? selection : undefined;
+  const shownHover =
+    hovered &&
+    recordLayers.includes(hovered.id.layer) &&
+    !(shownSelection && hitKey(shownSelection) === hitKey(hovered))
+      ? hovered
+      : undefined;
+  useEffect(() => {
+    if (!shownSelection) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') select(undefined);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [shownSelection, select]);
 
   const [productStatus, setProductStatus] = useState<Record<string, ProductLayerStatus>>({});
   const productListener = useRef(onProductStatus);
@@ -336,10 +423,13 @@ export function MapViewer({
 
   // The latest camera state, read when switching mode without re-creating the callback each frame.
   const cameraRef = useRef<CameraState>(undefined);
-  const onCamera = useCallback((state: CameraState) => {
-    cameraRef.current = state;
-    setCamera(state);
-  }, []);
+  const onCamera = useCallback(
+    (state: CameraState) => {
+      cameraRef.current = state;
+      cameraStore.set(state);
+    },
+    [cameraStore],
+  );
 
   const onSceneMode = useCallback(
     (next: SceneModeKey) => {
@@ -375,6 +465,47 @@ export function MapViewer({
     });
   }, [viewer]);
 
+  const onCloseLegend = useCallback(() => setLegendOpen(false), []);
+  const emptyNote =
+    productLayers.length > 0 && !legendEmptyNote ? 'No record kinds on.' : legendEmptyNote;
+  // Built again only when what it shows changes: the map re-renders on hover and status changes,
+  // and a legend of a full catalog of kinds is costly to render for nothing.
+  const legend = useMemo(
+    () =>
+      legendOpen && (
+        <MapLegend
+          state={overlayStyle}
+          api={api}
+          scope={legendScope}
+          emptyNote={emptyNote}
+          onClose={onCloseLegend}
+          products={
+            <ProductLegends
+              api={api}
+              products={products}
+              layers={productLayers}
+              statuses={productStatus}
+              looping={looping}
+              onToggleLoop={onToggleLoop}
+            />
+          }
+        />
+      ),
+    [
+      legendOpen,
+      overlayStyle,
+      api,
+      legendScope,
+      emptyNote,
+      onCloseLegend,
+      products,
+      productLayers,
+      productStatus,
+      looping,
+      onToggleLoop,
+    ],
+  );
+
   if (!webgl) {
     return (
       <div className={styles.region}>
@@ -393,6 +524,9 @@ export function MapViewer({
       data-record-features={drawnRecords}
       data-record-cells={drawnCells}
       data-product-layers={drawnProducts.join(' ')}
+      data-hovered={shownHover ? hitKey(shownHover) : undefined}
+      data-selected={shownSelection ? hitKey(shownSelection) : undefined}
+      style={hovered ? { cursor: 'pointer' } : undefined}
     >
       <ResiumViewer
         className={styles.viewer}
@@ -433,12 +567,18 @@ export function MapViewer({
             layers={recordLayers}
             hiddenSources={hiddenSources}
             onStatus={onStatus}
+            onHover={setHovered}
+            onSelect={select}
           />
         )}
       </ResiumViewer>
-      <MapHud
+      {viewer && shownSelection && (
+        <RecordMarker viewer={viewer} hit={shownSelection} variant="selected" />
+      )}
+      {viewer && shownHover && <RecordMarker viewer={viewer} hit={shownHover} variant="hover" />}
+      <LiveHud
+        store={cameraStore}
         mode={mode}
-        camera={camera}
         insetTiles={insetTiles}
         onSceneMode={onSceneMode}
         onResetNorth={onResetNorth}
@@ -447,27 +587,7 @@ export function MapViewer({
         onToggleLegend={api ? onToggleLegend : undefined}
         legendOpen={legendOpen}
       />
-      {legendOpen && (
-        <MapLegend
-          state={overlayStyle}
-          api={api}
-          scope={legendScope}
-          emptyNote={
-            productLayers.length > 0 && !legendEmptyNote ? 'No record kinds on.' : legendEmptyNote
-          }
-          onClose={() => setLegendOpen(false)}
-          products={
-            <ProductLegends
-              api={api}
-              products={products}
-              layers={productLayers}
-              statuses={productStatus}
-              looping={looping}
-              onToggleLoop={onToggleLoop}
-            />
-          }
-        />
-      )}
+      {legend}
       <MapAttribution api={api} extra={productAttributions} />
       {children}
     </div>

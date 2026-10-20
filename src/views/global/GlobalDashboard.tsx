@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useMemo, useState } from 'react';
 import type { ForesignalClient } from '../../api/client';
 import { DashboardLayout, type DockPanel } from '../../app/DashboardLayout';
 import { useTheme } from '../../app/theme';
@@ -16,6 +16,8 @@ import { useProducts } from '../../map/products/useProducts';
 import { useLayerCatalog } from '../../map/records/useLayerCatalog';
 import { useOverlayStyle } from '../../map/style/useOverlayStyle';
 import { MapViewer } from '../../map/Viewer';
+import type { RecordHit } from '../../map/records/recordPicking';
+import { stressModeOn } from '../../map/stress/stressMode';
 import { useViewCounts } from '../../state/contextSummary';
 import { useCommittedViewport } from '../../state/viewport';
 import {
@@ -32,6 +34,15 @@ import {
 } from './recordLayersContext';
 import { TimeHudPlaceholder } from './TimeHudPlaceholder';
 import { SelectedEntityPanel } from './SelectedEntityPanel';
+
+/** The stress harness (010), loaded only in development builds; production builds leave it out. */
+const StressHarness = import.meta.env.DEV
+  ? lazy(() =>
+      import('../../map/stress/StressHarness').then((module) => ({
+        default: module.StressHarness,
+      })),
+    )
+  : undefined;
 
 /** No products, before the catalog loads. */
 const NO_PRODUCTS: readonly Product[] = [];
@@ -82,8 +93,10 @@ const PANELS: readonly DockPanel[] = [
  * mock shows checked) and the sources the FILTERS tab hides. The rail's counts are the records in
  * the map's committed viewport, from the backend's viewport summary (008). The backend's raster
  * products and wind fields (009) are listed under their categories and drawn under the records; the
- * curated weather products are on at first, as the mock's Weather row is checked. The other panels are
- * skeletons with placeholder data until their prompts.
+ * curated weather products are on at first, as the mock's Weather row is checked. A record clicked
+ * on the map is the page's selection (010), for 014's dossier. In a development build, `?stress`
+ * adds the stress harness, which can turn on every kind in the catalog at once and measure the map
+ * (010). The other panels are skeletons with placeholder data until their prompts.
  */
 export function GlobalDashboard({ api }: { api?: ForesignalClient }) {
   const theme = useTheme();
@@ -191,10 +204,18 @@ export function GlobalDashboard({ api }: { api?: ForesignalClient }) {
     [catalogState, viewCounts],
   );
 
-  const recordLayers = useMemo(
-    () => (catalog ? drawnLayers(catalog, enabled) : []),
-    [catalog, enabled],
-  );
+  // The development stress harness (010) draws every enabled kind, records or not.
+  const [stress] = useState(stressModeOn);
+  const recordLayers = useMemo(() => {
+    if (!catalog) return [];
+    if (stress) return catalog.kinds.filter((entry) => enabled.has(entry.id)).map((e) => e.id);
+    return drawnLayers(catalog, enabled);
+  }, [catalog, enabled, stress]);
+  const allKinds = useMemo(() => catalog?.kinds.map((entry) => entry.id) ?? [], [catalog]);
+  const restoreKinds = useCallback(() => setChosen(undefined), []);
+  const allOn = useCallback(() => setChosen(new Set(allKinds)), [allKinds]);
+  // The selected record (010 picks it; 014's dossier shows it).
+  const [selection, setSelection] = useState<RecordHit>();
   const legendScope = useMemo(
     () => (catalog ? enabledKinds(catalog, enabled, hiddenSources) : undefined),
     [catalog, enabled, hiddenSources],
@@ -211,6 +232,7 @@ export function GlobalDashboard({ api }: { api?: ForesignalClient }) {
       showAllSources,
       statuses,
       products,
+      selection,
       sprite: overlay?.sprite,
       api,
     }),
@@ -225,6 +247,7 @@ export function GlobalDashboard({ api }: { api?: ForesignalClient }) {
       showAllSources,
       statuses,
       products,
+      selection,
       overlay,
       api,
     ],
@@ -247,8 +270,20 @@ export function GlobalDashboard({ api }: { api?: ForesignalClient }) {
             products={productList}
             productLayers={productLayers}
             onProductStatus={onProductStatus}
+            selected={selection}
+            onSelect={setSelection}
           >
             <TimeHudPlaceholder />
+            {stress && StressHarness && (
+              <Suspense fallback={null}>
+                <StressHarness
+                  kinds={allKinds}
+                  drawn={recordLayers}
+                  onAll={allOn}
+                  onRestore={restoreKinds}
+                />
+              </Suspense>
+            )}
           </MapViewer>
         }
         panels={PANELS}

@@ -82,6 +82,7 @@ describe('loadLayerTiles', () => {
     expect(await loadLayerTiles(api(), 'aircraft')).toEqual({
       ok: false,
       message: 'No layer named aircraft.',
+      transient: false,
     });
     expect(calls).toBe(2);
   });
@@ -181,6 +182,7 @@ describe('fetchTile', () => {
     expect(await fetchTile(api(), template, tile)).toEqual({
       status: 'failed',
       message: 'Zoom out of range.',
+      transient: false,
     });
   });
 

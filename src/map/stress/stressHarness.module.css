@@ -1,0 +1,49 @@
+.panel {
+  position: absolute;
+  bottom: 44px;
+  left: 50%;
+  z-index: 3;
+  width: min(560px, calc(100% - 32px));
+  padding: 8px 10px;
+  border: 1px dashed var(--fs-color-accent);
+  border-radius: var(--fs-radius-md);
+  background: rgba(6, 12, 20, 0.92);
+  color: var(--fs-color-text);
+  font-size: var(--fs-font-size-xs);
+  transform: translateX(-50%);
+}
+
+.panel header {
+  margin-bottom: 6px;
+  color: var(--fs-color-accent);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.totals {
+  display: grid;
+  grid-template-columns: repeat(6, auto);
+  gap: 2px 8px;
+  margin: 8px 0 0;
+}
+
+.totals dt {
+  color: var(--fs-color-text-secondary);
+}
+
+.totals dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.result {
+  margin: 6px 0 0;
+  font-variant-numeric: tabular-nums;
+}

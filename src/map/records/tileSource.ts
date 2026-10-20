@@ -14,8 +14,13 @@ export interface LayerTiles {
   aggBelowZoom?: number;
 }
 
-/** What loading a layer's TileJSON gave: its tiles, or why it cannot be drawn. */
-export type LayerTilesResult = { ok: true; tiles: LayerTiles } | { ok: false; message: string };
+/**
+ * What loading a layer's TileJSON gave: its tiles, or why it cannot be drawn. A `transient`
+ * failure (the backend busy or rate limiting, 429/503, past the client's own retries) is worth
+ * asking again shortly; any other is not.
+ */
+export type LayerTilesResult =
+  { ok: true; tiles: LayerTiles } | { ok: false; message: string; transient?: boolean };
 
 /**
  * Loads a record layer's TileJSON (`getTileJson`) and reads its concrete tile template, zoom
@@ -28,12 +33,17 @@ export async function loadLayerTiles(
   layer: string,
   signal?: AbortSignal,
 ): Promise<LayerTilesResult> {
-  const { data, error } = await api.GET('/v1/tiles/{layer}.json', {
+  const { data, error, response } = await api.GET('/v1/tiles/{layer}.json', {
     params: { path: { layer } },
     signal,
   });
-  if (!data)
-    return { ok: false, message: describeError(error, 'The layer’s TileJSON did not load.') };
+  if (!data) {
+    return {
+      ok: false,
+      message: describeError(error, 'The layer’s TileJSON did not load.'),
+      transient: TRANSIENT_STATUSES.has(response.status),
+    };
+  }
   const template = data.tiles?.map(parseTileTemplate).find(Boolean);
   if (!template) return { ok: false, message: 'The layer’s TileJSON has no record tile template.' };
   const [west, south, east, north] = data.bounds ?? [];
@@ -55,13 +65,16 @@ export async function loadLayerTiles(
 
 /**
  * What fetching one tile gave: its decoded records; `missing` when the layer is not on the server
- * (404), which no other tile will change; or `failed` for any other error, which leaves the tile
- * to be asked for again by a later view.
+ * (404), which no other tile will change; or `failed` for any other error, `transient` when the
+ * backend was busy or rate limiting (429/503) and the tile is worth asking for again shortly.
  */
 export type TileResult =
   | { status: 'ok'; features: RecordFeature[] }
   | { status: 'missing'; message: string }
-  | { status: 'failed'; message: string };
+  | { status: 'failed'; message: string; transient?: boolean };
+
+/** Statuses after which a request is worth making again shortly: rate limited, or busy. */
+const TRANSIENT_STATUSES = new Set([429, 503]);
 
 /** What a tile is asked for as: `none` for records, `hex` for aggregate cells (008). */
 export type TileAggregation = 'none' | 'hex';
@@ -91,7 +104,11 @@ export async function fetchTile(
     return { status: 'missing', message: describeError(error, 'The layer is not on the server.') };
   }
   if (!response.ok) {
-    return { status: 'failed', message: describeError(error, `HTTP ${response.status}`) };
+    return {
+      status: 'failed',
+      message: describeError(error, `HTTP ${response.status}`),
+      transient: TRANSIENT_STATUSES.has(response.status),
+    };
   }
   return {
     status: 'ok',
