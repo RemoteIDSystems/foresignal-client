@@ -842,11 +842,14 @@
 }
 
 .relatedThumb {
+  display: grid;
   flex: none;
+  place-items: center;
   width: 64px;
   height: 38px;
   border-radius: var(--fs-radius-sm);
   background: linear-gradient(135deg, #5a6a7a, #2c3a48 50%, #8a9aa8);
+  color: var(--fs-color-text);
 }
 
 .relatedMain {

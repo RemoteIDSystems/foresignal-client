@@ -82,4 +82,26 @@ describe('the object requests', () => {
     );
     await expect(new DossierSource(api()).load(REF)).rejects.toMatchObject({ status: 404 });
   });
+
+  it('answers reads of one dossier made while it is in flight with one request', async () => {
+    let requests = 0;
+    server.use(
+      http.get('/v1/objects/{ref}/dossier', ({ response }) => {
+        requests++;
+        return response(200).json(dossier as never);
+      }),
+    );
+    const source = new DossierSource(api());
+    const leaving = new AbortController();
+    const first = source.load(REF, undefined, leaving.signal);
+    const second = source.load(REF);
+    // One caller giving up does not cancel the request for the other.
+    leaving.abort();
+    await expect(first).rejects.toMatchObject({ name: 'AbortError' });
+    expect((await second).envelope.title).toBe('M 2.5 - Somewhere');
+    expect(requests).toBe(1);
+    // Once it is in, a new read asks again (by its ETag, when the backend gave one).
+    await source.load(REF);
+    expect(requests).toBe(2);
+  });
 });

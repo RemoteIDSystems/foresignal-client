@@ -1,12 +1,5 @@
 import { useState } from 'react';
-import {
-  ChevronDown,
-  ChevronRight,
-  CircleCheck,
-  Clock,
-  Diamond,
-  TriangleAlert,
-} from 'lucide-react';
+import { ChevronDown, Clock } from 'lucide-react';
 import { Badge } from '../../ui/Badge';
 import { Button } from '../../ui/Button';
 import { List } from '../../ui/List';
@@ -27,7 +20,7 @@ import {
   termTag,
   type InsightTab,
 } from './insightsView';
-import { PLACEHOLDER_IMAGERY, PLACEHOLDER_RELATED } from './placeholderData';
+import { PLACEHOLDER_IMAGERY } from './placeholderData';
 import { useRecordLayers } from './recordLayersContext';
 import styles from './GlobalDashboard.module.css';
 
@@ -267,51 +260,6 @@ export function InsightsPanel({ onClose }: { onClose: () => void }) {
           Last Updated: {view ? formatPanelTime(view.generatedAt) : '—'}
         </span>
       </div>
-    </Panel>
-  );
-}
-
-/** Related entities panel. Skeleton; prompt 016 fills it from `listRelatedObjects`. */
-export function RelatedEntitiesPanel() {
-  const [tab, setTab] = useState<'nearby' | 'operational' | 'infrastructure' | 'historical'>(
-    'nearby',
-  );
-  return (
-    <Panel title="Related Entities">
-      <Tabs
-        label="Relation types"
-        value={tab}
-        onChange={setTab}
-        items={[
-          { key: 'nearby', label: 'Nearby' },
-          { key: 'operational', label: 'Operational' },
-          { key: 'infrastructure', label: 'Infrastructure' },
-          { key: 'historical', label: 'Historical' },
-        ]}
-      />
-      <List
-        label="Related entities"
-        items={PLACEHOLDER_RELATED}
-        getKey={(row) => row.name}
-        renderItem={(row) => (
-          <>
-            <span className={styles.relatedThumb} />
-            <span className={styles.relatedMain}>
-              <span className={styles.relatedName}>{row.name}</span>
-              <Badge>{row.type}</Badge>
-            </span>
-            <span className={styles.relatedMeta}>
-              {row.distance && <span>{row.distance}</span>}
-              <span className={styles[`status_${row.statusTone}`]}>
-                {row.statusTone === 'ok' && <CircleCheck size={12} aria-hidden="true" />}
-                {row.statusTone === 'alert' && <TriangleAlert size={12} aria-hidden="true" />}
-                {row.statusTone === 'warn' && <Diamond size={12} aria-hidden="true" />} {row.status}
-              </span>
-            </span>
-            <ChevronRight size={15} className={styles.muted} aria-hidden="true" />
-          </>
-        )}
-      />
     </Panel>
   );
 }

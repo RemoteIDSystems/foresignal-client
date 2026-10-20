@@ -61,7 +61,9 @@ const DOSSIER_CACHE_SIZE = 50;
  * Reads objects' dossiers (`getObjectDossier`) and keeps the last {@link DOSSIER_CACHE_SIZE} with
  * their ETags: asking for one again sends `If-None-Match`, and the backend's 304 hands back the
  * kept copy, so re-reading a selected object when the live stream says its kind changed costs a
- * header, not a body. One per API client ({@link dossiersFor}).
+ * header, not a body. Reads of one dossier made while another is in flight share its answer, so
+ * the panels showing the selected object (014, 016) make one request between them. One per API
+ * client ({@link dossiersFor}).
  */
 export class DossierSource {
   private readonly cache = new Map<string, { etag: string; dossier: Dossier }>();
@@ -69,9 +71,23 @@ export class DossierSource {
   /** @param api The API client. */
   constructor(private readonly api: ForesignalClient) {}
 
-  /** An object's dossier, as known now or, with `asOf`, at that instant. */
-  async load(ref: string, asOf?: string, signal?: AbortSignal): Promise<Dossier> {
+  private readonly inFlight = new Map<string, Promise<Dossier>>();
+
+  /**
+   * An object's dossier, as known now or, with `asOf`, at that instant. A read of a dossier already
+   * being read shares that request; `signal` cancels only this caller's wait.
+   */
+  load(ref: string, asOf?: string, signal?: AbortSignal): Promise<Dossier> {
     const key = `${ref}|${asOf ?? ''}`;
+    let shared = this.inFlight.get(key);
+    if (!shared) {
+      shared = this.fetch(key, ref, asOf).finally(() => this.inFlight.delete(key));
+      this.inFlight.set(key, shared);
+    }
+    return abortable(shared, signal);
+  }
+
+  private async fetch(key: string, ref: string, asOf: string | undefined): Promise<Dossier> {
     const kept = this.cache.get(key);
     const { data, error, response } = await this.api.GET('/v1/objects/{ref}/dossier', {
       params: {
@@ -79,7 +95,6 @@ export class DossierSource {
         ...(asOf !== undefined && { query: { asOf } }),
         ...(kept && { header: { 'If-None-Match': kept.etag } }),
       },
-      signal,
     });
     if (response.status === 304 && kept) {
       this.remember(key, kept.etag, kept.dossier);
@@ -96,6 +111,26 @@ export class DossierSource {
     this.cache.set(key, { etag, dossier });
     while (this.cache.size > DOSSIER_CACHE_SIZE) this.cache.delete(this.cache.keys().next().value!);
   }
+}
+
+/** A promise that also rejects, with an `AbortError`, when `signal` aborts first. */
+function abortable<T>(promise: Promise<T>, signal: AbortSignal | undefined): Promise<T> {
+  if (!signal) return promise;
+  if (signal.aborted) return Promise.reject(new DOMException('Aborted', 'AbortError'));
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(new DOMException('Aborted', 'AbortError'));
+    signal.addEventListener('abort', onAbort, { once: true });
+    promise.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort);
+        resolve(value);
+      },
+      (error: unknown) => {
+        signal.removeEventListener('abort', onAbort);
+        reject(error);
+      },
+    );
+  });
 }
 
 const SOURCES = new WeakMap<ForesignalClient, DossierSource>();

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ChevronRight, Ellipsis, ExternalLink, X } from 'lucide-react';
 import type { ForesignalClient } from '../../api/client';
 import { prettifyId } from '../../lib/labels';
-import { parseObjectRef, recordRef } from '../../lib/objectRef';
+import { parseObjectRef } from '../../lib/objectRef';
 import { KindSwatch } from '../../map/style/legend';
 import type { RecordHit } from '../../map/records/recordPicking';
 import {
@@ -16,14 +16,13 @@ import {
 } from '../../objects/dossierView';
 import type { Dossier, ObjectAction, SectionStatus } from '../../objects/objectApi';
 import { isStormLike } from '../../objects/threeD';
-import { useDossier } from '../../objects/useDossier';
-import { appStore, useStoreKey } from '../../state/store';
 import { loadTrack } from '../../time/timeApi';
 import { TRAIL_WINDOW_MS, trailOf, type Trail } from '../../time/trail';
 import { Badge } from '../../ui/Badge';
 import { Button, IconButton } from '../../ui/Button';
 import { Tabs } from '../../ui/Tabs';
 import { useRecordLayers } from './recordLayersContext';
+import { useSelectedDossier } from './useSelectedDossier';
 import styles from './GlobalDashboard.module.css';
 
 type EntityTab = 'overview' | 'imagery' | 'forecast' | 'impacts' | 'related';
@@ -46,18 +45,9 @@ const ACTION_HANDLERS: Readonly<Record<string, (action: ObjectAction) => void>> 
  */
 export function SelectedEntityPanel({ onClose }: { onClose: () => void }) {
   const layers = useRecordLayers();
-  const store = layers?.store ?? appStore;
   const api = layers?.api;
   const selection = layers?.selection;
-  const ref =
-    selection?.id.ref ??
-    (selection?.id.source !== undefined && selection.id.externalId !== undefined
-      ? recordRef(selection.id.source, selection.id.externalId)
-      : undefined);
-  const time = useStoreKey('time', store);
-  const asOf = time.mode === 'asOf' ? time.asOf : undefined;
-  const live = useStoreKey(`layer:${selection?.id.kind ?? ''}`, store);
-  const state = useDossier(api, ref, asOf, live?.at);
+  const { ref, asOf, state } = useSelectedDossier();
   const catalog = layers?.catalog.status === 'ready' ? layers.catalog.catalog : undefined;
   const kind = selection?.id.kind;
   const kindEntry = kind ? catalog?.kinds.find((entry) => entry.id === kind) : undefined;

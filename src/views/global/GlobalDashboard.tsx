@@ -24,12 +24,8 @@ import { parseObjectRef } from '../../lib/objectRef';
 import { hitForRef } from '../../objects/selectObject';
 import { useCommittedViewport, viewportOf } from '../../state/viewport';
 import { appStore, useStoreKey, type AppState, type Store } from '../../state/store';
-import {
-  ActivityTimelinePanel,
-  InsightsPanel,
-  RecentImageryPanel,
-  RelatedEntitiesPanel,
-} from './BottomPanels';
+import { ActivityTimelinePanel, InsightsPanel, RecentImageryPanel } from './BottomPanels';
+import { RelatedEntitiesPanel } from './RelatedEntitiesPanel';
 import { LayersRail } from './LayersRail';
 import {
   RecordLayersContext,

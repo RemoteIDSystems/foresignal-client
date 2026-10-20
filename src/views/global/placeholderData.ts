@@ -47,53 +47,6 @@ export const PLACEHOLDER_LAYERS: PlaceholderLayer[] = [
   { id: 'conflict', name: 'Conflicts / Security', icon: 'conflict', enabled: false, count: 89 },
 ];
 
-/** Related entities. Replaced in 016 (`listRelatedObjects`). */
-export interface PlaceholderRelated {
-  name: string;
-  type: string;
-  distance: string;
-  status: string;
-  statusTone: 'ok' | 'alert' | 'warn' | 'none';
-}
-
-export const PLACEHOLDER_RELATED: PlaceholderRelated[] = [
-  {
-    name: 'Norfolk Intl Airport',
-    type: 'Airport',
-    distance: '45 km',
-    status: 'Operational',
-    statusTone: 'ok',
-  },
-  {
-    name: 'USS Dwight D. Eisenhower',
-    type: 'Military',
-    distance: '120 km',
-    status: 'Underway',
-    statusTone: 'ok',
-  },
-  {
-    name: 'Port of Virginia',
-    type: 'Port',
-    distance: '38 km',
-    status: 'Congestion Alert',
-    statusTone: 'alert',
-  },
-  {
-    name: 'NOAA-20',
-    type: 'Satellite',
-    distance: '',
-    status: 'Overhead in 42 min',
-    statusTone: 'none',
-  },
-  {
-    name: 'FEMA Region III',
-    type: 'Organization',
-    distance: '',
-    status: 'Responding',
-    statusTone: 'warn',
-  },
-];
-
 /** Recent imagery. Replaced in 028 (`getMedia` / `getMediaThumbnail`). */
 export const PLACEHOLDER_IMAGERY = {
   capturedAt: '2025-09-18 13:41Z',
