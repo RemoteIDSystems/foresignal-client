@@ -9,6 +9,10 @@ import {
   withViewCounts,
 } from '../../map/records/catalog';
 import type { RecordLayerStatus } from '../../map/records/recordLayers';
+import { allKeys, defaultProductLayers, productEntries } from '../../map/products/productCatalog';
+import type { Product } from '../../map/products/productApi';
+import type { ProductLayerStatus } from '../../map/products/productLayers';
+import { useProducts } from '../../map/products/useProducts';
 import { useLayerCatalog } from '../../map/records/useLayerCatalog';
 import { useOverlayStyle } from '../../map/style/useOverlayStyle';
 import { MapViewer } from '../../map/Viewer';
@@ -21,9 +25,16 @@ import {
   RelatedEntitiesPanel,
 } from './BottomPanels';
 import { LayersRail } from './LayersRail';
-import { RecordLayersContext, type RecordLayersValue } from './recordLayersContext';
+import {
+  RecordLayersContext,
+  type ProductLayersValue,
+  type RecordLayersValue,
+} from './recordLayersContext';
 import { TimeHudPlaceholder } from './TimeHudPlaceholder';
 import { SelectedEntityPanel } from './SelectedEntityPanel';
+
+/** No products, before the catalog loads. */
+const NO_PRODUCTS: readonly Product[] = [];
 
 /** The Global Dashboard's panels and the slots they dock into. */
 const PANELS: readonly DockPanel[] = [
@@ -69,7 +80,9 @@ const PANELS: readonly DockPanel[] = [
  * the bottom row of imagery, activity, insights and related entities. The rail and the map share
  * the overlay style, the layer catalog, the enabled kinds (at first, the kinds of the categories the
  * mock shows checked) and the sources the FILTERS tab hides. The rail's counts are the records in
- * the map's committed viewport, from the backend's viewport summary (008). The other panels are
+ * the map's committed viewport, from the backend's viewport summary (008). The backend's raster
+ * products and wind fields (009) are listed under their categories and drawn under the records; the
+ * curated weather products are on at first, as the mock's Weather row is checked. The other panels are
  * skeletons with placeholder data until their prompts.
  */
 export function GlobalDashboard({ api }: { api?: ForesignalClient }) {
@@ -106,7 +119,52 @@ export function GlobalDashboard({ api }: { api?: ForesignalClient }) {
     },
     [enabled],
   );
-  const clear = useCallback(() => setChosen(new Set()), []);
+
+  const productsState = useProducts(api);
+  const productList = productsState.status === 'ready' ? productsState.products : NO_PRODUCTS;
+  const entries = useMemo(() => productEntries(productList), [productList]);
+  const [chosenProducts, setChosenProducts] = useState<ReadonlySet<string>>();
+  const enabledProducts = useMemo(
+    () => chosenProducts ?? new Set(defaultProductLayers(entries)),
+    [chosenProducts, entries],
+  );
+  const setProductKeys = useCallback(
+    (keys: readonly string[], on: boolean) => {
+      const next = new Set(enabledProducts);
+      for (const key of keys) {
+        if (on) next.add(key);
+        else next.delete(key);
+      }
+      setChosenProducts(next);
+    },
+    [enabledProducts],
+  );
+  const [productStatuses, setProductStatuses] = useState<Record<string, ProductLayerStatus>>({});
+  const onProductStatus = useCallback((key: string, status: ProductLayerStatus) => {
+    setProductStatuses((current) => ({ ...current, [key]: status }));
+  }, []);
+  // Drawn bottom first in the rail's order, so the order does not depend on the order of clicks.
+  const productLayers = useMemo(
+    () =>
+      entries
+        .filter((entry) => entry.available)
+        .flatMap((entry) => allKeys(entry).filter((key) => enabledProducts.has(key))),
+    [entries, enabledProducts],
+  );
+  const products = useMemo<ProductLayersValue>(
+    () => ({
+      entries,
+      enabled: enabledProducts,
+      setKeys: setProductKeys,
+      statuses: productStatuses,
+    }),
+    [entries, enabledProducts, setProductKeys, productStatuses],
+  );
+
+  const clear = useCallback(() => {
+    setChosen(new Set());
+    setChosenProducts(new Set());
+  }, []);
 
   const [hiddenSources, setHiddenSources] = useState<ReadonlySet<string>>(() => new Set());
   const toggleSource = useCallback((source: string) => {
@@ -152,6 +210,7 @@ export function GlobalDashboard({ api }: { api?: ForesignalClient }) {
       toggleSource,
       showAllSources,
       statuses,
+      products,
       sprite: overlay?.sprite,
       api,
     }),
@@ -165,6 +224,7 @@ export function GlobalDashboard({ api }: { api?: ForesignalClient }) {
       toggleSource,
       showAllSources,
       statuses,
+      products,
       overlay,
       api,
     ],
@@ -184,6 +244,9 @@ export function GlobalDashboard({ api }: { api?: ForesignalClient }) {
               enabled.size > 0 ? 'The layers that are on have no records right now.' : undefined
             }
             onLayerStatus={onLayerStatus}
+            products={productList}
+            productLayers={productLayers}
+            onProductStatus={onProductStatus}
           >
             <TimeHudPlaceholder />
           </MapViewer>

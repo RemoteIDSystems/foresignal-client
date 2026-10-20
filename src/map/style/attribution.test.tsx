@@ -95,4 +95,24 @@ describe('MapAttribution', () => {
     render(<MapAttribution api={api()} sources={[]} />);
     expect(screen.queryByTestId('map-attribution')).toBeNull();
   });
+
+  it('adds the attributions of the products on the map', async () => {
+    server.use(
+      http.get('/v1/attributions', ({ response }) =>
+        response(200).json({ attributions: [shown], text: '' }),
+      ),
+    );
+    const product: Attribution = {
+      text: 'Contains modified Copernicus/ECMWF data',
+      licence: 'CC-BY-4.0',
+      requiredDisplay: true,
+    };
+    render(<MapAttribution api={api()} extra={[product, notRequired]} />);
+    await waitFor(() =>
+      expect(screen.getByTestId('map-attribution')).toHaveTextContent(
+        'Map data © OpenStreetMap contributors · Contains modified Copernicus/ECMWF data',
+      ),
+    );
+    expect(screen.getByTestId('map-attribution')).not.toHaveTextContent('NOAA');
+  });
 });

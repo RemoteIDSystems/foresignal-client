@@ -20,6 +20,19 @@ import {
   Zap,
 } from 'lucide-react';
 import type { CategoryId } from '../../lib/kindCategories';
+import { PRODUCT_CATEGORY_LABELS } from '../../lib/productCategories';
+import {
+  categoryDefaultKeys,
+  productFacets,
+  rowKeys,
+  allKeys,
+  type ProductEntry,
+} from '../../map/products/productCatalog';
+import {
+  productLayerKey,
+  type ProductFacet,
+  type ProductLayerStatus,
+} from '../../map/products/productLayers';
 import {
   filterSources,
   shownCount,
@@ -57,8 +70,11 @@ const CATEGORY_ICONS: Record<CategoryId, ReactNode> = {
  * The left LAYERS / ENTITIES / FILTERS rail, as in the Global mock. LAYERS lists the record kinds
  * grouped into the mock's categories (`lib/kindCategories`): a category's checkbox turns all its
  * kinds on or off, and it opens to the kinds themselves, each with its icon from the overlay style,
- * its label (the 006 prettifier), its record count and a toggle. FILTERS restricts which sources'
- * records show within the kinds that are on. ENTITIES is a stub until its prompt.
+ * its label (the 006 prettifier), its record count and a toggle, then to the backend's raster
+ * products and wind fields of that category (009), each a toggle (a wind field also offers its
+ * speed raster, barbs and particles separately). A category's checkbox covers its kinds and its
+ * curated products. FILTERS restricts which sources' records show within the kinds that are on.
+ * ENTITIES is a stub until its prompt.
  */
 export function LayersRail() {
   const layers = useRecordLayers();
@@ -107,24 +123,31 @@ function LayersTab({
   const [filter, setFilter] = useState('');
   const [open, setOpen] = useState<ReadonlySet<CategoryId>>(() => new Set());
   const needle = filter.trim().toLowerCase();
+  const products = layers.products.entries;
   const shown = useMemo(
     () =>
       categories
-        .map((group) => ({
-          ...group,
-          kinds: needle
-            ? group.kinds.filter(
-                (entry) =>
-                  entry.label.toLowerCase().includes(needle) ||
-                  entry.id.includes(needle) ||
-                  group.label.toLowerCase().includes(needle),
-              )
-            : group.kinds,
-        }))
-        .filter((group) => group.kinds.length > 0),
-    [categories, needle],
+        .map((group) => {
+          const matches = (label: string, id: string) =>
+            !needle ||
+            label.toLowerCase().includes(needle) ||
+            id.includes(needle) ||
+            group.label.toLowerCase().includes(needle);
+          return {
+            ...group,
+            kinds: group.kinds.filter((entry) => matches(entry.label, entry.id)),
+            products: products.filter(
+              (entry) => entry.category === group.id && matches(entry.label, entry.id),
+            ),
+          };
+        })
+        .filter((group) => group.kinds.length > 0 || group.products.length > 0),
+    [categories, products, needle],
   );
-  const on = layers.enabled.size;
+  const productsOn = products.filter((entry) =>
+    allKeys(entry).some((key) => layers.products.enabled.has(key)),
+  ).length;
+  const on = layers.enabled.size + productsOn;
   const toggleOpen = (id: CategoryId) =>
     setOpen((current) => {
       const next = new Set(current);
@@ -157,6 +180,7 @@ function LayersTab({
           <CategoryRow
             key={group.id}
             group={group}
+            products={group.products}
             layers={layers}
             // A filter opens every category it matches.
             open={needle !== '' || open.has(group.id)}
@@ -175,27 +199,39 @@ function LayersTab({
 /** One category: a checkbox for all its kinds, its icon, label and count, and its kinds when open. */
 function CategoryRow({
   group,
+  products,
   layers,
   open,
   onToggleOpen,
 }: {
   group: CategoryGroup;
+  products: readonly ProductEntry[];
   layers: RecordLayersValue;
   open: boolean;
   onToggleOpen: () => void;
 }) {
   const ids = group.kinds.map((entry) => entry.id);
-  const onCount = ids.filter((id) => layers.enabled.has(id)).length;
-  const all = onCount === ids.length;
+  // The checkbox covers the kinds and the curated products that can be drawn.
+  const productKeys = categoryDefaultKeys(layers.products.entries, group.id);
+  const onCount =
+    ids.filter((id) => layers.enabled.has(id)).length +
+    productKeys.filter((key) => layers.products.enabled.has(key)).length;
+  const total = ids.length + productKeys.length;
+  const all = total > 0 && onCount === total;
   const some = onCount > 0 && !all;
   const box = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (box.current) box.current.indeterminate = some;
   }, [some]);
-  const statuses = group.kinds
-    .filter((entry) => layers.enabled.has(entry.id))
-    .map((entry) => layers.statuses[entry.id])
-    .filter((status): status is RecordLayerStatus => status !== undefined);
+  const statuses: (RecordLayerStatus | ProductLayerStatus)[] = [
+    ...group.kinds
+      .filter((entry) => layers.enabled.has(entry.id))
+      .map((entry) => layers.statuses[entry.id]),
+    ...products
+      .flatMap((entry) => allKeys(entry))
+      .filter((key) => layers.products.enabled.has(key))
+      .map((key) => layers.products.statuses[key]),
+  ].filter((status) => status !== undefined);
   const listId = `rail-category-${group.id}`;
 
   return (
@@ -211,7 +247,10 @@ function CategoryRow({
             type="checkbox"
             className={styles.checkbox}
             checked={all}
-            onChange={() => layers.setKinds(ids, !all)}
+            onChange={() => {
+              layers.setKinds(ids, !all);
+              if (productKeys.length) layers.products.setKeys(productKeys, !all);
+            }}
           />
           <span className={styles.categoryIcon} aria-hidden="true">
             {CATEGORY_ICONS[group.id]}
@@ -241,14 +280,15 @@ function CategoryRow({
               status={layers.enabled.has(entry.id) ? layers.statuses[entry.id] : undefined}
             />
           ))}
+          {products.length > 0 && <ProductList entries={products} layers={layers} />}
         </ul>
       )}
     </li>
   );
 }
 
-/** A category's mark: loading or failed when any of its drawn kinds is. */
-function CategoryMark({ statuses }: { statuses: RecordLayerStatus[] }) {
+/** A category's mark: loading or failed when any of its drawn kinds or products is. */
+function CategoryMark({ statuses }: { statuses: (RecordLayerStatus | ProductLayerStatus)[] }) {
   if (statuses.some((status) => status.state === 'error')) {
     return <CircleAlert size={13} color="#ff6b6b" aria-label="A layer did not load" />;
   }
@@ -410,4 +450,139 @@ function FiltersTab({ layers }: { layers: RecordLayersValue }) {
       </ul>
     </>
   );
+}
+
+/** Facet toggles' labels: a wind field's speed raster, barbs and particles. */
+const FACET_LABELS: Record<ProductFacet, string> = {
+  raster: 'Speed',
+  barbs: 'Barbs',
+  particles: 'Particles',
+};
+
+/**
+ * A category's products, under a "Products" heading, grouped by their own category (radar,
+ * satellite, models…). Those that cannot be drawn now (disabled) are folded away under a count,
+ * each with its reason.
+ */
+function ProductList({
+  entries,
+  layers,
+}: {
+  entries: readonly ProductEntry[];
+  layers: RecordLayersValue;
+}) {
+  const available = entries.filter((entry) => entry.available);
+  const unavailable = entries.filter((entry) => !entry.available);
+  const groups = new Map<string, ProductEntry[]>();
+  for (const entry of available) {
+    const label = PRODUCT_CATEGORY_LABELS[entry.productCategory] ?? entry.productCategory;
+    groups.set(label, [...(groups.get(label) ?? []), entry]);
+  }
+  return (
+    <li className={styles.productSection} data-testid="rail-products">
+      <p className={styles.sectionLabel}>Products</p>
+      {[...groups].map(([label, list]) => (
+        <div key={label} className={styles.productGroup}>
+          <p className={styles.productGroupLabel}>{label}</p>
+          <ul className={styles.kindList}>
+            {list.map((entry) => (
+              <ProductRow key={entry.id} entry={entry} layers={layers} />
+            ))}
+          </ul>
+        </div>
+      ))}
+      {available.length === 0 && (
+        <p className={styles.empty}>No products can be drawn right now.</p>
+      )}
+      {unavailable.length > 0 && (
+        <details className={styles.unavailable}>
+          <summary>{unavailable.length.toLocaleString('en-US')} unavailable</summary>
+          <ul className={styles.kindList}>
+            {unavailable.map((entry) => (
+              <li key={entry.id} data-product={entry.id} data-product-state="unavailable">
+                <span
+                  className={`${styles.kindRow} ${styles.layerEmpty}`}
+                  title={`${entry.label}: ${entry.reason}`}
+                >
+                  <input type="checkbox" className={styles.checkbox} disabled checked={false} />
+                  <span className={styles.layerName}>{entry.label}</span>
+                  <span className={styles.productReason}>{entry.reason}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </li>
+  );
+}
+
+/** One product: a toggle with its title and status; a wind field adds its facet toggles when on. */
+function ProductRow({ entry, layers }: { entry: ProductEntry; layers: RecordLayersValue }) {
+  const { enabled, setKeys, statuses } = layers.products;
+  const keys = allKeys(entry);
+  const onKeys = keys.filter((key) => enabled.has(key));
+  const on = onKeys.length > 0;
+  const status = onKeys
+    .map((key) => statuses[key])
+    .find((item) => item?.state === 'error' || item?.state === 'loading');
+  const facets = productFacets(entry);
+  return (
+    <li data-product={entry.id} data-product-state={on ? (status?.state ?? 'ready') : 'off'}>
+      <label className={styles.kindRow} title={entry.summary ?? entry.label}>
+        <input
+          type="checkbox"
+          className={styles.checkbox}
+          checked={on}
+          onChange={() => (on ? setKeys(keys, false) : setKeys(rowKeys(entry), true))}
+        />
+        <span className={styles.layerName}>{entry.label}</span>
+        <ProductMark status={status} />
+        {entry.coverage && entry.coverage !== 'global' && (
+          <span className={styles.coverage}>{entry.coverage}</span>
+        )}
+      </label>
+      {on && facets.length > 1 && (
+        <div className={styles.facets} role="group" aria-label={`${entry.label} shown as`}>
+          {facets.map((facet) => {
+            const key = productLayerKey(entry.id, facet);
+            const pressed = enabled.has(key);
+            return (
+              <button
+                key={facet}
+                type="button"
+                className={styles.facet}
+                aria-pressed={pressed}
+                data-facet={facet}
+                data-facet-state={pressed ? (statuses[key]?.state ?? 'loading') : 'off'}
+                title={pressed ? statuses[key]?.message : undefined}
+                onClick={() => setKeys([key], !pressed)}
+              >
+                {FACET_LABELS[facet]}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </li>
+  );
+}
+
+/** A product's mark: loading, or failed with why. */
+function ProductMark({ status }: { status?: ProductLayerStatus }) {
+  if (status?.state === 'loading') {
+    return <LoaderCircle className={styles.spin} size={13} aria-label="Loading" />;
+  }
+  if (status?.state === 'error') {
+    return (
+      <CircleAlert
+        size={13}
+        color="#ff6b6b"
+        aria-label={`Did not load: ${status.message ?? 'error'}`}
+      >
+        <title>{status.message}</title>
+      </CircleAlert>
+    );
+  }
+  return null;
 }

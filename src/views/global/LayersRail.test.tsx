@@ -10,6 +10,8 @@ import {
 import type { RecordLayerStatus } from '../../map/records/recordLayers';
 import fixture from '../../map/style/fixtures/overlay-style.json';
 import { parseOverlayStyle, type MapStyle } from '../../map/style/parseStyle';
+import { productEntries } from '../../map/products/productCatalog';
+import type { Product } from '../../map/products/productApi';
 import { LayersRail } from './LayersRail';
 import { RecordLayersContext, type RecordLayersValue } from './recordLayersContext';
 
@@ -75,6 +77,7 @@ function Harness({
     toggleSource: (id) => setHidden((current) => flip(current, id)),
     showAllSources: () => setHidden(new Set()),
     statuses,
+    products: { entries: [], enabled: new Set(), setKeys: () => {}, statuses: {} },
     ...value,
   };
   return (
@@ -244,5 +247,88 @@ describe('LayersRail', () => {
   it('says it needs a backend outside a page that provides layers', () => {
     render(<LayersRail />);
     expect(screen.getByText('Layers need a backend connection.')).toBeInTheDocument();
+  });
+
+  it('lists a category’s products, folds away the unavailable, and toggles a wind field’s facets', async () => {
+    const weather = buildCatalog(
+      [layer('space-weather-alert', 'kind')],
+      [{ kind: 'space-weather-alert', currentCount: 3, sources: ['swpc'] }],
+      model,
+    );
+    const product = (id: string, kind: string, category: string, health = 'healthy') =>
+      ({
+        id,
+        title: id.toUpperCase(),
+        kind,
+        category,
+        source: id,
+        coverage: id === 'gfs' ? 'global' : 'CONUS',
+        status: { health, stale: false, reason: health === 'disabled' ? 'source disabled' : null },
+      }) as Product;
+    const entries = productEntries([
+      product('mrms-reflectivity', 'raster', 'radar'),
+      product('gfs', 'field', 'model'),
+      product('hrrr-smoke', 'raster', 'model', 'disabled'),
+    ]);
+    function ProductHarness() {
+      const [enabled, setEnabled] = useState<ReadonlySet<string>>(() => new Set());
+      const [kinds, setKinds] = useState<ReadonlySet<string>>(() => new Set());
+      const setKeys = (keys: readonly string[], on: boolean) =>
+        setEnabled((current) => {
+          const next = new Set(current);
+          for (const key of keys) {
+            if (on) next.add(key);
+            else next.delete(key);
+          }
+          return next;
+        });
+      return (
+        <Harness
+          initial={[]}
+          value={{
+            catalog: { status: 'ready', catalog: weather },
+            enabled: kinds,
+            setKinds: (ids, on) => setKinds(on ? new Set(ids) : new Set()),
+            products: { entries, enabled, setKeys, statuses: {} },
+          }}
+        />
+      );
+    }
+    const { container } = render(<ProductHarness />);
+    await userEvent.click(screen.getByRole('button', { name: 'Show the kinds in Weather' }));
+    const rows = () =>
+      [...container.querySelectorAll<HTMLElement>('li[data-product]')].map((li) => [
+        li.dataset.product,
+        li.dataset.productState,
+      ]);
+    expect(rows()).toEqual([
+      ['mrms-reflectivity', 'off'],
+      ['gfs', 'off'],
+      ['hrrr-smoke', 'unavailable'],
+    ]);
+    expect(screen.getByText('1 unavailable')).toBeInTheDocument();
+    expect(screen.getByText('CONUS')).toBeInTheDocument();
+
+    // The category's checkbox covers its kinds and its curated products.
+    await userEvent.click(categoryBox(container, 'weather'));
+    expect(rows()[0]).toEqual(['mrms-reflectivity', 'ready']);
+    expect(screen.getByTestId('layers-on')).toHaveTextContent('2 on');
+
+    // A wind field turns on as speed and particles; its facets toggle one by one.
+    const gfs = container.querySelector('li[data-product="gfs"]') as HTMLElement;
+    await userEvent.click(within(gfs).getByRole('checkbox'));
+    const pressed = () =>
+      within(gfs)
+        .getAllByRole('button')
+        .map((button) => [button.textContent, button.getAttribute('aria-pressed')]);
+    expect(pressed()).toEqual([
+      ['Speed', 'true'],
+      ['Barbs', 'false'],
+      ['Particles', 'true'],
+    ]);
+    await userEvent.click(within(gfs).getByRole('button', { name: 'Barbs' }));
+    expect(pressed()[1]).toEqual(['Barbs', 'true']);
+    await userEvent.click(within(gfs).getByRole('checkbox'));
+    expect(within(gfs).queryAllByRole('button')).toHaveLength(0);
   });
 });

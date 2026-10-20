@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ChevronRight, X } from 'lucide-react';
 import type { ForesignalClient } from '../../api/client';
 import { IconButton } from '../../ui/Button';
@@ -31,6 +31,8 @@ export interface MapLegendProps {
   scope?: LegendScope;
   /** What a scoped legend says when nothing is on the map. */
   emptyNote?: string;
+  /** The product legends (009), shown above the record kinds. */
+  products?: ReactNode;
 }
 
 /**
@@ -38,9 +40,10 @@ export interface MapLegendProps {
  * one compact row each as in the Conflict mockup: its icon in the style's own color (SDF sprite icons rendered as the map renders
  * them, oversized ones scaled to match), its label, and the severity colors it uses. The sources
  * that draw it and the zoom it switches to hexagon counts are in the row's tooltip and in its
- * expanded detail. Built only from `getMapStyle` and its sprite; product legends join it in 009.
+ * expanded detail. Built only from `getMapStyle` and its sprite. The product legends (009) sit
+ * above the kinds, in the same panel.
  */
-export function MapLegend({ state, api, onClose, scope, emptyNote }: MapLegendProps) {
+export function MapLegend({ state, api, onClose, scope, emptyNote, products }: MapLegendProps) {
   const [filter, setFilter] = useState('');
   const overlay = state.status === 'ready' ? state.overlay : undefined;
   const entries = useMemo(
@@ -54,6 +57,7 @@ export function MapLegend({ state, api, onClose, scope, emptyNote }: MapLegendPr
         <h2 className={styles.title}>Legend</h2>
         <IconButton label="Close legend" icon={<X size={14} />} onClick={onClose} />
       </header>
+      {products}
       {state.status === 'loading' || state.status === 'idle' ? (
         <p className={styles.note}>Loading the map style…</p>
       ) : state.status === 'error' ? (

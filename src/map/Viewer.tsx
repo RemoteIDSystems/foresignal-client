@@ -18,6 +18,11 @@ import { MapLegend } from './style/legend';
 import type { LegendScope } from './style/legendModel';
 import { useOverlayStyle, type OverlayStyleState } from './style/useOverlayStyle';
 import { RecordLayersBridge } from './records/RecordLayersBridge';
+import { ProductLayersBridge } from './products/ProductLayersBridge';
+import { ProductLegends } from './products/ProductLegends';
+import { parseProductLayerKey, type ProductLayerStatus } from './products/productLayers';
+import type { Product } from './products/productApi';
+import type { Attribution } from './style/attributionModel';
 import { ViewportTracker } from './ViewportTracker';
 import { viewportStore, type ViewportStore } from '../state/viewport';
 import type { RecordLayerStatus } from './records/recordLayers';
@@ -229,12 +234,20 @@ export interface MapViewerProps {
   onLayerStatus?: (id: string, status: RecordLayerStatus) => void;
   /** Where the map commits its viewport once the camera rests; the app-wide store by default. */
   viewport?: ViewportStore;
+  /** The product catalog (`listProducts`), for the product layers. */
+  products?: readonly Product[];
+  /** Product layers to draw, by key (`productLayerKey`), bottom first. */
+  productLayers?: readonly string[];
+  /** Told when a product layer's status changes. */
+  onProductStatus?: (key: string, status: ProductLayerStatus) => void;
 }
 
 /** No record layers. */
 const NO_LAYERS: readonly string[] = [];
 /** No hidden sources. */
 const NO_SOURCES: ReadonlySet<string> = new Set();
+/** No products. */
+const NO_PRODUCTS: readonly Product[] = [];
 
 /**
  * The map engine: a Resium viewer with Cesium's own widgets removed, the self-hosted NASA
@@ -246,8 +259,11 @@ const NO_SOURCES: ReadonlySet<string> = new Set();
  * About page instead of over the map. With an API client it loads the backend's overlay style for
  * the theme, draws the enabled record layers from their vector tiles with it, shows the legend for
  * what is on the map (open by default, toggled from the HUD), and the attributions the data licenses
- * require. `data-record-features` on the region is the number of records drawn one by one, and
- * `data-record-cells` the number of hexagon cells drawn for layers below their aggregation zoom.
+ * require. Backend raster products and wind (009) are drawn under the records: rasters as imagery
+ * layers over the basemap, with their legends (and loop controls) at the top of the legend and their
+ * attributions with the rest. `data-record-features` on the region is the number of records drawn
+ * one by one, `data-record-cells` the number of hexagon cells drawn for layers below their
+ * aggregation zoom, and `data-product-layers` the product layers drawn.
  */
 export function MapViewer({
   children,
@@ -259,6 +275,9 @@ export function MapViewer({
   legendEmptyNote,
   onLayerStatus,
   viewport = viewportStore,
+  products = NO_PRODUCTS,
+  productLayers = NO_LAYERS,
+  onProductStatus,
 }: MapViewerProps) {
   const [webgl] = useState(supportsWebGL);
   const [viewer, setViewer] = useState<CesiumViewer>();
@@ -284,6 +303,36 @@ export function MapViewer({
   const drawnRecords = recordLayers.reduce((sum, id) => sum + (layerStatus[id]?.features ?? 0), 0);
   const drawnCells = recordLayers.reduce((sum, id) => sum + (layerStatus[id]?.cells ?? 0), 0);
   const onToggleLegend = useCallback(() => setLegendOpen((open) => !open), []);
+
+  const [productStatus, setProductStatus] = useState<Record<string, ProductLayerStatus>>({});
+  const productListener = useRef(onProductStatus);
+  useEffect(() => {
+    productListener.current = onProductStatus;
+  }, [onProductStatus]);
+  const onProduct = useCallback((key: string, status: ProductLayerStatus) => {
+    setProductStatus((current) => ({ ...current, [key]: status }));
+    productListener.current?.(key, status);
+  }, []);
+  // Loops play only while asked; a layer turned off stops its loop.
+  const [loopChoice, setLoopChoice] = useState<ReadonlySet<string>>(() => new Set());
+  const looping = useMemo(
+    () => new Set([...loopChoice].filter((key) => productLayers.includes(key))),
+    [loopChoice, productLayers],
+  );
+  const onToggleLoop = useCallback((key: string) => {
+    setLoopChoice((current) => {
+      const next = new Set(current);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
+  }, []);
+  const productAttributions = useMemo(() => {
+    const ids = new Set(productLayers.map((key) => parseProductLayerKey(key).productId));
+    return products
+      .filter((product) => ids.has(product.id) && product.attribution)
+      .map((product) => product.attribution as Attribution);
+  }, [products, productLayers]);
+  const drawnProducts = productLayers.filter((key) => productStatus[key]?.state === 'ready');
 
   // The latest camera state, read when switching mode without re-creating the callback each frame.
   const cameraRef = useRef<CameraState>(undefined);
@@ -343,6 +392,7 @@ export function MapViewer({
       data-scene-mode={mode}
       data-record-features={drawnRecords}
       data-record-cells={drawnCells}
+      data-product-layers={drawnProducts.join(' ')}
     >
       <ResiumViewer
         className={styles.viewer}
@@ -366,6 +416,16 @@ export function MapViewer({
       >
         <SceneBridge onReady={setViewer} onCamera={onCamera} />
         <ViewportTracker store={viewport} />
+        {api && (
+          <ProductLayersBridge
+            api={api}
+            products={products}
+            layers={productLayers}
+            looping={looping}
+            viewport={viewport}
+            onStatus={onProduct}
+          />
+        )}
         {api && (
           <RecordLayersBridge
             api={api}
@@ -392,11 +452,23 @@ export function MapViewer({
           state={overlayStyle}
           api={api}
           scope={legendScope}
-          emptyNote={legendEmptyNote}
+          emptyNote={
+            productLayers.length > 0 && !legendEmptyNote ? 'No record kinds on.' : legendEmptyNote
+          }
           onClose={() => setLegendOpen(false)}
+          products={
+            <ProductLegends
+              api={api}
+              products={products}
+              layers={productLayers}
+              statuses={productStatus}
+              looping={looping}
+              onToggleLoop={onToggleLoop}
+            />
+          }
         />
       )}
-      <MapAttribution api={api} />
+      <MapAttribution api={api} extra={productAttributions} />
       {children}
     </div>
   );

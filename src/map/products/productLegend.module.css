@@ -1,0 +1,163 @@
+.products {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 6px;
+  margin: 2px 0 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.name {
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.play {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--fs-color-border-strong);
+  border-radius: var(--fs-radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fs-color-text);
+  cursor: pointer;
+}
+
+.play[aria-pressed='true'] {
+  border-color: var(--fs-color-accent);
+  color: var(--fs-color-accent);
+}
+
+.meta {
+  display: flex;
+  gap: 8px;
+  color: var(--fs-color-text-secondary);
+  font-size: var(--fs-font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.barWrap {
+  position: relative;
+}
+
+.gradient,
+.bands {
+  height: 8px;
+  border-radius: 2px;
+}
+
+.bands {
+  display: flex;
+  overflow: hidden;
+}
+
+.bands i {
+  flex: 1;
+}
+
+.ticks {
+  position: relative;
+  height: 12px;
+  margin: 2px 6px 0;
+  color: var(--fs-color-text-secondary);
+  font-size: 10px;
+}
+
+.ticks span {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.bandLabels {
+  display: flex;
+  margin-top: 2px;
+  color: var(--fs-color-text-secondary);
+  font-size: 10px;
+}
+
+.bandLabels span {
+  overflow: visible;
+  flex: 1;
+  white-space: nowrap;
+}
+
+.bandLabels .units {
+  flex: none;
+}
+
+.units {
+  color: var(--fs-color-text-secondary);
+  font-size: 10px;
+  text-align: right;
+}
+
+.categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  margin: 0;
+  padding: 0;
+  font-size: var(--fs-font-size-xs);
+  list-style: none;
+}
+
+.categories i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-radius: 2px;
+}
+
+.note {
+  margin: 0;
+  color: var(--fs-color-text-secondary);
+  font-size: var(--fs-font-size-xs);
+}
+
+.barbs {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  color: var(--fs-color-text-secondary);
+  font-size: 10px;
+}
+
+.barbs span {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

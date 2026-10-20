@@ -712,3 +712,72 @@
 .status_none {
   color: var(--fs-color-text-secondary);
 }
+
+/* 009: the products under a category, after its kinds. */
+.productSection {
+  margin: 4px 0 2px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.productGroup + .productGroup {
+  margin-top: 2px;
+}
+
+.productGroupLabel {
+  margin: 4px 0 0 8px;
+  color: var(--fs-color-text-secondary);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.coverage {
+  flex: none;
+  color: var(--fs-color-text-secondary);
+  font-size: 10px;
+}
+
+.productReason {
+  flex: none;
+  color: var(--fs-color-text-secondary);
+  font-size: 10px;
+}
+
+.unavailable {
+  margin: 4px 0 0 8px;
+  color: var(--fs-color-text-secondary);
+  font-size: var(--fs-font-size-xs);
+}
+
+.unavailable summary {
+  cursor: pointer;
+}
+
+.facets {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 4px 30px;
+}
+
+.facet {
+  padding: 1px 6px;
+  border: 1px solid var(--fs-color-border-strong);
+  border-radius: var(--fs-radius-sm);
+  background: transparent;
+  color: var(--fs-color-text-secondary);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.facet[aria-pressed='true'] {
+  border-color: var(--fs-color-accent);
+  background: rgba(59, 130, 246, 0.16);
+  color: var(--fs-color-text);
+}
+
+.productSection .kindList {
+  padding-left: 0;
+  border-bottom: 0;
+}

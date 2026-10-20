@@ -11,14 +11,20 @@ export interface MapAttributionProps {
    * read; empty, there is nothing to attribute.
    */
   sources?: readonly string[];
+  /**
+   * Attributions of what else is on the map, already structured (a product's own `attribution`,
+   * 009); shown after the backend's, when their license requires display.
+   */
+  extra?: readonly Attribution[];
 }
 
 /**
  * The map's required attribution line, from the backend's structured attributions
  * (`getAttributions`, never hard-coded). Shows only entries whose license requires display, each
- * linked to its terms when it has a link; renders nothing when none do.
+ * linked to its terms when it has a link, then those of the products on the map; renders nothing
+ * when none do.
  */
-export function MapAttribution({ api, sources }: MapAttributionProps) {
+export function MapAttribution({ api, sources, extra }: MapAttributionProps) {
   const [loaded, setLoaded] = useState<{ key: string; items: Attribution[] }>();
   const sourceKey = sources?.join(',');
   const key = sourceKey ?? '*';
@@ -39,7 +45,8 @@ export function MapAttribution({ api, sources }: MapAttributionProps) {
     };
   }, [api, sourceKey, key]);
 
-  const items = api && sourceKey !== '' && loaded?.key === key ? loaded.items : [];
+  const fromApi = api && sourceKey !== '' && loaded?.key === key ? loaded.items : [];
+  const items = extra?.length ? requiredAttributions([...fromApi, ...extra]) : fromApi;
   if (items.length === 0) return null;
   return (
     <div className={styles.attribution} data-testid="map-attribution">
