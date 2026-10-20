@@ -23,19 +23,21 @@
 4. **Execute the prompt completely, exactly as written:**
    - read its *Read first* section and the earlier completion reports;
    - implement it, matching the relevant `design/` mockup;
-   - write its tests (Vitest; UI-visible behavior proven from outside the component);
-   - `npm run generate` if the prompt touched the API surface, then
-     `npm run typecheck`, `npm run lint`, `npm run build`, and the relevant `npm test`;
-   - **capture the look:** run the app (`npm run dev` / `vite preview`), screenshot the new UI to
-     `review/NNN-<name>.png`, and confirm it against the relevant `design/` mockup;
-   - commit the implementation **and the screenshot** as `NNN: <Title>`;
+   - **write** its tests (Vitest unit; Playwright e2e specs) so they exist for the owner's run — but
+     **do NOT run them.** Standing rule: **no test execution until 100% code-complete**; the owner
+     runs the full suite then. Where a prompt's *Done when* mentions Playwright or a test passing,
+     write that check as a spec, don't run it;
+   - `npm run generate` if the prompt touched the API surface, then **compile only**:
+     `npm run typecheck`, `npm run lint`, `npm run build`. **No `npm test`, no `npm run e2e`, no
+     browser or screenshot run;**
+   - commit the implementation as `NNN: <Title>`;
    - write `completion-reports/NNN-CR-<Name>.md` (same format as earlier reports) with the
      40-character implementation commit hash, a line on how the result compares to the mockup, and
      any **owner questions** (things the OpenAPI did not express — never invented, never worked
      around with a second service);
    - commit the report as `NNN: completion report`; push to `origin main`.
 5. **Pause at the review gate (default).** Unless the owner has waived gates for this range, after
-   the prompt show the owner the screenshot (`review/NNN-<name>.png`) and a one-line summary, and
+   the prompt show the owner a one-line summary, and
    ask: *approve NNN and continue?* **Wait for the owner's reply in this same session**, then
    continue to the next prompt on approval — do not start a new session. The owner approves by
    replying (e.g. "continue", "approved") — never by running a command. Write
@@ -44,8 +46,8 @@
    exists, re-ask the owner and proceed on their reply (deleting the marker then).
 6. **Guardrails every time:** OpenAPI is the only backend reference; two components only
    (no backend change, no BFF/Node/proxy, no native wrapper); US English; dense layers rendered
-   batched over server-aggregated, viewport-scoped data; generated code never hand-edited; every
-   prompt leaves the app runnable with a committed screenshot.
+   batched over server-aggregated, viewport-scoped data; generated code never hand-edited; **tests
+   are written but not run**; every prompt compiles (typecheck + build) cleanly.
 
 ## Review gates and unattended mode
 

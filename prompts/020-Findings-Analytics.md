@@ -25,7 +25,8 @@ CONFLICT METRICS (Military/Strikes/Casualties/Economic/Humanitarian charts) and 
 Casualties / Economic / Humanitarian**, each a time-series chart (7-day-average style) plus a row of
 **stat tiles** (big number + label + delta vs prior, e.g. `1,946 Combat events +12%`). Evidence
 panel: tabs **All / Imagery / Signals / Reports / Docs** with rows (thumbnail, title, source + family
-tags, a confidence tag) and `View all evidence`.
+tags, a confidence tag) and `View all evidence`. **Charts use ECharts** (add it here; dark-theme,
+canvas) — reused by 022/023 and the stat/trend widgets; trivial inline sparklines may stay SVG.
 
 **Done when.** The situation view shows findings and metric charts from real series; impacts render
 with probabilities. Playwright: metrics tab renders charts.
