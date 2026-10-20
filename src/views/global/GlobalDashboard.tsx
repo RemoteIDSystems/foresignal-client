@@ -34,7 +34,8 @@ import {
   type ProductLayersValue,
   type RecordLayersValue,
 } from './recordLayersContext';
-import { TimeHudPlaceholder } from './TimeHudPlaceholder';
+import { TimeHud } from './TimeHud';
+import styles from './GlobalDashboard.module.css';
 import { SelectedEntityPanel } from './SelectedEntityPanel';
 
 /** The stress harness (010), loaded only in development builds; production builds leave it out. */
@@ -99,7 +100,8 @@ const PANELS: readonly DockPanel[] = [
  * on the map is the page's selection (010), for 014's dossier. In a development build, `?stress`
  * adds the stress harness, which can turn on every kind in the catalog at once and measure the map
  * (010). The page holds the live stream open (011), narrowed to the drawn kinds (and product frames)
- * in the committed view, so the map stays current; the time HUD's badge shows its state. The enabled
+ * in the committed view, so the map stays current; the time HUD's badge shows its state. The time
+ * HUD (013) pins the map at an instant in the last day, or plays its history. The enabled
  * layers, hidden sources, selection and viewport are the store's (012), so they outlast the page. The other
  * panels are skeletons with placeholder data until their prompts.
  */
@@ -324,7 +326,14 @@ export function GlobalDashboard({
             store={store}
             viewport={storeViewport}
           >
-            <TimeHudPlaceholder stream={stream} />
+            <TimeHud
+              api={api}
+              stream={stream}
+              store={store}
+              kinds={recordLayers}
+              bbox={viewport?.bbox}
+            />
+            <div className={styles.placeholderChip}>Placeholder panel data</div>
             {stress && StressHarness && (
               <Suspense fallback={null}>
                 <StressHarness

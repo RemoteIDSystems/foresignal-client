@@ -1,6 +1,8 @@
 import { SceneMode, type Viewer } from 'cesium';
 import type { ForesignalClient } from '../../api/client';
 import type { OverlayStyle } from '../style/loadOverlayStyle';
+import type { RecordFeature } from './decodeTile';
+import { FrameLayer } from './frameLayer';
 import { LayerSources } from './layerSources';
 import type { Box, ChangedArea } from './liveChanges';
 import { RecordBatch } from './recordBatch';
@@ -94,6 +96,13 @@ export class RecordLayerSet {
   /** Changed boxes per layer waiting for the next live refresh; `all` for every tile. */
   private readonly liveBoxes = new Map<string, Box[] | 'all'>();
   private liveTimer?: ReturnType<typeof setTimeout>;
+  /** The layers asked for, drawn from tiles unless a history step is shown. */
+  private ids: readonly string[] = [];
+  /** The instant the tiles are drawn as of; undefined for live data (013). */
+  private asOf?: string;
+  /** The history step shown instead of the tiles, if any (013). */
+  private frame?: readonly RecordFeature[];
+  private frameLayer?: FrameLayer;
 
   /**
    * @param viewer The Cesium viewer to draw into.
@@ -131,10 +140,19 @@ export class RecordLayerSet {
     const ids = [...this.layers.keys()];
     for (const id of ids) this.remove(id);
     for (const id of ids) this.add(id);
+    this.frameLayer?.clear();
+    this.frameLayer = undefined;
+    this.drawFrame();
   }
 
   /** Sets which layers are drawn: adds the new ones and removes the rest. */
   setLayers(ids: readonly string[]): void {
+    const changed = ids !== this.ids;
+    this.ids = ids;
+    if (this.frame) {
+      if (changed) this.drawFrame();
+      return;
+    }
     const start = performance.now();
     const wanted = new Set(ids);
     let removed = 0;
@@ -159,6 +177,8 @@ export class RecordLayerSet {
    * touched again, gathered over {@link LIVE_REFRESH_MS}. Changes to kinds not drawn are ignored.
    */
   applyAreas(areas: readonly ChangedArea[]): void {
+    // Pinned in the past, the map does not follow the present; it is fetched afresh on return.
+    if (this.asOf !== undefined || this.frame) return;
     for (const area of areas) {
       for (const id of [area.kind, area.source]) {
         if (!this.layers.has(id)) continue;
@@ -173,8 +193,77 @@ export class RecordLayerSet {
 
   /** Fetches every drawn tile of every layer again: the stream lost updates (a resync). */
   reload(): void {
+    if (this.asOf !== undefined || this.frame) return;
     for (const id of this.layers.keys()) this.liveBoxes.set(id, 'all');
     this.scheduleLive();
+  }
+
+  /**
+   * Pins the tile layers at an instant (013), as an RFC 3339 string to the second, or returns them
+   * to live data with undefined. Each layer is drawn again from its TileJSON as of that instant,
+   * whose template carries the instant the tiles are asked for with. While pinned, the live
+   * stream's changes are not applied; back at live, every tile is fetched afresh, so what changed
+   * meanwhile is drawn.
+   */
+  setAsOf(asOf: string | undefined): void {
+    if (asOf === this.asOf) return;
+    const backToLive = asOf === undefined;
+    this.asOf = asOf;
+    this.liveBoxes.clear();
+    if (backToLive) this.sources.forgetTiles();
+    if (this.frame) return;
+    const ids = [...this.layers.keys()];
+    for (const id of ids) this.remove(id);
+    for (const id of ids) this.add(id);
+  }
+
+  /** The instant the tile layers are pinned at, or undefined while live. */
+  get pinnedAt(): string | undefined {
+    return this.asOf;
+  }
+
+  /**
+   * Shows one step of a history playback (013) in place of the tile layers: the records of the
+   * enabled layers as they were then, drawn with the same symbols. Undefined ends the playback and
+   * draws the tile layers again (as of {@link setAsOf}'s instant).
+   */
+  setFrame(features: readonly RecordFeature[] | undefined): void {
+    if (features === this.frame) return;
+    const wasFrame = this.frame !== undefined;
+    this.frame = features;
+    if (features) {
+      if (!wasFrame) for (const id of [...this.layers.keys()]) this.remove(id);
+      this.drawFrame();
+      return;
+    }
+    this.frameLayer?.clear();
+    const ids = this.ids;
+    this.ids = [];
+    this.setLayers(ids);
+  }
+
+  /** Records the shown history step draws (0 when none is shown). */
+  get frameRecords(): number {
+    return this.frameLayer?.count ?? 0;
+  }
+
+  /** Draws the shown history step with the current layers, filters and style. */
+  private drawFrame(): void {
+    if (!this.frame || !this.overlay || !this.images || this.viewer.isDestroyed()) return;
+    this.frameLayer ??= new FrameLayer({
+      batch: this.batch,
+      model: this.overlay.model,
+      images: this.images,
+    });
+    const counts = this.frameLayer.draw(
+      this.frame,
+      new Set(this.ids),
+      this.hiddenSources,
+      this.currentView().zoom,
+    );
+    for (const id of this.ids) {
+      this.queueStatus(id, { state: 'ready', features: counts.get(id) ?? 0, tiles: 0 });
+    }
   }
 
   /** Tiles fetched again for live changes so far, across the layers drawn now. */
@@ -200,12 +289,14 @@ export class RecordLayerSet {
   setHiddenSources(hidden: ReadonlySet<string>): void {
     this.hiddenSources = hidden;
     for (const layer of this.layers.values()) layer.setHiddenSources(hidden);
+    this.drawFrame();
   }
 
   /** The records under the pointer across every layer, topmost first. */
   pick(query: PickQuery): RecordHit[] {
     const hits: RecordHit[] = [];
     for (const layer of this.layers.values()) hits.push(...layer.pick(query));
+    if (this.frame && this.frameLayer) hits.push(...this.frameLayer.pick(query));
     return hits.sort(compareHits);
   }
 
@@ -237,6 +328,7 @@ export class RecordLayerSet {
       totals.tiles += layer.tileCount;
       if (layer.loading) totals.loading++;
     }
+    totals.features += this.frameRecords;
     for (const merged of this.batch.merged) {
       totals.instances += merged.instanceCount;
       totals.builds += merged.builds;
@@ -252,6 +344,7 @@ export class RecordLayerSet {
     clearTimeout(this.liveTimer);
     for (const remove of this.removers) remove();
     for (const id of [...this.layers.keys()]) this.remove(id);
+    this.frameLayer?.clear();
     if (!this.viewer.isDestroyed()) this.batch.destroy();
   }
 
@@ -259,7 +352,13 @@ export class RecordLayerSet {
     if (!this.overlay || !this.images || this.viewer.isDestroyed()) return;
     const layer = new RecordLayer(
       id,
-      { sources: this.sources, batch: this.batch, model: this.overlay.model, images: this.images },
+      {
+        sources: this.sources,
+        batch: this.batch,
+        model: this.overlay.model,
+        images: this.images,
+        asOf: this.asOf,
+      },
       (status) => this.queueStatus(id, status),
     );
     this.layers.set(id, layer);

@@ -12,6 +12,7 @@ import {
   Cartesian2,
   type Cartesian3,
   EllipsoidGeodesic,
+  JulianDate,
   Rectangle,
   Math as CesiumMath,
   SceneMode,
@@ -38,13 +39,17 @@ import { ViewportTracker } from './ViewportTracker';
 import { viewportStore, type CommittedViewport, type ViewportStore } from '../state/viewport';
 import type { RecordLayerStatus } from './records/recordLayers';
 import { RecordMarker } from './records/RecordMarker';
+import { TrailBridge } from './records/TrailBridge';
+import type { RecordFeature } from './records/decodeTile';
+import { frameFeature } from '../time/history';
+import type { Trail } from '../time/trail';
 import { hitKey } from './records/mapPointer';
 import type { RecordHit } from './records/recordPicking';
 import { createTerrainProvider, TerrainSampler } from './terrain';
 import { MapHud, type CameraState, type GroundPoint, type MapHudProps } from './MapHud';
 import { niceScale } from './readout';
 import { SCENE_MODES, type SceneModeKey } from './sceneMode';
-import { appStore, useStoreKey, type AppState, type Store } from '../state/store';
+import { appStore, useStoreKey, type AppState, type Store, type TimeCursor } from '../state/store';
 import {
   homeDestination,
   styleScene,
@@ -53,6 +58,16 @@ import {
   visibleRectangle,
 } from './view';
 import styles from './Viewer.module.css';
+
+/**
+ * Sets the scene's clock to an instant (RFC 3339), stopped, or with undefined to now, running in
+ * real time: the day/night terminator follows it.
+ */
+function setSceneTime(viewer: CesiumViewer, asOf: string | undefined): void {
+  const { clock } = viewer;
+  clock.currentTime = asOf !== undefined ? JulianDate.fromIso8601(asOf) : JulianDate.now();
+  clock.shouldAnimate = asOf === undefined;
+}
 
 /** How long a 2D/3D switch animates, in seconds. */
 const MORPH_SECONDS = 1;
@@ -329,9 +344,9 @@ const NO_PRODUCTS: readonly Product[] = [];
  * Blue Marble / Black Marble day/night basemap draped over self-hosted ETOPO terrain (raised in
  * 3D, flat in 2D), the 2D Map / 3D Globe toggle (2D by default), and
  * the DOM HUD (compass, zoom, inset, pointer lat/lon/elevation readout, scale bar). Renders at
- * device pixel ratio for sharp output. The clock runs in real time so the terminator moves; 013's
- * time machine takes it over. Cesium's credits go to a detached element: they are shown on the
- * About page instead of over the map. With an API client it loads the backend's overlay style for
+ * device pixel ratio for sharp output. The clock runs in real time so the terminator moves, and
+ * stands at the time machine's instant while the map is pinned (013). Cesium's credits go to a
+ * detached element: they are shown on the About page instead of over the map. With an API client it loads the backend's overlay style for
  * the theme, draws the enabled record layers from their vector tiles with it, shows the legend for
  * what is on the map (open by default, toggled from the HUD), and the attributions the data licenses
  * require. Backend raster products and wind (009) are drawn under the records: rasters as imagery
@@ -344,7 +359,10 @@ const NO_PRODUCTS: readonly Product[] = [];
  * Escape clears it; `data-hovered` and `data-selected` name them. With the live stream (011), the
  * tiles a change touches are fetched again and new product frames are swapped in as announced. The
  * scene mode is the store's `sceneMode` (012): the toggle writes it and any change to it morphs the
- * map; a new map opens in that mode, over the viewport last committed to the store.
+ * map; a new map opens in that mode, over the viewport last committed to the store. The store's
+ * `time` pins the records at an instant (013: `data-time` names it, or `live`), its `playback`
+ * draws a history step in place of the tiles (`data-playback`), and the selected record shows its
+ * trail up to the cursor (`data-trail`, the positions drawn).
  */
 export function MapViewer({
   children,
@@ -371,6 +389,29 @@ export function MapViewer({
   const mode = useStoreKey('sceneMode', store);
   // The mode the viewer was created in; later changes morph it.
   const [initialMode] = useState(mode);
+  // The time machine (013): pinned at an instant, or playing history, from the store.
+  const time = useStoreKey('time', store);
+  const playback = useStoreKey('playback', store);
+  const asOf = time.mode === 'asOf' ? time.asOf : undefined;
+  const frame = useMemo(
+    () =>
+      playback
+        ? playback.history
+            .stateAt(playback.index)
+            .map(frameFeature)
+            .filter((feature): feature is RecordFeature => feature !== undefined)
+        : undefined,
+    [playback],
+  );
+  const [trail, setTrail] = useState<Trail>();
+  // During a playback the trail covers it to its end, rather than being read again at each step.
+  const trailTime = useMemo<TimeCursor>(
+    () =>
+      playback
+        ? { mode: 'asOf', asOf: playback.history.timeAt(playback.history.length - 1) }
+        : time,
+    [playback, time],
+  );
   // The view it opens on, likewise from the store.
   const [startView] = useState(() => viewport.get());
   const insetTiles = useMemo(() => insetTileUrls(), []);
@@ -463,6 +504,12 @@ export function MapViewer({
     },
     [cameraStore],
   );
+
+  // The scene's clock is the time cursor's (013): pinned, the day/night terminator stands where it
+  // was at that instant; live, it runs in real time again.
+  useEffect(() => {
+    if (viewer) setSceneTime(viewer, asOf);
+  }, [viewer, asOf]);
 
   const onSceneMode = useCallback((next: SceneModeKey) => store.set('sceneMode', next), [store]);
   // The store's mode, whoever set it, is the scene's: a change morphs the map, keeping its place.
@@ -557,6 +604,9 @@ export function MapViewer({
       data-product-layers={drawnProducts.join(' ')}
       data-hovered={shownHover ? hitKey(shownHover) : undefined}
       data-selected={shownSelection ? hitKey(shownSelection) : undefined}
+      data-time={asOf ?? 'live'}
+      data-playback={playback ? `${playback.index}/${playback.history.length}` : undefined}
+      data-trail={trail ? trail.lines.reduce((sum, line) => sum + line.length, 0) : undefined}
       style={hovered ? { cursor: 'pointer' } : undefined}
     >
       <ResiumViewer
@@ -602,6 +652,17 @@ export function MapViewer({
             onHover={setHovered}
             onSelect={select}
             stream={stream}
+            asOf={asOf}
+            frame={frame}
+          />
+        )}
+        {api && (
+          <TrailBridge
+            api={api}
+            selected={shownSelection}
+            time={trailTime}
+            color={theme.tokens.color.accent}
+            onTrail={setTrail}
           />
         )}
       </ResiumViewer>

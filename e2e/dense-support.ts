@@ -67,9 +67,36 @@ function parseTileUrl(url: string) {
 
 /**
  * Stand-in earthquakes: the live earthquake layer's record tiles are answered with these records
- * (from `usgs-earthquakes`, so they take its live style), so a check knows where each one is.
+ * (from `usgs-earthquakes`, so they take its live style), so a check knows where each one is. The
+ * backend does not know them, so a selected one's track (013's trail) is answered too: the record
+ * standing still, as a real earthquake's track is.
  */
 export async function standInQuakes(page: Page, records: readonly StandInRecord[]) {
+  await page.route(/\/v1\/records\/usgs-earthquakes\/([^/]+)\/track/, async (route) => {
+    const id = decodeURIComponent(
+      /\/records\/usgs-earthquakes\/([^/]+)\/track/.exec(route.request().url())![1]!,
+    );
+    const record = records.find((candidate) => candidate.properties.externalId === id);
+    if (!record) return route.fallback();
+    const at = [record.longitude, record.latitude];
+    await route.fulfill({
+      contentType: 'application/geo+json',
+      body: JSON.stringify({
+        type: 'Feature',
+        geometry: { type: 'MultiLineString', coordinates: [[at, at]] },
+        properties: {
+          sourceId: 'usgs-earthquakes',
+          externalId: id,
+          from: new Date(Date.now() - 6 * 3_600_000).toISOString(),
+          to: new Date().toISOString(),
+          times: [[Date.now(), Date.now()]],
+          pointsReturned: 2,
+          segments: 1,
+          watermarkSeq: 1,
+        },
+      }),
+    });
+  });
   await page.route(/\/v1\/tiles\/earthquake\/\d+\/\d+\/\d+\.mvt/, async (route) => {
     const tile = parseTileUrl(route.request().url())!;
     if (tile.agg === 'hex') return route.fallback();

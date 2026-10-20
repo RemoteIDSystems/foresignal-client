@@ -228,12 +228,3 @@ export const PLACEHOLDER_IMAGERY = {
   sensor: 'Sentinel-2 (10m)',
   thumbnails: ['Recent', 'Optical', 'SAR', 'Infrared', 'Night', 'Archive'],
 };
-
-/** Map HUD readouts. Replaced in 005 (camera) and 013 (time cursor). */
-export const PLACEHOLDER_HUD = {
-  time: '2025-09-18 14:32:17Z',
-  lat: '28.3921°',
-  lon: '-76.5123°',
-  elevation: '0 m',
-  scale: '1,000 km',
-};

@@ -23,6 +23,9 @@ export const TILE_CACHE_SIZE = 1_500;
 /** How long a layer whose TileJSON failed waits before it is asked for again, in ms. */
 const TILE_JSON_RETRY_MS = 30_000;
 
+/** Most TileJSONs of past instants kept (013); each scrub of the time machine reads new ones. */
+export const AS_OF_TILE_JSON_SIZE = 200;
+
 /** A cached tile: its records and when they arrived. */
 interface CachedTile {
   features: RecordFeature[];
@@ -53,18 +56,33 @@ export class LayerSources {
     private readonly now: () => number = Date.now,
   ) {}
 
-  /** A layer's TileJSON, read once and shared; a failed read is tried again after a while. */
-  layerTiles(layer: string): Promise<LayerTilesResult> {
-    const cached = this.tileJson.get(layer);
+  /**
+   * A layer's TileJSON, read once and shared; a failed read is tried again after a while. With
+   * `asOf`, the layer as known at that instant (013), kept apart from the live one; only the most
+   * recent {@link AS_OF_TILE_JSON_SIZE} instants' are kept.
+   */
+  layerTiles(layer: string, asOf?: string): Promise<LayerTilesResult> {
+    const key = asOf === undefined ? layer : `${layer}@${asOf}`;
+    const cached = this.tileJson.get(key);
     if (cached) {
       const stale = this.now() - cached.at > TILE_JSON_RETRY_MS;
       if (!stale) return cached.result;
       // Only a failure is read again; a template that loaded stays.
-      const retry = cached.result.then((result) => (result.ok ? result : this.readTileJson(layer)));
-      this.tileJson.set(layer, { result: retry, at: this.now() });
+      const retry = cached.result.then((result) =>
+        result.ok ? result : this.readTileJson(key, layer, asOf),
+      );
+      this.tileJson.set(key, { result: retry, at: this.now() });
       return retry;
     }
-    return this.readTileJson(layer);
+    return this.readTileJson(key, layer, asOf);
+  }
+
+  /**
+   * Drops every decoded tile, so each is fetched again: the map is back from a pinned instant to
+   * live data, and the stream's changes while it was pinned were not applied to the cache.
+   */
+  forgetTiles(): void {
+    this.tiles.clear();
   }
 
   /**
@@ -106,11 +124,11 @@ export class LayerSources {
     return { waiting: this.waiting.length, active: this.active };
   }
 
-  private readTileJson(layer: string): Promise<LayerTilesResult> {
+  private readTileJson(key: string, layer: string, asOf?: string): Promise<LayerTilesResult> {
     const read = async (): Promise<LayerTilesResult> => {
       await this.slot(NEVER_ABORTED);
       try {
-        return await loadLayerTiles(this.api, layer);
+        return await loadLayerTiles(this.api, layer, undefined, asOf);
       } catch (cause) {
         return {
           ok: false,
@@ -123,13 +141,22 @@ export class LayerSources {
     };
     const result: Promise<LayerTilesResult> = read().then((loaded) => {
       // A transient failure is not kept: the next ask reads again.
-      if (!loaded.ok && loaded.transient && this.tileJson.get(layer)?.result === result) {
-        this.tileJson.delete(layer);
+      if (!loaded.ok && loaded.transient && this.tileJson.get(key)?.result === result) {
+        this.tileJson.delete(key);
       }
       return loaded;
     });
-    this.tileJson.set(layer, { result, at: this.now() });
+    this.tileJson.set(key, { result, at: this.now() });
+    if (asOf !== undefined) this.trimPast();
     return result;
+  }
+
+  /** Keeps only the most recent past instants' TileJSONs; live ones always stay. */
+  private trimPast(): void {
+    const past = [...this.tileJson.keys()].filter((key) => key.includes('@'));
+    for (const key of past.slice(0, Math.max(0, past.length - AS_OF_TILE_JSON_SIZE))) {
+      this.tileJson.delete(key);
+    }
   }
 
   private keep(key: string, features: RecordFeature[]): void {

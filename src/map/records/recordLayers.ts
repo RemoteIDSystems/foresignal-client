@@ -94,6 +94,11 @@ export interface RecordLayerContext {
   batch: RecordBatch;
   model: StyleModel;
   images: SymbolImages;
+  /**
+   * The instant the layer is drawn as of (013's time machine), as an RFC 3339 string to the
+   * second; undefined for live data.
+   */
+  asOf?: string;
 }
 
 /** The prefix of an aggregate tile's key, so it never collides with the same tile's records. */
@@ -296,7 +301,7 @@ export class RecordLayer {
 
   /** Reads the layer's TileJSON (shared) for its template, zoom range, bounds and aggregation. */
   private async loadTileJson(): Promise<LayerTiles | undefined> {
-    const result = await this.context.sources.layerTiles(this.id);
+    const result = await this.context.sources.layerTiles(this.id, this.context.asOf);
     if (this.destroyed) return undefined;
     if (!result.ok) {
       this.tileJson = undefined;

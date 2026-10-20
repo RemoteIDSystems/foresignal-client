@@ -284,12 +284,78 @@
   color: var(--fs-tone-neutral-fg);
 }
 
+.live[data-state='history'] {
+  border: 0;
+  background: var(--fs-tone-warning-bg);
+  color: var(--fs-tone-warning-fg);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.playButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--fs-radius-sm);
+  background: transparent;
+  color: var(--fs-color-text);
+  font-size: var(--fs-font-size-lg);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.playButton:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.playButton:disabled {
+  color: var(--fs-color-text-muted);
+  cursor: default;
+}
+
+.playButton[data-state='playing'] {
+  font-size: var(--fs-font-size-xs);
+}
+
 .scrubber {
   width: 194px;
-  padding: 8px 10px 6px;
+  padding: 2px 10px 6px;
   border: 1px solid var(--fs-color-border-strong);
   border-radius: var(--fs-radius-md);
   background: rgba(6, 12, 20, 0.88);
+}
+
+.scrubberArea {
+  position: relative;
+  padding-top: 2px;
+  cursor: pointer;
+  touch-action: none;
+  outline: none;
+}
+
+.scrubberArea:focus-visible {
+  border-radius: var(--fs-radius-sm);
+  box-shadow: 0 0 0 1px var(--fs-color-accent);
+}
+
+.histogram {
+  display: block;
+  width: calc(100% - 4px);
+  height: 14px;
+  margin: 0 2px;
+}
+
+.histogramBar {
+  fill: var(--fs-color-accent);
+  opacity: 0.45;
+}
+
+.histogramLost {
+  fill: rgba(255, 255, 255, 0.06);
 }
 
 .scrubberTrack {
@@ -297,6 +363,33 @@
   height: 2px;
   margin: 4px 2px 10px;
   background: #4a5868;
+}
+
+.scrubberFill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 2px;
+  background: #b8c4d2;
+}
+
+.scrubberTick {
+  position: absolute;
+  top: -3px;
+  width: 1px;
+  height: 8px;
+  margin-left: -0.5px;
+  background: #6c7a8a;
+}
+
+/* No product gives forecast tracks yet: the future half is shown but dimmed. */
+.scrubberFuture {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  right: 0;
+  height: 10px;
+  background: rgba(6, 12, 20, 0.45);
 }
 
 .scrubberThumb {
@@ -308,6 +401,7 @@
   margin-left: -5px;
   border-radius: 50%;
   background: #e8eef5;
+  pointer-events: none;
 }
 
 .scrubberLabels {
@@ -315,6 +409,17 @@
   justify-content: space-between;
   color: var(--fs-color-text-secondary);
   font-size: var(--fs-font-size-xs);
+}
+
+.scrubberNote {
+  color: var(--fs-tone-warning-fg);
+  font-size: var(--fs-font-size-xs);
+}
+
+.scrubberStep {
+  color: var(--fs-color-text-secondary);
+  font-size: var(--fs-font-size-xs);
+  font-variant-numeric: tabular-nums;
 }
 
 .placeholderChip {

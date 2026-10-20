@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import type { SceneModeKey } from '../map/sceneMode';
 import type { RecordHit } from '../map/records/recordPicking';
+import type { HistoryPlayback } from '../time/history';
 import type { CommittedViewport } from './viewport';
 
 /** What the user turned on and filtered in the layers rail. */
@@ -15,6 +16,16 @@ export interface LayersState {
 
 /** The time cursor: following live data, or pinned at an instant (013's time machine). */
 export type TimeCursor = { mode: 'live' } | { mode: 'asOf'; asOf: string };
+
+/**
+ * A history playback on the map (013): the frames loaded, the step shown, and whether it is
+ * stepping on by itself. While one is held, the map draws its step in place of the tiles.
+ */
+export interface PlaybackState {
+  history: HistoryPlayback;
+  index: number;
+  playing: boolean;
+}
 
 /** The inbox badge (018 fills it). */
 export interface InboxBadge {
@@ -47,6 +58,8 @@ export interface AppState {
   selection: RecordHit | undefined;
   /** Live, or pinned at an instant. */
   time: TimeCursor;
+  /** The history playback shown on the map, if any (013). */
+  playback: PlaybackState | undefined;
   /** The inbox badge. */
   inbox: InboxBadge;
   /** Bumped whenever the workspace context changes, for the views that cache against it. */
@@ -61,6 +74,7 @@ export const INITIAL_STATE: AppState = {
   layers: { hiddenSources: [] },
   selection: undefined,
   time: { mode: 'live' },
+  playback: undefined,
   inbox: { unread: 0 },
   workspaceContextVersion: 0,
 };

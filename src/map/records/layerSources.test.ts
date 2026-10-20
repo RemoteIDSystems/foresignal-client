@@ -156,4 +156,39 @@ describe('LayerSources', () => {
     expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(MAX_TILE_REQUESTS + 2);
     expect(sources.queued).toEqual({ waiting: 0, active: 0 });
   });
+
+  it('reads a layer as of an instant apart from live, and asks for its tiles with that template', async () => {
+    const asked: (string | null)[] = [];
+    const tileAsked: (string | null)[] = [];
+    server.use(
+      http.get('/v1/tiles/{layer}.json', ({ request, response }) => {
+        const asOf = new URL(request.url).searchParams.get('asOf');
+        asked.push(asOf);
+        return response(200).json({
+          tilejson: '3.0.0',
+          tiles: [`/v1/tiles/earthquake/{z}/{x}/{y}.mvt${asOf ? `?asOf=${asOf}` : ''}`],
+        });
+      }),
+      http.get('/v1/tiles/{layer}/{z}/{x}/{y}.mvt', ({ request, response }) => {
+        tileAsked.push(new URL(request.url).searchParams.get('asOf'));
+        return response.untyped(new Response(quake.slice()));
+      }),
+    );
+    const sources = new LayerSources(api());
+    const live = await sources.layerTiles('earthquake');
+    const past = await sources.layerTiles('earthquake', '2026-10-20T11:13:04Z');
+    await sources.layerTiles('earthquake', '2026-10-20T11:13:04Z');
+    expect(asked).toEqual([null, '2026-10-20T11:13:04Z']);
+    if (!live.ok || !past.ok) throw new Error('Expected both TileJSONs to load.');
+    expect(past.tiles.template.query).toEqual({ asOf: '2026-10-20T11:13:04Z' });
+    const signal = new AbortController().signal;
+    await sources.tile(past.tiles.template, { z: 0, x: 0, y: 0 }, signal);
+    await sources.tile(live.tiles.template, { z: 0, x: 0, y: 0 }, signal);
+    // A past instant's tile and the live one are cached apart.
+    expect(tileAsked).toEqual(['2026-10-20T11:13:04Z', null]);
+    // Back at live, the cache is dropped: the tile is fetched afresh.
+    sources.forgetTiles();
+    await sources.tile(live.tiles.template, { z: 0, x: 0, y: 0 }, signal);
+    expect(tileAsked).toEqual(['2026-10-20T11:13:04Z', null, null]);
+  });
 });

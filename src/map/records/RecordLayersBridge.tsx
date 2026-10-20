@@ -5,6 +5,7 @@ import type { ForesignalClient } from '../../api/client';
 import type { ChangeStream } from '../../api/stream/ChangeStream';
 import { registerEngine } from '../stress/engineProbe';
 import type { OverlayStyle } from '../style/loadOverlayStyle';
+import type { RecordFeature } from './decodeTile';
 import { changedArea, liveArea, type ChangedArea } from './liveChanges';
 import { MapPointer } from './mapPointer';
 import { RecordLayerSet } from './recordLayerSet';
@@ -28,6 +29,10 @@ export interface RecordLayersBridgeProps {
   onSelect?: (hit: RecordHit | undefined) => void;
   /** The live stream: the tiles its changes touch are fetched again and redrawn (011). */
   stream?: ChangeStream;
+  /** The instant the layers are pinned at (013), to the second; undefined for live data. */
+  asOf?: string;
+  /** A history playback's step, drawn in place of the tiles while one is shown (013). */
+  frame?: readonly RecordFeature[];
 }
 
 /**
@@ -35,7 +40,8 @@ export interface RecordLayersBridgeProps {
  * layers, the hidden sources and the overlay style, and runs the map's pointer ({@link MapPointer}),
  * which picks the set's records on hover and click. With the live stream, the tiles a change or
  * live position touches are fetched again ({@link RecordLayerSet.applyAreas}), and a resync loads
- * every drawn tile again. Renders nothing itself: the records are Cesium primitives. In development
+ * every drawn tile again. Pinned at an instant (013), the layers draw that instant's tiles and the
+ * stream's changes wait; a history playback's step is drawn in their place. Renders nothing itself: the records are Cesium primitives. In development
  * it registers the engine for the stress harness and the end-to-end checks.
  */
 export function RecordLayersBridge({
@@ -47,21 +53,25 @@ export function RecordLayersBridge({
   onHover,
   onSelect,
   stream,
+  asOf,
+  frame,
 }: RecordLayersBridgeProps) {
   const { viewer } = useCesium();
   const setRef = useRef<RecordLayerSet>(undefined);
-  const latest = useRef({ overlay, layers, hiddenSources });
+  const latest = useRef({ overlay, layers, hiddenSources, asOf, frame });
   const pointerHandlers = useRef({ onHover, onSelect });
   const streamRef = useRef(stream);
 
   // Declared first so it runs first: on the first render the set does not exist yet and picks
   // these up when it is created below.
   useEffect(() => {
-    latest.current = { overlay, layers, hiddenSources };
+    latest.current = { overlay, layers, hiddenSources, asOf, frame };
     setRef.current?.setStyle(overlay);
     setRef.current?.setHiddenSources(hiddenSources);
+    setRef.current?.setAsOf(asOf);
     setRef.current?.setLayers(layers);
-  }, [overlay, layers, hiddenSources]);
+    setRef.current?.setFrame(frame);
+  }, [overlay, layers, hiddenSources, asOf, frame]);
 
   useEffect(() => {
     pointerHandlers.current = { onHover, onSelect };
@@ -90,7 +100,9 @@ export function RecordLayersBridge({
     const set = new RecordLayerSet(viewer, api, onStatus);
     set.setStyle(latest.current.overlay);
     set.setHiddenSources(latest.current.hiddenSources);
+    set.setAsOf(latest.current.asOf);
     set.setLayers(latest.current.layers);
+    set.setFrame(latest.current.frame);
     setRef.current = set;
     const pointer = new MapPointer(viewer, () => setRef.current, {
       onHover: (hit) => pointerHandlers.current.onHover?.(hit),

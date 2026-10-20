@@ -24,17 +24,20 @@ export type LayerTilesResult =
 
 /**
  * Loads a record layer's TileJSON (`getTileJson`) and reads its concrete tile template, zoom
- * range, bounds and aggregation zoom. A TileJSON with no usable template (none, another shape, or
- * a time alias such as `latest`) cannot be drawn and gives a message. Retries on 429/503 are the
- * API client's (002).
+ * range, bounds and aggregation zoom. With `asOf` (013) the TileJSON is the layer as known at that
+ * instant, and its template carries the backend's own form of the instant, which the tiles are then
+ * asked for with: the client never builds the time string of a tile URL. A TileJSON with no usable
+ * template (none, another shape, or a time alias such as `latest`) cannot be drawn and gives a
+ * message. Retries on 429/503 are the API client's (002).
  */
 export async function loadLayerTiles(
   api: ForesignalClient,
   layer: string,
   signal?: AbortSignal,
+  asOf?: string,
 ): Promise<LayerTilesResult> {
   const { data, error, response } = await api.GET('/v1/tiles/{layer}.json', {
-    params: { path: { layer } },
+    params: { path: { layer }, ...(asOf !== undefined && { query: { asOf } }) },
     signal,
   });
   if (!data) {
