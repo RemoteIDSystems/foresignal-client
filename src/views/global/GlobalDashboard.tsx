@@ -20,7 +20,8 @@ import { MapViewer } from '../../map/Viewer';
 import type { RecordHit } from '../../map/records/recordPicking';
 import { stressModeOn } from '../../map/stress/stressMode';
 import { useViewCounts } from '../../state/contextSummary';
-import { useCommittedViewport } from '../../state/viewport';
+import { useCommittedViewport, viewportOf } from '../../state/viewport';
+import { appStore, useStoreKey, type AppState, type Store } from '../../state/store';
 import {
   ActivityTimelinePanel,
   InsightsPanel,
@@ -98,24 +99,39 @@ const PANELS: readonly DockPanel[] = [
  * on the map is the page's selection (010), for 014's dossier. In a development build, `?stress`
  * adds the stress harness, which can turn on every kind in the catalog at once and measure the map
  * (010). The page holds the live stream open (011), narrowed to the drawn kinds (and product frames)
- * in the committed view, so the map stays current; the time HUD's badge shows its state. The other
+ * in the committed view, so the map stays current; the time HUD's badge shows its state. The enabled
+ * layers, hidden sources, selection and viewport are the store's (012), so they outlast the page. The other
  * panels are skeletons with placeholder data until their prompts.
  */
 export function GlobalDashboard({
   api,
   stream,
+  store = appStore,
 }: {
   api?: ForesignalClient;
   /** The live stream (011): held open while the page shows, narrowed to its layers and view. */
   stream?: ChangeStream;
+  /** The store the page's layers, selection, viewport and scene live in (012); the app's. */
+  store?: Store<AppState>;
 }) {
+  const storeViewport = useMemo(() => viewportOf(store), [store]);
   const theme = useTheme();
   const overlayStyle = useOverlayStyle(api, theme.name);
   const overlay = overlayStyle.status === 'ready' ? overlayStyle.overlay : undefined;
   const catalogState = useLayerCatalog(api, overlay?.model);
   const catalog = catalogState.status === 'ready' ? catalogState.catalog : undefined;
-  // The user's choice once they toggle; until then the default for the catalog.
-  const [chosen, setChosen] = useState<ReadonlySet<string>>();
+  // Layers and their filters live in the store (012): the user's choice once they toggle; until
+  // then the catalog's default.
+  const layerState = useStoreKey('layers', store);
+  const chosen = useMemo(
+    () => (layerState.kinds ? new Set(layerState.kinds) : undefined),
+    [layerState.kinds],
+  );
+  const setChosen = useCallback(
+    (kinds: ReadonlySet<string> | undefined) =>
+      store.merge('layers', { kinds: kinds && [...kinds].sort() }),
+    [store],
+  );
   const enabled = useMemo(
     () => chosen ?? new Set(catalog ? defaultEnabled(catalog) : []),
     [chosen, catalog],
@@ -129,7 +145,7 @@ export function GlobalDashboard({
       else next.add(kind);
       setChosen(next);
     },
-    [enabled],
+    [enabled, setChosen],
   );
   const setKinds = useCallback(
     (kinds: readonly string[], on: boolean) => {
@@ -140,13 +156,21 @@ export function GlobalDashboard({
       }
       setChosen(next);
     },
-    [enabled],
+    [enabled, setChosen],
   );
 
   const productsState = useProducts(api);
   const productList = productsState.status === 'ready' ? productsState.products : NO_PRODUCTS;
   const entries = useMemo(() => productEntries(productList), [productList]);
-  const [chosenProducts, setChosenProducts] = useState<ReadonlySet<string>>();
+  const chosenProducts = useMemo(
+    () => (layerState.products ? new Set(layerState.products) : undefined),
+    [layerState.products],
+  );
+  const setChosenProducts = useCallback(
+    (keys: ReadonlySet<string> | undefined) =>
+      store.merge('layers', { products: keys && [...keys].sort() }),
+    [store],
+  );
   const enabledProducts = useMemo(
     () => chosenProducts ?? new Set(defaultProductLayers(entries)),
     [chosenProducts, entries],
@@ -160,7 +184,7 @@ export function GlobalDashboard({
       }
       setChosenProducts(next);
     },
-    [enabledProducts],
+    [enabledProducts, setChosenProducts],
   );
   const [productStatuses, setProductStatuses] = useState<Record<string, ProductLayerStatus>>({});
   const onProductStatus = useCallback((key: string, status: ProductLayerStatus) => {
@@ -184,27 +208,29 @@ export function GlobalDashboard({
     [entries, enabledProducts, setProductKeys, productStatuses],
   );
 
-  const clear = useCallback(() => {
-    setChosen(new Set());
-    setChosenProducts(new Set());
-  }, []);
+  const clear = useCallback(() => store.merge('layers', { kinds: [], products: [] }), [store]);
 
-  const [hiddenSources, setHiddenSources] = useState<ReadonlySet<string>>(() => new Set());
-  const toggleSource = useCallback((source: string) => {
-    setHiddenSources((current) => {
-      const next = new Set(current);
-      if (!next.delete(source)) next.add(source);
-      return next;
-    });
-  }, []);
-  const showAllSources = useCallback(() => setHiddenSources(new Set()), []);
+  const hiddenSources = useMemo(
+    () => new Set(layerState.hiddenSources),
+    [layerState.hiddenSources],
+  );
+  const toggleSource = useCallback(
+    (source: string) =>
+      store.update('layers', (current) => {
+        const next = new Set(current.hiddenSources);
+        if (!next.delete(source)) next.add(source);
+        return { ...current, hiddenSources: [...next].sort() };
+      }),
+    [store],
+  );
+  const showAllSources = useCallback(() => store.merge('layers', { hiddenSources: [] }), [store]);
 
   const onLayerStatus = useCallback((id: string, status: RecordLayerStatus) => {
     setStatuses((current) => ({ ...current, [id]: status }));
   }, []);
 
   // Counts in view: the map commits its viewport when the camera rests; the summary follows it.
-  const viewport = useCommittedViewport();
+  const viewport = useCommittedViewport(storeViewport);
   const viewCounts = useViewCounts(api, viewport);
   const railCatalog = useMemo(
     () =>
@@ -222,8 +248,8 @@ export function GlobalDashboard({
     return drawnLayers(catalog, enabled);
   }, [catalog, enabled, stress]);
   const allKinds = useMemo(() => catalog?.kinds.map((entry) => entry.id) ?? [], [catalog]);
-  const restoreKinds = useCallback(() => setChosen(undefined), []);
-  const allOn = useCallback(() => setChosen(new Set(allKinds)), [allKinds]);
+  const restoreKinds = useCallback(() => setChosen(undefined), [setChosen]);
+  const allOn = useCallback(() => setChosen(new Set(allKinds)), [allKinds, setChosen]);
   // The live stream follows what the map draws: the drawn kinds (and product frames) in the view.
   useEffect(() => stream?.retain(), [stream]);
   useEffect(() => {
@@ -232,8 +258,12 @@ export function GlobalDashboard({
       bbox: viewport?.bbox,
     });
   }, [stream, recordLayers, productLayers, viewport]);
-  // The selected record (010 picks it; 014's dossier shows it).
-  const [selection, setSelection] = useState<RecordHit>();
+  // The selected record (010 picks it; 014's dossier shows it), in the store (012).
+  const selection = useStoreKey('selection', store);
+  const setSelection = useCallback(
+    (hit: RecordHit | undefined) => store.set('selection', hit),
+    [store],
+  );
   const legendScope = useMemo(
     () => (catalog ? enabledKinds(catalog, enabled, hiddenSources) : undefined),
     [catalog, enabled, hiddenSources],
@@ -291,6 +321,8 @@ export function GlobalDashboard({
             selected={selection}
             onSelect={setSelection}
             stream={stream}
+            store={store}
+            viewport={storeViewport}
           >
             <TimeHudPlaceholder stream={stream} />
             {stress && StressHarness && (

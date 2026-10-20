@@ -1,5 +1,21 @@
 /** Reactive store: viewport, layers, selection, time cursor, inbox and backend capabilities. */
 export {
+  appStore,
+  createStore,
+  INITIAL_STATE,
+  keysReader,
+  reconcile,
+  useStoreKey,
+  useStoreKeys,
+  type AppState,
+  type InboxBadge,
+  type LayerLive,
+  type LayersState,
+  type Store,
+  type TimeCursor,
+} from './store';
+export { connectStreamToStore } from './liveDeltas';
+export {
   capabilitiesStore,
   checkVersion,
   createCapabilitiesStore,
@@ -15,6 +31,7 @@ export {
   createViewportStore,
   splitAtAntimeridian,
   useCommittedViewport,
+  viewportOf,
   viewportStore,
   WORLD_BBOX,
   type CommittedViewport,

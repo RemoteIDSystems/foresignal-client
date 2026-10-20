@@ -7,6 +7,8 @@ import {
 import { createTokenStore, type TokenStore } from '../api/auth';
 import { createTicketSource, type TicketSource } from '../api/tickets';
 import { ChangeStream } from '../api/stream/ChangeStream';
+import { connectStreamToStore } from '../state/liveDeltas';
+import { appStore, createStore, INITIAL_STATE, type AppState, type Store } from '../state/store';
 import { describeDevice, getDeviceId } from '../lib/deviceId';
 import { baseUrl } from '../lib/config';
 import {
@@ -31,6 +33,8 @@ export interface Session {
   capabilities: CapabilitiesStore;
   /** The page's one live stream (011); opened while a view holds it. */
   stream: ChangeStream;
+  /** The app's state (012): the map and panels read it; the live stream writes into it. */
+  store: Store<AppState>;
   /** Reports this browser's device metadata for the current token; resolves `false` with none. */
   reportDevice(): Promise<boolean>;
 }
@@ -41,12 +45,13 @@ export interface SessionOptions {
   baseUrl?: string;
   /** Retry settings passed to the API client. */
   retry?: ForesignalClientOptions['retry'];
-  /** Use a fresh capabilities store instead of the app-wide one (tests). */
+  /** Use fresh capabilities and app stores instead of the app-wide ones (tests). */
   isolated?: boolean;
 }
 
 /**
- * Builds the session: token store, API client, ticket source, live stream and capabilities.
+ * Builds the session: token store, API client, ticket source, live stream, app store (with the
+ * stream's deltas applied to it) and capabilities.
  *
  * Capabilities load immediately and again on every token change; when a token is present its
  * device metadata is reported with `updateCurrentTokenDevice` (`PUT /v1/tokens/current/device`).
@@ -60,6 +65,7 @@ export function createSession(options: SessionOptions = {}): Session {
     retry: options.retry,
   });
   const capabilities = options.isolated ? createCapabilitiesStore() : capabilitiesStore;
+  const store = options.isolated ? createStore<AppState>(INITIAL_STATE) : appStore;
   const tickets = createTicketSource(api, { getToken: tokens.get });
   const stream = new ChangeStream({
     api,
@@ -67,6 +73,7 @@ export function createSession(options: SessionOptions = {}): Session {
     getToken: tokens.get,
     tickets,
   });
+  connectStreamToStore(stream, store);
 
   const reportDevice = async () => {
     if (!tokens.get()) return false;
@@ -86,5 +93,5 @@ export function createSession(options: SessionOptions = {}): Session {
   tokens.subscribe(refresh);
   refresh();
 
-  return { tokens, api, tickets, capabilities, stream, reportDevice };
+  return { tokens, api, tickets, capabilities, stream, store, reportDevice };
 }

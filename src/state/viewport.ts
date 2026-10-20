@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { appStore, type AppState, type Store } from './store';
 
 /**
  * The map's committed viewport: what it shows once the camera has come to rest. `bbox` is
@@ -94,8 +95,23 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-/** The app-wide viewport store: the main map commits to it; summaries and panels read it. */
-export const viewportStore = createViewportStore();
+/**
+ * A {@link ViewportStore} over a key of a keyed {@link Store}: committing writes the key (an
+ * equal viewport changes nothing), and subscribers hear only that key.
+ */
+export function viewportOf(store: Store<AppState>): ViewportStore {
+  return {
+    get: () => store.get('viewport'),
+    subscribe: (listener) => store.subscribe('viewport', listener),
+    commit: (viewport) => store.set('viewport', viewport),
+  };
+}
+
+/**
+ * The app-wide viewport: the `viewport` key of the app store (012). The main map commits to it;
+ * summaries, panels and the live stream's filter read it.
+ */
+export const viewportStore = viewportOf(appStore);
 
 /** Subscribes a component to the committed viewport. */
 export function useCommittedViewport(

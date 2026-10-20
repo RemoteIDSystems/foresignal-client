@@ -36,7 +36,9 @@ export function App({ session, initialPath }: AppProps) {
       <Route element={<AppShell session={session} />}>
         <Route
           path="/global"
-          element={<GlobalDashboard api={session.api} stream={session.stream} />}
+          element={
+            <GlobalDashboard api={session.api} stream={session.stream} store={session.store} />
+          }
         />
         <Route path="/analyst" element={<AnalystView />} />
         <Route path="/map" element={<MapView />} />

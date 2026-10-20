@@ -10,7 +10,9 @@ import {
 import { Viewer as ResiumViewer, useCesium } from 'resium';
 import {
   Cartesian2,
+  type Cartesian3,
   EllipsoidGeodesic,
+  Rectangle,
   Math as CesiumMath,
   SceneMode,
   ScreenSpaceEventHandler,
@@ -33,7 +35,7 @@ import { parseProductLayerKey, type ProductLayerStatus } from './products/produc
 import type { Product } from './products/productApi';
 import type { Attribution } from './style/attributionModel';
 import { ViewportTracker } from './ViewportTracker';
-import { viewportStore, type ViewportStore } from '../state/viewport';
+import { viewportStore, type CommittedViewport, type ViewportStore } from '../state/viewport';
 import type { RecordLayerStatus } from './records/recordLayers';
 import { RecordMarker } from './records/RecordMarker';
 import { hitKey } from './records/mapPointer';
@@ -41,7 +43,8 @@ import type { RecordHit } from './records/recordPicking';
 import { createTerrainProvider, TerrainSampler } from './terrain';
 import { MapHud, type CameraState, type GroundPoint, type MapHudProps } from './MapHud';
 import { niceScale } from './readout';
-import { DEFAULT_SCENE_MODE, SCENE_MODES, type SceneModeKey } from './sceneMode';
+import { SCENE_MODES, type SceneModeKey } from './sceneMode';
+import { appStore, useStoreKey, type AppState, type Store } from '../state/store';
 import {
   homeDestination,
   styleScene,
@@ -157,18 +160,35 @@ function stateKey(s: CameraState): string {
 }
 
 /**
+ * Where a new map opens: the area of the viewport last committed, so a map built again (the page
+ * left and come back to) shows what it showed; the home view when there is none, or when it was
+ * the whole world (the globe seen from far away, which the home view frames better).
+ */
+function startDestination(start: CommittedViewport | undefined): Cartesian3 | Rectangle {
+  if (!start) return homeDestination();
+  const [west, south, east, north] = start.bbox;
+  if (west <= -180 && east >= 180 && south <= -90 && north >= 90) return homeDestination();
+  return Rectangle.fromDegrees(west, south, east, north);
+}
+
+/**
  * Lives inside the Resium viewer: applies the theme and day/night lighting, adds the basemap and
- * the self-hosted terrain, sets the home view, tracks the mouse pointer over the canvas, and
+ * the self-hosted terrain, opens on the last committed view (from the store, 012) or the home view, tracks the mouse pointer over the canvas, and
  * reports camera state after each render, only when a displayed value changed.
  */
 function SceneBridge({
   onReady,
   onCamera,
+  start,
 }: {
   onReady: (viewer: CesiumViewer) => void;
   onCamera: (state: CameraState) => void;
+  /** The view to open on: the viewport last committed, else the home view. */
+  start?: CommittedViewport;
 }) {
   const { viewer } = useCesium();
+  // Read once, when the viewer is set up; a later commit is where the camera already is.
+  const startRef = useRef(start);
   useEffect(() => {
     if (!viewer) return;
     styleScene(viewer);
@@ -187,9 +207,7 @@ function SceneBridge({
         // The map still works on the plain ellipsoid; the readout then shows no elevation.
         console.error('Terrain failed to load', error);
       });
-    viewer.camera.setView({
-      destination: homeDestination(),
-    });
+    viewer.camera.setView({ destination: startDestination(startRef.current) });
     onReady(viewer);
     let pointer: Cartesian2 | undefined;
     const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
@@ -295,6 +313,8 @@ export interface MapViewerProps {
   onProductStatus?: (key: string, status: ProductLayerStatus) => void;
   /** The live stream, which keeps the records and product frames on the map current (011). */
   stream?: ChangeStream;
+  /** The store holding the scene mode (012); the app's by default. */
+  store?: Store<AppState>;
 }
 
 /** No record layers. */
@@ -322,7 +342,9 @@ const NO_PRODUCTS: readonly Product[] = [];
  * CPU from the drawn tiles (010): hovering one shows its callout and a pointer cursor, clicking one
  * selects it, marked as the Global mock marks the selected entity, and clicking nothing or pressing
  * Escape clears it; `data-hovered` and `data-selected` name them. With the live stream (011), the
- * tiles a change touches are fetched again and new product frames are swapped in as announced.
+ * tiles a change touches are fetched again and new product frames are swapped in as announced. The
+ * scene mode is the store's `sceneMode` (012): the toggle writes it and any change to it morphs the
+ * map; a new map opens in that mode, over the viewport last committed to the store.
  */
 export function MapViewer({
   children,
@@ -340,11 +362,17 @@ export function MapViewer({
   selected: controlledSelection,
   onSelect,
   stream,
+  store = appStore,
 }: MapViewerProps) {
   const [webgl] = useState(supportsWebGL);
   const [viewer, setViewer] = useState<CesiumViewer>();
   const [cameraStore] = useState(createCameraStore);
-  const [mode, setMode] = useState<SceneModeKey>(DEFAULT_SCENE_MODE);
+  // The mode lives in the store (012), so whatever selects an item can switch the map (014).
+  const mode = useStoreKey('sceneMode', store);
+  // The mode the viewer was created in; later changes morph it.
+  const [initialMode] = useState(mode);
+  // The view it opens on, likewise from the store.
+  const [startView] = useState(() => viewport.get());
   const insetTiles = useMemo(() => insetTileUrls(), []);
   const [creditContainer] = useState(() => document.createElement('div'));
   const theme = useTheme();
@@ -436,13 +464,11 @@ export function MapViewer({
     [cameraStore],
   );
 
-  const onSceneMode = useCallback(
-    (next: SceneModeKey) => {
-      setMode(next);
-      if (viewer) switchSceneMode(viewer, next, cameraRef.current, MORPH_SECONDS);
-    },
-    [viewer],
-  );
+  const onSceneMode = useCallback((next: SceneModeKey) => store.set('sceneMode', next), [store]);
+  // The store's mode, whoever set it, is the scene's: a change morphs the map, keeping its place.
+  useEffect(() => {
+    if (viewer) switchSceneMode(viewer, mode, cameraRef.current, MORPH_SECONDS);
+  }, [viewer, mode]);
 
   const onResetNorth = useCallback(() => {
     if (!viewer) return;
@@ -548,12 +574,12 @@ export function MapViewer({
         selectionIndicator={false}
         vrButton={false}
         skyBox={false}
-        sceneMode={SCENE_MODES[DEFAULT_SCENE_MODE]}
+        sceneMode={SCENE_MODES[initialMode]}
         useBrowserRecommendedResolution={false}
         shouldAnimate
         creditContainer={creditContainer}
       >
-        <SceneBridge onReady={setViewer} onCamera={onCamera} />
+        <SceneBridge onReady={setViewer} onCamera={onCamera} start={startView} />
         <ViewportTracker store={viewport} />
         {api && (
           <ProductLayersBridge
