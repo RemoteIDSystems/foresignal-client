@@ -19,4 +19,11 @@ describe('Sparkline', () => {
     expect(chart.querySelector('polyline')).not.toBeNull();
     expect(chart.querySelectorAll('circle')).toHaveLength(1);
   });
+
+  it('takes a level’s tone, the accent by default', () => {
+    render(<Sparkline values={[0.6, 0.7]} label="High" tone="danger" />);
+    render(<Sparkline values={[0.2, 0.1]} label="Plain" />);
+    expect(screen.getByRole('img', { name: 'High' })).toHaveAttribute('data-tone', 'danger');
+    expect(screen.getByRole('img', { name: 'Plain' })).toHaveAttribute('data-tone', 'accent');
+  });
 });

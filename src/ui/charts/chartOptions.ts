@@ -57,12 +57,14 @@ export function movingAverage(points: readonly TimePoint[], days: number): TimeP
 /**
  * A time-series line chart (the Conflict mock's CONFLICT METRICS): one smoothed line per series on
  * a time axis, the legend under it, the grid lines faint. With `averageDays`, each line is that
- * many days' trailing average, as the mock's "(7-day average)".
+ * many days' trailing average, as the mock's "(7-day average)". With `percent`, the values are
+ * percents and the axis runs from 0 to 100.
  */
 export function timeSeriesOption(
   tokens: ThemeTokens,
   series: readonly ChartSeries[],
   averageDays?: number,
+  percent = false,
 ): ChartOption {
   const axisLine = { lineStyle: { color: tokens.color.borderStrong } };
   const splitLine = { lineStyle: { color: tokens.color.border } };
@@ -77,7 +79,16 @@ export function timeSeriesOption(
       textStyle: { color: tokens.color.textSecondary, fontSize: 11 },
     },
     xAxis: { type: 'time', axisLine, splitLine: { show: false } },
-    yAxis: { type: 'value', axisLine, splitLine },
+    yAxis: percent
+      ? {
+          type: 'value',
+          min: 0,
+          max: 100,
+          axisLine,
+          splitLine,
+          axisLabel: { formatter: '{value}%' },
+        }
+      : { type: 'value', axisLine, splitLine },
     series: series.map((line) => ({
       type: 'line' as const,
       name: line.name,
@@ -89,5 +100,85 @@ export function timeSeriesOption(
       connectNulls: false,
       lineStyle: { width: 1.5 },
     })),
+  };
+}
+
+/** A reliability bin: the mean forecast, the observed frequency and how many forecasts. */
+export interface ReliabilityBin {
+  forecast: number;
+  observed: number;
+  n: number;
+}
+
+/**
+ * A reliability diagram (022's calibration curve): forecast probability against observed
+ * frequency, both 0–100%. The diagonal is perfect calibration; the bins are dots sized by how many
+ * forecasts they hold; the recalibrated curve, when there is one, is a line.
+ */
+export function reliabilityOption(
+  tokens: ThemeTokens,
+  bins: readonly ReliabilityBin[],
+  curve: readonly [number, number][],
+): ChartOption {
+  const axisLine = { lineStyle: { color: tokens.color.borderStrong } };
+  const splitLine = { lineStyle: { color: tokens.color.border } };
+  const axis = (name: string) => ({
+    type: 'value' as const,
+    min: 0,
+    max: 100,
+    name,
+    nameLocation: 'middle' as const,
+    nameGap: 26,
+    axisLine,
+    splitLine,
+    axisLabel: { formatter: '{value}%' },
+  });
+  const largest = Math.max(1, ...bins.map((bin) => bin.n));
+  // A probability as a percent to a tenth, so 0.06 draws at 6 and not 6.000000000000001.
+  const pct = (p: number) => Math.round(p * 1000) / 10;
+  return {
+    ...baseOption(tokens),
+    tooltip: { ...baseOption(tokens).tooltip, trigger: 'item' },
+    grid: { left: 48, right: 12, top: 12, bottom: 64 },
+    legend: {
+      bottom: 0,
+      itemWidth: 10,
+      itemHeight: 8,
+      textStyle: { color: tokens.color.textSecondary, fontSize: 11 },
+    },
+    xAxis: axis('Forecast'),
+    yAxis: axis('Observed'),
+    series: [
+      {
+        type: 'line',
+        name: 'Perfect calibration',
+        data: [
+          [0, 0],
+          [100, 100],
+        ],
+        showSymbol: false,
+        lineStyle: { type: 'dashed', width: 1, color: tokens.color.textSecondary },
+        itemStyle: { color: tokens.color.textSecondary },
+      },
+      {
+        type: 'scatter',
+        name: 'Bins',
+        data: bins.map((bin) => [pct(bin.forecast), pct(bin.observed), bin.n]),
+        symbolSize: (value: number[]) => 6 + 14 * Math.sqrt((value[2] ?? 0) / largest),
+        itemStyle: { color: tokens.color.accent },
+      },
+      ...(curve.length > 0
+        ? [
+            {
+              type: 'line' as const,
+              name: 'Recalibrated',
+              data: curve.map(([x, y]) => [pct(x), pct(y)]),
+              showSymbol: false,
+              lineStyle: { width: 1.5, color: tokens.color.warning },
+              itemStyle: { color: tokens.color.warning },
+            },
+          ]
+        : []),
+    ],
   };
 }

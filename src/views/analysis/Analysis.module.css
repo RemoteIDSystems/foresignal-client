@@ -656,3 +656,49 @@
 .table [data-least] {
   background: var(--fs-tone-success-bg);
 }
+
+/* The Forecasts tab (022): question rows and the trend legend. */
+
+.questionRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--fs-color-border);
+  font-size: var(--fs-font-size-sm);
+}
+
+.legendRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  font-size: var(--fs-font-size-xs);
+}
+
+.legendRow > :first-child {
+  margin-right: auto;
+}
+
+.legendKey::before {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 2px;
+  margin-right: 5px;
+  vertical-align: middle;
+  background: var(--fs-color-accent);
+}
+
+.legendKey[data-tone='danger']::before {
+  background: var(--fs-color-danger);
+}
+
+.legendKey[data-tone='warning']::before {
+  background: var(--fs-color-warning);
+}
+
+.legendKey[data-tone='info']::before {
+  background: var(--fs-tone-info-fg);
+}

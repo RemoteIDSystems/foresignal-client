@@ -19,3 +19,26 @@
 .dot {
   fill: var(--fs-color-accent);
 }
+
+/* A level's color (022's forecast trends: high red, medium amber, low blue). */
+
+.sparkline[data-tone='danger'] {
+  --spark: var(--fs-color-danger);
+}
+
+.sparkline[data-tone='warning'] {
+  --spark: var(--fs-color-warning);
+}
+
+.sparkline[data-tone='info'] {
+  --spark: var(--fs-tone-info-fg);
+}
+
+.sparkline[data-tone]:not([data-tone='accent']) .line {
+  stroke: var(--spark);
+}
+
+.sparkline[data-tone]:not([data-tone='accent']) .area,
+.sparkline[data-tone]:not([data-tone='accent']) .dot {
+  fill: var(--spark);
+}

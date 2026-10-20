@@ -10,13 +10,21 @@ export interface SparklineProps {
   height?: number;
   /** Accessible description, such as what the values are and over what time. */
   label: string;
+  /** The line's color: the accent (default), or a level's red, amber or blue. */
+  tone?: 'accent' | 'danger' | 'warning' | 'info';
 }
 
 /**
- * A small line chart of a series, drawn as SVG in the accent color with a faint fill: a trend at
- * a glance, with no axes. The last value is marked.
+ * A small line chart of a series, drawn as SVG in the accent color (or a level's tone) with a faint
+ * fill: a trend at a glance, with no axes. The last value is marked.
  */
-export function Sparkline({ values, width = 72, height = 18, label }: SparklineProps) {
+export function Sparkline({
+  values,
+  width = 72,
+  height = 18,
+  label,
+  tone = 'accent',
+}: SparklineProps) {
   const points = sparklinePoints(values, width, height);
   const line = points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
   const last = points.at(-1);
@@ -29,6 +37,7 @@ export function Sparkline({ values, width = 72, height = 18, label }: SparklineP
       role="img"
       aria-label={label}
       data-points={points.length}
+      data-tone={tone}
     >
       {points.length > 1 && (
         <>

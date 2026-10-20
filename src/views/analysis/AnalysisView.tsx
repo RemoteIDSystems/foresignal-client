@@ -18,6 +18,7 @@ import {
   type AnalysisKind,
 } from '../../intel/analysisView';
 import { getInformationValue, type HypothesisSet } from '../../intel/hypothesisApi';
+import { questionScope } from '../../intel/forecastsView';
 import { hypothesisScope, informationLevel, primarySet } from '../../intel/hypothesesView';
 import { useAnalysis, type Analysis } from '../../intel/useAnalysis';
 import type { Part } from '../../intel/useEvidence';
@@ -31,6 +32,7 @@ import { AnalysisHeader } from './AnalysisHeader';
 import { AnalysisMap } from './AnalysisMap';
 import { AnalysisRail } from './AnalysisRail';
 import { AnalysisEvidence } from './EvidenceTab';
+import { ForecastsTab } from './ForecastsTab';
 import { HypothesesTab } from './HypothesesTab';
 import { ExportPanel, InvestigationOverview, ItemsTab } from './InvestigationTabs';
 import {
@@ -64,7 +66,8 @@ export interface AnalysisViewProps {
  * Confidence gauge, the Information Value meter, Last Updated with auto-refresh, and actions); the
  * tab strip; and the tab. Overview, Timeline, Map, Entities (a situation's members) or Items (an
  * investigation's, added and removed where its envelope allows), Evidence (020), Hypotheses (021),
- * Related and, for an investigation, Export are filled; the other tabs name the prompt that fills them.
+ * Forecasts (022), Related and, for an investigation, Export are filled; the other tabs name the
+ * prompt that fills them.
  */
 export function AnalysisView({ api, stream, store = appStore, kind }: AnalysisViewProps) {
   const { id = '' } = useParams();
@@ -359,6 +362,8 @@ function renderTab(tab: AnalysisTab, analysis: Analysis, context: TabContext): R
       return <AnalysisEvidence api={context.api} analysis={analysis} onOpen={context.open} />;
     case 'hypotheses':
       return <HypothesesTab api={context.api} sets={context.sets} onOpen={context.open} />;
+    case 'forecasts':
+      return <ForecastsTab api={context.api} scope={questionScope(analysis)} />;
     case 'related':
       return <RelatedTab state={context.related} onOpen={context.open} />;
     case 'export':
