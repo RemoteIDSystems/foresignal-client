@@ -1,5 +1,6 @@
-import { lazy, Suspense, useCallback, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import type { ForesignalClient } from '../../api/client';
+import { RASTER_FRAME_KIND, type ChangeStream } from '../../api/stream/ChangeStream';
 import { DashboardLayout, type DockPanel } from '../../app/DashboardLayout';
 import { useTheme } from '../../app/theme';
 import {
@@ -96,9 +97,18 @@ const PANELS: readonly DockPanel[] = [
  * curated weather products are on at first, as the mock's Weather row is checked. A record clicked
  * on the map is the page's selection (010), for 014's dossier. In a development build, `?stress`
  * adds the stress harness, which can turn on every kind in the catalog at once and measure the map
- * (010). The other panels are skeletons with placeholder data until their prompts.
+ * (010). The page holds the live stream open (011), narrowed to the drawn kinds (and product frames)
+ * in the committed view, so the map stays current; the time HUD's badge shows its state. The other
+ * panels are skeletons with placeholder data until their prompts.
  */
-export function GlobalDashboard({ api }: { api?: ForesignalClient }) {
+export function GlobalDashboard({
+  api,
+  stream,
+}: {
+  api?: ForesignalClient;
+  /** The live stream (011): held open while the page shows, narrowed to its layers and view. */
+  stream?: ChangeStream;
+}) {
   const theme = useTheme();
   const overlayStyle = useOverlayStyle(api, theme.name);
   const overlay = overlayStyle.status === 'ready' ? overlayStyle.overlay : undefined;
@@ -214,6 +224,14 @@ export function GlobalDashboard({ api }: { api?: ForesignalClient }) {
   const allKinds = useMemo(() => catalog?.kinds.map((entry) => entry.id) ?? [], [catalog]);
   const restoreKinds = useCallback(() => setChosen(undefined), []);
   const allOn = useCallback(() => setChosen(new Set(allKinds)), [allKinds]);
+  // The live stream follows what the map draws: the drawn kinds (and product frames) in the view.
+  useEffect(() => stream?.retain(), [stream]);
+  useEffect(() => {
+    stream?.setFilter({
+      kinds: productLayers.length > 0 ? [...recordLayers, RASTER_FRAME_KIND] : recordLayers,
+      bbox: viewport?.bbox,
+    });
+  }, [stream, recordLayers, productLayers, viewport]);
   // The selected record (010 picks it; 014's dossier shows it).
   const [selection, setSelection] = useState<RecordHit>();
   const legendScope = useMemo(
@@ -272,8 +290,9 @@ export function GlobalDashboard({ api }: { api?: ForesignalClient }) {
             onProductStatus={onProductStatus}
             selected={selection}
             onSelect={setSelection}
+            stream={stream}
           >
-            <TimeHudPlaceholder />
+            <TimeHudPlaceholder stream={stream} />
             {stress && StressHarness && (
               <Suspense fallback={null}>
                 <StressHarness

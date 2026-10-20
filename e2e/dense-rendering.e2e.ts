@@ -243,6 +243,5 @@ test('the full catalog at world zoom, dense layers aggregated, stays interactive
     // which no batching changes; here the check is that the map still renders.
     expect(full.frames.frames).toBeGreaterThan(0);
   }
-  // The browser logs each rate-limited response; anything else is a problem.
-  expect(problems.filter((problem) => !problem.includes('status of 429'))).toEqual([]);
+  expect(problems).toEqual([]);
 });

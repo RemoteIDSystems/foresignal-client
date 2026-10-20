@@ -4,6 +4,7 @@ import {
   drawn,
   drawnCells,
   expectLiveEarthquakes,
+  getBackend,
   kindToggle,
   openGlobal,
   standInDense,
@@ -121,7 +122,7 @@ test('the rail counts the records in view, from the viewport summary', async ({ 
   await expect(hazards).toHaveAttribute('data-count-scope', 'view', { timeout: 30_000 });
   const count = async () => Number((await hazards.innerText()).replace(/,/g, ''));
   const atStart = await count();
-  const live = (await (await page.request.get('/v1/kinds')).json()) as {
+  const live = (await (await getBackend(page.request, '/v1/kinds')).json()) as {
     kind: string;
     currentCount: number;
   }[];

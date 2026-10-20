@@ -39,6 +39,7 @@ import {
 } from './productApi';
 import { ProductTileProvider, SingleImageProvider } from './productTiles';
 import { WindField } from './windField';
+import { frameFeedFor, type FrameFeed } from './frameFeed';
 
 /** What the map shows of a product layer, for the rail and the legend. */
 export interface ProductLayerStatus {
@@ -87,16 +88,23 @@ function describe(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+/** While the live stream is connected, how often a product is still polled, as a safety net. */
+export const LIVE_POLL_MS = 10 * 60_000;
+
 /**
- * Follows a product's newest frame: asks `getLatestProductFrame` now and again every half cadence
- * (at most a minute), and calls `onFrame` with each new concrete frame. The map then draws that
- * frame's own content-addressed URLs, never the `latest` alias. (011 replaces polling with the
- * live stream.)
+ * Follows a product's newest frame and calls `onFrame` with each new concrete frame, so the map
+ * draws that frame's own content-addressed URLs, never the `latest` alias. New frames come from the
+ * live stream's `raster-frame` changes (011, through {@link frameFeedFor}); `getLatestProductFrame`
+ * is asked now and then again every half cadence (at most a minute) — or only every
+ * {@link LIVE_POLL_MS} while the stream is live. A frame older than the one drawn is ignored.
  */
 export class FrameWatcher {
   private timer?: ReturnType<typeof setTimeout>;
   private readonly controller = new AbortController();
   private frameKey?: string;
+  private time?: string;
+  private readonly feed: FrameFeed;
+  private readonly unsubscribe: () => void;
 
   constructor(
     private readonly api: ForesignalClient,
@@ -104,28 +112,37 @@ export class FrameWatcher {
     private readonly onFrame: (frame: RasterFrame) => void,
     private readonly onError: (message: string) => void,
   ) {
+    this.feed = frameFeedFor(api);
+    this.unsubscribe = this.feed.subscribe(product.id, (frame) => this.take(frame));
     void this.poll();
   }
 
-  /** Stops polling. */
+  /** Stops polling and listening. */
   destroy(): void {
     clearTimeout(this.timer);
     this.controller.abort();
+    this.unsubscribe();
+  }
+
+  /** Draws a frame if it is new and not older than the one drawn. */
+  private take(frame: RasterFrame): void {
+    if (this.controller.signal.aborted || frame.frameKey === this.frameKey) return;
+    if (this.time && Date.parse(frame.time) < Date.parse(this.time)) return;
+    this.frameKey = frame.frameKey;
+    this.time = frame.time;
+    this.onFrame(frame);
   }
 
   private async poll(): Promise<void> {
     try {
-      const frame = await loadLatestFrame(this.api, this.product.id, this.controller.signal);
-      if (frame.frameKey !== this.frameKey) {
-        this.frameKey = frame.frameKey;
-        this.onFrame(frame);
-      }
+      this.take(await loadLatestFrame(this.api, this.product.id, this.controller.signal));
     } catch (error) {
       if (this.controller.signal.aborted) return;
       this.onError(describe(error));
     }
     if (this.controller.signal.aborted) return;
-    this.timer = setTimeout(() => void this.poll(), pollInterval(this.product.temporal?.cadence));
+    const wait = this.feed.live ? LIVE_POLL_MS : pollInterval(this.product.temporal?.cadence);
+    this.timer = setTimeout(() => void this.poll(), wait);
   }
 }
 

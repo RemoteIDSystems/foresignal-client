@@ -1,4 +1,7 @@
-/** API layer: generated OpenAPI types, the fetch client, auth, tickets, retries, paging and errors. */
+/**
+ * API layer: generated OpenAPI types, the fetch client, auth, tickets, the live stream, retries,
+ * paging and errors.
+ */
 export {
   createForesignalClient,
   DEVICE_ID_OPERATIONS,
@@ -15,6 +18,20 @@ export {
   type TicketSource,
   type TicketSourceOptions,
 } from './tickets';
+export {
+  ChangeStream,
+  RASTER_FRAME_KIND,
+  withChangesCursor,
+  type Change,
+  type ChangeStreamOptions,
+  type LiveEvent,
+  type ResyncReason,
+  type StreamFilter,
+  type StreamListener,
+  type StreamState,
+  type StreamStatus,
+} from './stream/ChangeStream';
+export { fetchSseTransport, SseParser, type SseEvent, type SseTransport } from './stream/sse';
 export { keyed, mintTileKey, type TileKey, type TileKeyRequest } from './tileKey';
 export { FsError, isProblem, parseRetryAfter, toFsError, type Problem } from './errors';
 export { createRetryingFetch, type RetryOptions } from './retry';

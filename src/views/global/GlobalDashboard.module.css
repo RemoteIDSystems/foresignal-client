@@ -272,6 +272,18 @@
   font-weight: 600;
 }
 
+.live[data-state='connecting'],
+.live[data-state='reconnecting'] {
+  background: var(--fs-tone-warning-bg);
+  color: var(--fs-tone-warning-fg);
+}
+
+.live[data-state='paused'],
+.live[data-state='idle'] {
+  background: var(--fs-tone-neutral-bg);
+  color: var(--fs-tone-neutral-fg);
+}
+
 .scrubber {
   width: 194px;
   padding: 8px 10px 6px;

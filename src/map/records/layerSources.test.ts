@@ -107,6 +107,24 @@ describe('LayerSources', () => {
     expect(fetches).toBe(3);
   });
 
+  it('fetches a forgotten tile again at once (it changed on the live stream), and only that one', async () => {
+    let fetches = 0;
+    server.use(
+      http.get('/v1/tiles/{layer}/{z}/{x}/{y}.mvt', ({ response }) => {
+        fetches++;
+        return response.untyped(new Response(quake.slice()));
+      }),
+    );
+    const sources = new LayerSources(api(), () => 0);
+    const signal = new AbortController().signal;
+    await sources.tile(template, { z: 1, x: 0, y: 0 }, signal, 'none');
+    await sources.tile(template, { z: 1, x: 1, y: 0 }, signal, 'none');
+    sources.forget(template, { z: 1, x: 0, y: 0 }, 'none');
+    await sources.tile(template, { z: 1, x: 0, y: 0 }, signal, 'none');
+    await sources.tile(template, { z: 1, x: 1, y: 0 }, signal, 'none');
+    expect(fetches).toBe(3);
+  });
+
   it('keeps at most the shared number of requests in flight, and drops aborted waiters', async () => {
     const release: (() => void)[] = [];
     let started = 0;

@@ -28,6 +28,7 @@ import {
   type HexCell,
 } from './hexCells';
 import type { LayerSources } from './layerSources';
+import { parseTileKey, tileTouches, type Box } from './liveChanges';
 import type { RecordBatch } from './recordBatch';
 import { RecordClaims, recordId, shownRecords } from './recordFilter';
 import {
@@ -147,6 +148,10 @@ export class RecordLayer {
   /** A pending retry after a transient failure, and how many in a row there have been. */
   private retryTimer?: ReturnType<typeof setTimeout>;
   private retries = 0;
+  /** Drawn tiles the live stream changed, to be fetched again and drawn over themselves. */
+  private readonly stale = new Set<string>();
+  /** Tiles fetched again because they changed, for the status and tests. */
+  refreshed = 0;
 
   /**
    * @param id The layer id (`listTileLayers`: a source id or a kind).
@@ -210,6 +215,31 @@ export class RecordLayer {
       if (hit) hits.push(hit);
     }
     return hits.sort(compareHits);
+  }
+
+  /**
+   * Fetches again the drawn tiles that hold any of these boxes (every tile with none), because
+   * the live stream says records there changed: each is drawn over itself when it arrives, so a
+   * new record appears, a moved one moves and a removed one goes, with no blink. A tile on its
+   * way is asked for again too, since it may predate the change. Returns how many tiles.
+   */
+  refresh(boxes?: readonly Box[]): number {
+    const tiles = this.tiles;
+    if (!tiles || this.destroyed) return 0;
+    let count = 0;
+    for (const key of new Set([...this.drawn.keys(), ...this.inFlight.keys()])) {
+      const hex = key.startsWith(HEX_KEY);
+      const tile = parseTileKey(hex ? key.slice(HEX_KEY.length) : key);
+      if (boxes && !boxes.some((box) => tileTouches(tile, box))) continue;
+      this.context.sources.forget(tiles.template, tile, hex ? 'hex' : this.recordAgg());
+      this.inFlight.get(key)?.abort();
+      this.inFlight.delete(key);
+      if (this.drawn.has(key)) this.stale.add(key);
+      count++;
+    }
+    if (count > 0 && this.view) this.plan(this.view);
+    this.refreshed += count;
+    return count;
   }
 
   /** Removes everything the layer drew and cancels its requests. */
@@ -317,21 +347,23 @@ export class RecordLayer {
     }
     this.queue = needed.filter((tile) => {
       const key = keyOf(tile);
-      return !this.drawn.has(key) && !this.inFlight.has(key);
+      return (!this.drawn.has(key) || this.stale.has(key)) && !this.inFlight.has(key);
     });
     this.queueHex = hex;
     this.pump();
     this.settle();
   }
 
+  /** How record tiles are asked for: `none` for a layer that aggregates, else the template's. */
+  private recordAgg(): TileAggregation | undefined {
+    return this.tiles?.aggBelowZoom !== undefined ? 'none' : undefined;
+  }
+
   /** Starts queued tile requests up to the layer's limit. */
   private pump(): void {
     while (this.inFlight.size < MAX_IN_FLIGHT && this.queue.length > 0) {
       const tile = this.queue.shift()!;
-      void this.loadTile(
-        tile,
-        this.queueHex ? 'hex' : this.tiles?.aggBelowZoom !== undefined ? 'none' : undefined,
-      );
+      void this.loadTile(tile, this.queueHex ? 'hex' : this.recordAgg());
     }
     this.report();
   }
@@ -356,6 +388,7 @@ export class RecordLayer {
         else console.warn(`ForeSignal: tile ${this.id} ${key} failed (${result.message}).`);
       } else {
         this.retries = 0;
+        this.stale.delete(key);
         if (this.wanted.has(key)) this.drawTile(key, result.features, this.view?.zoom ?? tile.z);
       }
     } catch (cause) {
@@ -527,6 +560,7 @@ export class RecordLayer {
     if (this.cells.delete(key)) this.scheduleCells();
     this.drawn.delete(key);
     if (keepWaiting || this.destroyed) return;
+    this.stale.delete(key);
     for (const other of waiting) {
       const drawn = this.drawn.get(other);
       if (drawn) this.drawTile(other, drawn.records, drawn.zoom);

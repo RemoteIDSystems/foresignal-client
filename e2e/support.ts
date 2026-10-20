@@ -1,4 +1,4 @@
-import { expect, type APIRequestContext, type Page } from '@playwright/test';
+import { expect, type APIRequestContext, type APIResponse, type Page } from '@playwright/test';
 
 /** The live earthquake style's icon color (usgs-earthquakes, `#D9480F`). */
 export const EARTHQUAKE_RGB: [number, number, number] = [0xd9, 0x48, 0x0f];
@@ -49,11 +49,19 @@ export async function pixelsNear(page: Page, [r, g, b]: [number, number, number]
   );
 }
 
-/** Console errors and uncaught exceptions on a page, collected from now; a check fails on any. */
+/**
+ * Console errors and uncaught exceptions on a page, collected from now; a check fails on any. The
+ * browser's own line for a rate-limited response (429) is not one: the backend limits anonymous
+ * clients, the app's client waits and asks again, and a suite of checks that each load the whole
+ * map meets the limit between them.
+ */
 export function collectProblems(page: Page): string[] {
   const problems: string[] = [];
   page.on('console', (message) => {
-    if (message.type() === 'error') problems.push(message.text());
+    if (message.type() !== 'error') return;
+    const text = message.text();
+    if (/^Failed to load resource: the server responded with a status of 429\b/.test(text)) return;
+    problems.push(text);
   });
   page.on('pageerror', (error) => problems.push(error.message));
   return problems;
@@ -74,9 +82,23 @@ export async function kindToggle(page: Page, category: string, kind: string) {
   return page.locator(`li[data-layer="${kind}"] input[type="checkbox"]`);
 }
 
+/**
+ * A backend read made by a check itself (not the page), waiting out the backend's rate limit for
+ * anonymous clients (429 with Retry-After) as the app's own client does. A suite of checks that
+ * each load the whole map can meet the limit between them.
+ */
+export async function getBackend(request: APIRequestContext, path: string): Promise<APIResponse> {
+  for (let attempt = 0; ; attempt++) {
+    const response = await request.get(path);
+    if (response.status() !== 429 || attempt >= 10) return response;
+    const wait = Number(response.headers()['retry-after'] ?? '1');
+    await new Promise((resolve) => setTimeout(resolve, (Number.isFinite(wait) ? wait : 1) * 1000));
+  }
+}
+
 /** Checks the backend is up and its live earthquake layer has records, which these checks read. */
 export async function expectLiveEarthquakes(request: APIRequestContext) {
-  const kinds = await request.get('/v1/kinds');
+  const kinds = await getBackend(request, '/v1/kinds');
   expect(kinds.ok(), 'the backend must be running on http://localhost:8080').toBe(true);
   const live = (await kinds.json()) as { kind: string; currentCount: number }[];
   expect(

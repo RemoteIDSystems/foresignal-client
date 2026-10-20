@@ -2,7 +2,9 @@ import { useEffect, useRef } from 'react';
 import { useCesium } from 'resium';
 import type { Viewer } from 'cesium';
 import type { ForesignalClient } from '../../api/client';
+import type { ChangeStream } from '../../api/stream/ChangeStream';
 import { useCommittedViewport, type ViewportStore } from '../../state/viewport';
+import { frameFeedFor, frameFromChange } from './frameFeed';
 import type { Product } from './productApi';
 import {
   parseProductLayerKey,
@@ -28,13 +30,17 @@ export interface ProductLayersBridgeProps {
   viewport: ViewportStore;
   /** Told when a layer's status changes. */
   onStatus: (key: string, status: ProductLayerStatus) => void;
+  /** The live stream, whose `raster-frame` changes swap in each product's new frames (011). */
+  stream?: ChangeStream;
 }
 
 /**
  * Lives inside the Resium viewer and keeps one layer per enabled product key: a
  * {@link ProductRasterLayer} for a raster (or a wind field's speed raster), a
  * {@link WindBarbLayer} for `id:barbs` and a {@link WindParticleLayer} for `id:particles`. Loops
- * play over the committed viewport and reload when it changes. Renders nothing.
+ * play over the committed viewport and reload when it changes. With the live stream, each
+ * `raster-frame` change it announces is handed to the product's layers ({@link frameFeedFor}),
+ * which then poll only as a safety net. Renders nothing.
  */
 export function ProductLayersBridge({
   api,
@@ -43,6 +49,7 @@ export function ProductLayersBridge({
   looping,
   viewport,
   onStatus,
+  stream,
 }: ProductLayersBridgeProps) {
   const { viewer } = useCesium();
   const drawn = useRef(new Map<string, AnyProductLayer>());
@@ -77,6 +84,29 @@ export function ProductLayersBridge({
       }
     }
   }, [looping, committed, layers, products]);
+
+  useEffect(() => {
+    if (!stream) return;
+    const feed = frameFeedFor(api);
+    const sync = () => {
+      feed.live = stream.getStatus().state === 'live';
+    };
+    sync();
+    const stopStatus = stream.subscribeStatus(sync);
+    const stopListening = stream.listen({
+      changes(changes) {
+        for (const change of changes) {
+          const frame = frameFromChange(change);
+          if (frame) feed.offer(frame);
+        }
+      },
+    });
+    return () => {
+      stopStatus();
+      stopListening();
+      feed.live = false;
+    };
+  }, [api, stream]);
 
   useEffect(() => {
     const current = drawn.current;

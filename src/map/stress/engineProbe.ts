@@ -1,4 +1,5 @@
 import type { Viewer } from 'cesium';
+import type { ChangeStream } from '../../api/stream/ChangeStream';
 import type { RecordLayerSet } from '../records/recordLayerSet';
 
 /** The map engine the stress harness measures: the viewer and its record layers. */
@@ -7,6 +8,8 @@ export interface MapEngine {
   layers: RecordLayerSet;
   /** Where a point on the ellipsoid shows on the canvas, in CSS pixels; undefined off screen. */
   toScreen(longitude: number, latitude: number): { x: number; y: number } | undefined;
+  /** The live stream the map follows, when it has one (011). */
+  stream?: ChangeStream;
 }
 
 declare global {

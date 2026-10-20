@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { collectProblems, openCategory, openGlobal } from './support';
+import { collectProblems, getBackend, openCategory, openGlobal } from './support';
 import { LOOP_FRAMES, standInProducts } from './products-support';
 
 /** Console errors and uncaught exceptions on the page; a check fails if any appear. */
@@ -7,7 +7,7 @@ let problems: string[] = [];
 
 test.beforeEach(async ({ page, request }) => {
   problems = collectProblems(page);
-  const products = await request.get('/v1/products?limit=1');
+  const products = await getBackend(request, '/v1/products?limit=1');
   expect(products.ok(), 'the backend must be running on http://localhost:8080').toBe(true);
   await standInProducts(page, request);
 });
@@ -96,7 +96,9 @@ test('the default weather products draw over the basemap, with their legends', a
   await page.waitForTimeout(4_000);
 
   // The legend is the backend's: one band per live stop, in its colors and units.
-  const live = (await (await page.request.get('/v1/products/mrms-reflectivity/legend')).json()) as {
+  const live = (await (
+    await getBackend(page.request, '/v1/products/mrms-reflectivity/legend')
+  ).json()) as {
     stops: { color: string }[];
   };
   const block = page.locator('section[data-product="mrms-reflectivity"]');

@@ -96,6 +96,11 @@ export class LayerSources {
     }
   }
 
+  /** Drops a cached tile, so the next ask fetches it again (it changed on the live stream). */
+  forget(template: RecordTileTemplate, tile: TileId, agg?: TileAggregation): void {
+    this.tiles.delete(cacheKey(template, tile, agg));
+  }
+
   /** Requests waiting for a slot, and in flight (for tests and the stress harness). */
   get queued(): { waiting: number; active: number } {
     return { waiting: this.waiting.length, active: this.active };

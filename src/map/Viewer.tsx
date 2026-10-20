@@ -19,6 +19,7 @@ import {
   type Viewer as CesiumViewer,
 } from 'cesium';
 import type { ForesignalClient } from '../api/client';
+import type { ChangeStream } from '../api/stream/ChangeStream';
 import { useTheme } from '../app/theme';
 import { createBaseLayers, insetTileUrls } from './imagery';
 import { MapAttribution } from './style/attribution';
@@ -292,6 +293,8 @@ export interface MapViewerProps {
   onSelect?: (hit: RecordHit | undefined) => void;
   /** Told when a product layer's status changes. */
   onProductStatus?: (key: string, status: ProductLayerStatus) => void;
+  /** The live stream, which keeps the records and product frames on the map current (011). */
+  stream?: ChangeStream;
 }
 
 /** No record layers. */
@@ -318,7 +321,8 @@ const NO_PRODUCTS: readonly Product[] = [];
  * aggregation zoom, and `data-product-layers` the product layers drawn. Records are picked on the
  * CPU from the drawn tiles (010): hovering one shows its callout and a pointer cursor, clicking one
  * selects it, marked as the Global mock marks the selected entity, and clicking nothing or pressing
- * Escape clears it; `data-hovered` and `data-selected` name them.
+ * Escape clears it; `data-hovered` and `data-selected` name them. With the live stream (011), the
+ * tiles a change touches are fetched again and new product frames are swapped in as announced.
  */
 export function MapViewer({
   children,
@@ -335,6 +339,7 @@ export function MapViewer({
   onProductStatus,
   selected: controlledSelection,
   onSelect,
+  stream,
 }: MapViewerProps) {
   const [webgl] = useState(supportsWebGL);
   const [viewer, setViewer] = useState<CesiumViewer>();
@@ -558,6 +563,7 @@ export function MapViewer({
             looping={looping}
             viewport={viewport}
             onStatus={onProduct}
+            stream={stream}
           />
         )}
         {api && (
@@ -569,6 +575,7 @@ export function MapViewer({
             onStatus={onStatus}
             onHover={setHovered}
             onSelect={select}
+            stream={stream}
           />
         )}
       </ResiumViewer>

@@ -6,6 +6,7 @@ import {
 } from '../api/client';
 import { createTokenStore, type TokenStore } from '../api/auth';
 import { createTicketSource, type TicketSource } from '../api/tickets';
+import { ChangeStream } from '../api/stream/ChangeStream';
 import { describeDevice, getDeviceId } from '../lib/deviceId';
 import { baseUrl } from '../lib/config';
 import {
@@ -28,6 +29,8 @@ export interface Session {
   tickets: TicketSource;
   /** The backend's capabilities, reloaded whenever the token changes. */
   capabilities: CapabilitiesStore;
+  /** The page's one live stream (011); opened while a view holds it. */
+  stream: ChangeStream;
   /** Reports this browser's device metadata for the current token; resolves `false` with none. */
   reportDevice(): Promise<boolean>;
 }
@@ -43,7 +46,7 @@ export interface SessionOptions {
 }
 
 /**
- * Builds the session: token store, API client, ticket source and capabilities.
+ * Builds the session: token store, API client, ticket source, live stream and capabilities.
  *
  * Capabilities load immediately and again on every token change; when a token is present its
  * device metadata is reported with `updateCurrentTokenDevice` (`PUT /v1/tokens/current/device`).
@@ -58,6 +61,12 @@ export function createSession(options: SessionOptions = {}): Session {
   });
   const capabilities = options.isolated ? createCapabilitiesStore() : capabilitiesStore;
   const tickets = createTicketSource(api, { getToken: tokens.get });
+  const stream = new ChangeStream({
+    api,
+    baseUrl: options.baseUrl ?? baseUrl,
+    getToken: tokens.get,
+    tickets,
+  });
 
   const reportDevice = async () => {
     if (!tokens.get()) return false;
@@ -67,6 +76,8 @@ export function createSession(options: SessionOptions = {}): Session {
 
   const refresh = () => {
     tickets.invalidate();
+    // A new token may see other data: the stream reconnects with a ticket for it.
+    stream.reconnectNow();
     void capabilities.load(api, SPEC_VERSION);
     reportDevice().catch((error: unknown) => {
       console.warn('ForeSignal: could not report device metadata for this token.', error);
@@ -75,5 +86,5 @@ export function createSession(options: SessionOptions = {}): Session {
   tokens.subscribe(refresh);
   refresh();
 
-  return { tokens, api, tickets, capabilities, reportDevice };
+  return { tokens, api, tickets, capabilities, stream, reportDevice };
 }

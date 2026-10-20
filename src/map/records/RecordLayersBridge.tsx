@@ -2,8 +2,10 @@ import { Cartesian3, SceneTransforms } from 'cesium';
 import { useEffect, useRef } from 'react';
 import { useCesium } from 'resium';
 import type { ForesignalClient } from '../../api/client';
+import type { ChangeStream } from '../../api/stream/ChangeStream';
 import { registerEngine } from '../stress/engineProbe';
 import type { OverlayStyle } from '../style/loadOverlayStyle';
+import { changedArea, liveArea, type ChangedArea } from './liveChanges';
 import { MapPointer } from './mapPointer';
 import { RecordLayerSet } from './recordLayerSet';
 import type { RecordLayerStatus } from './recordLayers';
@@ -24,13 +26,17 @@ export interface RecordLayersBridgeProps {
   onHover?: (hit: RecordHit | undefined) => void;
   /** The record clicked, or undefined for a click on nothing. */
   onSelect?: (hit: RecordHit | undefined) => void;
+  /** The live stream: the tiles its changes touch are fetched again and redrawn (011). */
+  stream?: ChangeStream;
 }
 
 /**
  * Lives inside the Resium viewer and keeps a {@link RecordLayerSet} in step with the enabled
  * layers, the hidden sources and the overlay style, and runs the map's pointer ({@link MapPointer}),
- * which picks the set's records on hover and click. Renders nothing itself: the records are Cesium
- * primitives. In development it registers the engine for the stress harness.
+ * which picks the set's records on hover and click. With the live stream, the tiles a change or
+ * live position touches are fetched again ({@link RecordLayerSet.applyAreas}), and a resync loads
+ * every drawn tile again. Renders nothing itself: the records are Cesium primitives. In development
+ * it registers the engine for the stress harness and the end-to-end checks.
  */
 export function RecordLayersBridge({
   api,
@@ -40,11 +46,13 @@ export function RecordLayersBridge({
   onStatus,
   onHover,
   onSelect,
+  stream,
 }: RecordLayersBridgeProps) {
   const { viewer } = useCesium();
   const setRef = useRef<RecordLayerSet>(undefined);
   const latest = useRef({ overlay, layers, hiddenSources });
   const pointerHandlers = useRef({ onHover, onSelect });
+  const streamRef = useRef(stream);
 
   // Declared first so it runs first: on the first render the set does not exist yet and picks
   // these up when it is created below.
@@ -58,6 +66,24 @@ export function RecordLayersBridge({
   useEffect(() => {
     pointerHandlers.current = { onHover, onSelect };
   }, [onHover, onSelect]);
+
+  useEffect(() => {
+    streamRef.current = stream;
+    if (!stream) return;
+    return stream.listen({
+      changes(changes) {
+        const areas = changes.map(changedArea).filter((area): area is ChangedArea => !!area);
+        if (areas.length > 0) setRef.current?.applyAreas(areas);
+      },
+      live(event) {
+        const area = liveArea(event);
+        if (area) setRef.current?.applyAreas([area]);
+      },
+      resync() {
+        setRef.current?.reload();
+      },
+    });
+  }, [stream]);
 
   useEffect(() => {
     if (!viewer) return;
@@ -74,6 +100,7 @@ export function RecordLayersBridge({
       registerEngine({
         viewer,
         layers: set,
+        stream: streamRef.current,
         toScreen: (longitude, latitude) => {
           const at = SceneTransforms.worldToWindowCoordinates(
             viewer.scene,

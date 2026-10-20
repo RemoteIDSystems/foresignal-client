@@ -2,6 +2,7 @@ import { SceneMode, type Viewer } from 'cesium';
 import type { ForesignalClient } from '../../api/client';
 import type { OverlayStyle } from '../style/loadOverlayStyle';
 import { LayerSources } from './layerSources';
+import type { Box, ChangedArea } from './liveChanges';
 import { RecordBatch } from './recordBatch';
 import {
   readRecordView,
@@ -20,6 +21,15 @@ const CAMERA_CHANGE_FRACTION = 0.05;
 
 /** How long layer statuses are gathered before the owner is told, in ms. */
 export const STATUS_FLUSH_MS = 50;
+
+/**
+ * The live stream's changes are gathered for this long, in ms, then each layer fetches the tiles
+ * they touched once: a busy kind costs a tile request per second, not one per change.
+ */
+export const LIVE_REFRESH_MS = 1_000;
+
+/** Past this many changed boxes in one layer per refresh, every drawn tile of it is fetched again. */
+const MAX_LIVE_BOXES = 200;
 
 /** One per API client, so every map on the page (the split view's two) shares TileJSON and tiles. */
 const SOURCES = new WeakMap<ForesignalClient, LayerSources>();
@@ -81,6 +91,9 @@ export class RecordLayerSet {
   private statusTimer?: ReturnType<typeof setTimeout>;
   /** What the last {@link setLayers} cost. */
   lastChange?: LayerChange;
+  /** Changed boxes per layer waiting for the next live refresh; `all` for every tile. */
+  private readonly liveBoxes = new Map<string, Box[] | 'all'>();
+  private liveTimer?: ReturnType<typeof setTimeout>;
 
   /**
    * @param viewer The Cesium viewer to draw into.
@@ -141,6 +154,48 @@ export class RecordLayerSet {
     if (added + removed > 0) this.lastChange = { added, removed, ms: performance.now() - start };
   }
 
+  /**
+   * Takes record changes from the live stream: the layers drawing their kind fetch the tiles they
+   * touched again, gathered over {@link LIVE_REFRESH_MS}. Changes to kinds not drawn are ignored.
+   */
+  applyAreas(areas: readonly ChangedArea[]): void {
+    for (const area of areas) {
+      for (const id of [area.kind, area.source]) {
+        if (!this.layers.has(id)) continue;
+        const boxes = this.liveBoxes.get(id) ?? [];
+        if (boxes === 'all') continue;
+        boxes.push(...area.boxes);
+        this.liveBoxes.set(id, boxes.length > MAX_LIVE_BOXES ? 'all' : boxes);
+      }
+    }
+    this.scheduleLive();
+  }
+
+  /** Fetches every drawn tile of every layer again: the stream lost updates (a resync). */
+  reload(): void {
+    for (const id of this.layers.keys()) this.liveBoxes.set(id, 'all');
+    this.scheduleLive();
+  }
+
+  /** Tiles fetched again for live changes so far, across the layers drawn now. */
+  get refreshed(): number {
+    let total = 0;
+    for (const layer of this.layers.values()) total += layer.refreshed;
+    return total;
+  }
+
+  private scheduleLive(): void {
+    if (this.liveTimer !== undefined || this.liveBoxes.size === 0) return;
+    this.liveTimer = setTimeout(() => {
+      this.liveTimer = undefined;
+      const pending = [...this.liveBoxes];
+      this.liveBoxes.clear();
+      for (const [id, boxes] of pending) {
+        this.layers.get(id)?.refresh(boxes === 'all' ? undefined : boxes);
+      }
+    }, LIVE_REFRESH_MS);
+  }
+
   /** Hides the records of these sources in every layer (the FILTERS tab). */
   setHiddenSources(hidden: ReadonlySet<string>): void {
     this.hiddenSources = hidden;
@@ -194,6 +249,7 @@ export class RecordLayerSet {
   destroy(): void {
     clearTimeout(this.timer);
     clearTimeout(this.statusTimer);
+    clearTimeout(this.liveTimer);
     for (const remove of this.removers) remove();
     for (const id of [...this.layers.keys()]) this.remove(id);
     if (!this.viewer.isDestroyed()) this.batch.destroy();

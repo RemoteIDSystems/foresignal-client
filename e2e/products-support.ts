@@ -1,6 +1,7 @@
 import { crc32, deflateSync } from 'node:zlib';
 import type { APIRequestContext, Page, Route } from '@playwright/test';
 import { encodeTile } from '../src/map/records/testing/encodeTile';
+import { getBackend } from './support';
 
 /**
  * Stand-in data for the raster products and wind (009). Every product on the backend these checks
@@ -155,7 +156,7 @@ type Painter = (lon: number, lat: number, t: number) => [number, number, number,
 /** The painters, from the live legends. */
 async function painters(request: APIRequestContext): Promise<Record<string, Painter>> {
   const legend = async (id: string) =>
-    ((await (await request.get(`/v1/products/${id}/legend`)).json()) as Stops).stops;
+    ((await (await getBackend(request, `/v1/products/${id}/legend`)).json()) as Stops).stops;
   const radar = await legend('mrms-reflectivity');
   const speed = await legend('gfs');
   return {

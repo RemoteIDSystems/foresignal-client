@@ -1,5 +1,6 @@
 import type { APIRequestContext, Page } from '@playwright/test';
 import { encodeTile, type TestFeature } from '../src/map/records/testing/encodeTile';
+import { getBackend } from './support';
 
 /** The tile extent the stand-in tiles are encoded at. */
 const EXTENT = 4096;
@@ -116,14 +117,14 @@ function kindRecords(kind: string): StandInRecord[] {
  * {@link POINTS_PER_KIND} points over the world, encoded per tile. Returns the kind ids.
  */
 export async function standInCatalog(page: Page, request: APIRequestContext): Promise<string[]> {
-  const index = (await (await request.get('/v1/tiles.json')).json()) as {
+  const index = (await (await getBackend(request, '/v1/tiles.json')).json()) as {
     layers: { id: string; type: string }[];
   };
   const kinds = index.layers.filter((layer) => layer.type === 'kind').map((layer) => layer.id);
   const records = new Map<string, StandInRecord[]>();
   await page.route('**/v1/kinds', async (route) => {
     // Read here, not through the page's request: the browser's may be a revalidation (304).
-    const live = (await (await request.get('/v1/kinds')).json()) as {
+    const live = (await (await getBackend(request, '/v1/kinds')).json()) as {
       kind: string;
       currentCount: number;
     }[];
