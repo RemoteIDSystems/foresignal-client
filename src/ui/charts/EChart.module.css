@@ -1,0 +1,10 @@
+.chart {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.loading {
+  color: var(--fs-color-text-muted);
+  font-size: var(--fs-font-size-xs);
+}

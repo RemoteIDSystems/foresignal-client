@@ -55,6 +55,7 @@ export interface PackageCredit {
  */
 export const PACKAGE_CREDITS: readonly PackageCredit[] = [
   { name: 'cesium', license: 'Apache-2.0', use: 'Map and globe engine' },
+  { name: 'echarts', license: 'Apache-2.0', use: 'Charts' },
   { name: 'resium', license: 'MIT', use: 'React bindings for Cesium' },
   { name: 'react', license: 'MIT', use: 'User interface' },
   { name: 'react-dom', license: 'MIT', use: 'User interface' },

@@ -551,3 +551,77 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* The Evidence tab (020): metric tiles, evidence rows, findings and impacts. */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-panel-alt);
+}
+
+.tileValue {
+  font-size: var(--fs-font-size-xl);
+  font-weight: 600;
+}
+
+.tileLabel {
+  color: var(--fs-color-text-secondary);
+  font-size: var(--fs-font-size-xs);
+}
+
+.evidenceRow {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--fs-color-border);
+  font-size: var(--fs-font-size-sm);
+}
+
+.evidenceIcon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 34px;
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-raised);
+  color: var(--fs-color-text-secondary);
+}
+
+.evidenceText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.findingRow {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--fs-color-border);
+  font-size: var(--fs-font-size-sm);
+}
+
+.pill {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--fs-tone-success-bg);
+  color: var(--fs-tone-success-fg);
+  font-size: var(--fs-font-size-xs);
+  font-weight: 600;
+}

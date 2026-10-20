@@ -26,6 +26,7 @@ import { appStore, type AppState, type Store } from '../../state/store';
 import { AnalysisHeader } from './AnalysisHeader';
 import { AnalysisMap } from './AnalysisMap';
 import { AnalysisRail } from './AnalysisRail';
+import { AnalysisEvidence } from './EvidenceTab';
 import { ExportPanel, InvestigationOverview, ItemsTab } from './InvestigationTabs';
 import {
   ANALYSIS_TABS,
@@ -52,9 +53,9 @@ export interface AnalysisViewProps {
  * Tropical-Storm workspace), at `/intelligence/situations/:id` or `/intelligence/investigations/:id`,
  * the tab in `?tab=`. The analysis rail on the left; the header (title and status, the subline, the
  * Confidence gauge, the Information Value meter, Last Updated with auto-refresh, and actions); the
- * tab strip; and the tab. This prompt fills Overview, Timeline, Map, Entities (a situation's members)
- * or Items (an investigation's, added and removed where its envelope allows), Related and, for an
- * investigation, Export; the other tabs name the prompt that fills them.
+ * tab strip; and the tab. Overview, Timeline, Map, Entities (a situation's members) or Items (an
+ * investigation's, added and removed where its envelope allows), Evidence (020), Related and, for
+ * an investigation, Export are filled; the other tabs name the prompt that fills them.
  */
 export function AnalysisView({ api, stream, store = appStore, kind }: AnalysisViewProps) {
   const { id = '' } = useParams();
@@ -134,6 +135,10 @@ export function AnalysisView({ api, stream, store = appStore, kind }: AnalysisVi
       analysis.kind === 'situation'
         ? analysis.members.length
         : (analysis.investigation.items?.length ?? 0);
+    const evidenceCount =
+      analysis.kind === 'situation'
+        ? analysis.members.length
+        : (analysis.investigation.items ?? []).filter((item) => item.itemType !== 'note').length;
     header = headerFor(
       analysis,
       state.error,
@@ -157,7 +162,7 @@ export function AnalysisView({ api, stream, store = appStore, kind }: AnalysisVi
     );
     const items: TabItem<AnalysisTab>[] = ANALYSIS_TABS.map((key) => ({
       key,
-      label: tabLabel(key, analysis.kind, memberCount, relatedCount),
+      label: tabLabel(key, analysis.kind, memberCount, relatedCount, evidenceCount),
     }));
     body = (
       <>
@@ -190,18 +195,24 @@ export function AnalysisView({ api, stream, store = appStore, kind }: AnalysisVi
   );
 }
 
-/** A tab's label: Entities or Items with their count, Related with its count once known. */
+/**
+ * A tab's label: Entities or Items with their count, Evidence with its count, Related with its
+ * count once known.
+ */
 function tabLabel(
   key: AnalysisTab,
   kind: AnalysisKind,
   members: number,
   related: number | undefined,
+  evidence?: number,
 ): string {
   switch (key) {
     case 'analysis':
       return 'Full Analysis';
     case 'entities':
       return `${kind === 'situation' ? 'Entities' : 'Items'} (${members.toLocaleString('en-US')})`;
+    case 'evidence':
+      return evidence === undefined ? 'Evidence' : `Evidence (${evidence.toLocaleString('en-US')})`;
     case 'related':
       return related === undefined ? 'Related' : `Related (${related.toLocaleString('en-US')})`;
     default:
@@ -318,6 +329,8 @@ function renderTab(tab: AnalysisTab, analysis: Analysis, context: TabContext): R
           onChanged={context.refresh}
         />
       );
+    case 'evidence':
+      return <AnalysisEvidence api={context.api} analysis={analysis} onOpen={context.open} />;
     case 'related':
       return <RelatedTab state={context.related} onOpen={context.open} />;
     case 'export':

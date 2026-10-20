@@ -38,7 +38,6 @@ export type AnalysisTab = (typeof ANALYSIS_TABS)[number];
 /** The prompts that fill the tabs this one does not, shown on those tabs until then. */
 export const PENDING_TABS: Readonly<Partial<Record<AnalysisTab, string>>> = {
   analysis: '023 (Assessments)',
-  evidence: '020 (Findings and Analytics)',
   hypotheses: '021 (Hypotheses and ACH)',
   forecasts: '022 (Forecasts)',
   reports: 'a later prompt',
@@ -90,7 +89,7 @@ export const ANALYSIS_ENTRIES: readonly RailEntry[] = [
   { label: 'Hypotheses', icon: FlaskConical, tab: 'hypotheses' },
   { label: 'Forecasts', icon: TrendingUp, tab: 'forecasts' },
   { label: 'Indicators', icon: Gauge, tab: 'hypotheses' },
-  { label: 'Base Rates', icon: Sigma, later: '020' },
+  { label: 'Base Rates', icon: Sigma, tab: 'evidence' },
   { label: 'Comparisons', icon: GitCompare, later: 'a later prompt' },
   { label: 'Reports', icon: FileText, tab: 'reports' },
 ];
