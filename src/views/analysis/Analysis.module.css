@@ -625,3 +625,34 @@
   font-size: var(--fs-font-size-xs);
   font-weight: 600;
 }
+
+/* The Hypotheses tab (021): hypothesis rows and the matrix's least-inconsistent column. */
+
+.hypothesisRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--fs-color-border);
+  font-size: var(--fs-font-size-sm);
+}
+
+.hypothesisText {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.clamp {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--fs-color-text-secondary);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.table [data-least] {
+  background: var(--fs-tone-success-bg);
+}

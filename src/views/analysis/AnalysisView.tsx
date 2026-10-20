@@ -17,7 +17,11 @@ import {
   utcText,
   type AnalysisKind,
 } from '../../intel/analysisView';
+import { getInformationValue, type HypothesisSet } from '../../intel/hypothesisApi';
+import { hypothesisScope, informationLevel, primarySet } from '../../intel/hypothesesView';
 import { useAnalysis, type Analysis } from '../../intel/useAnalysis';
+import type { Part } from '../../intel/useEvidence';
+import { useHypothesisSets, useRead } from '../../intel/useHypotheses';
 import { useOpenObject } from '../../intel/useOpenObject';
 import { useRelatedObjects } from '../../objects/relatedApi';
 import { prettifyId } from '../../lib/labels';
@@ -27,6 +31,7 @@ import { AnalysisHeader } from './AnalysisHeader';
 import { AnalysisMap } from './AnalysisMap';
 import { AnalysisRail } from './AnalysisRail';
 import { AnalysisEvidence } from './EvidenceTab';
+import { HypothesesTab } from './HypothesesTab';
 import { ExportPanel, InvestigationOverview, ItemsTab } from './InvestigationTabs';
 import {
   ANALYSIS_TABS,
@@ -37,7 +42,11 @@ import {
   type AnalysisTab,
 } from './frame';
 import { MembersTab, SituationOverview, TimelineList } from './SituationTabs';
+import type { InformationLevel } from './AnalysisHeader';
 import styles from './Analysis.module.css';
+
+const readValue = (api: ForesignalClient, id: string, signal: AbortSignal) =>
+  getInformationValue(api, id, signal);
 
 /** Props for {@link AnalysisView}. */
 export interface AnalysisViewProps {
@@ -54,8 +63,8 @@ export interface AnalysisViewProps {
  * the tab in `?tab=`. The analysis rail on the left; the header (title and status, the subline, the
  * Confidence gauge, the Information Value meter, Last Updated with auto-refresh, and actions); the
  * tab strip; and the tab. Overview, Timeline, Map, Entities (a situation's members) or Items (an
- * investigation's, added and removed where its envelope allows), Evidence (020), Related and, for
- * an investigation, Export are filled; the other tabs name the prompt that fills them.
+ * investigation's, added and removed where its envelope allows), Evidence (020), Hypotheses (021),
+ * Related and, for an investigation, Export are filled; the other tabs name the prompt that fills them.
  */
 export function AnalysisView({ api, stream, store = appStore, kind }: AnalysisViewProps) {
   const { id = '' } = useParams();
@@ -87,6 +96,13 @@ export function AnalysisView({ api, stream, store = appStore, kind }: AnalysisVi
   const ref = `${kind}:${id}`;
   const related = useRelatedObjects(api, id ? ref : undefined, undefined, true);
   const relatedCount = related.status === 'ready' ? related.related.items.length : undefined;
+  // The hypothesis sets (021) feed both the Hypotheses tab and the header's Information Value.
+  const scopeKey =
+    state.status === 'ready' ? JSON.stringify(hypothesisScope(state.analysis)) : undefined;
+  const sets = useHypothesisSets(api, scopeKey);
+  const primary = sets.status === 'ready' ? primarySet(sets.value) : undefined;
+  const value = useRead(api, primary?.id, readValue);
+  const information = informationLevel(value.status === 'ready' ? value.value : undefined);
 
   const rangeSelect = (
     <label>
@@ -142,6 +158,7 @@ export function AnalysisView({ api, stream, store = appStore, kind }: AnalysisVi
     header = headerFor(
       analysis,
       state.error,
+      information,
       <>
         <Button icon={<StickyNote size={14} />} disabled title="Notes arrive with 026">
           Add Note
@@ -178,6 +195,7 @@ export function AnalysisView({ api, stream, store = appStore, kind }: AnalysisVi
             rangeLabel: range.label.toLowerCase(),
             rangeSelect,
             related,
+            sets,
           })}
         </div>
       </>
@@ -220,8 +238,13 @@ function tabLabel(
   }
 }
 
-/** The header for a loaded analysis. */
-function headerFor(analysis: Analysis, refreshError: string | undefined, actions: ReactNode) {
+/** The header for a loaded analysis, with its primary hypothesis set's information value. */
+function headerFor(
+  analysis: Analysis,
+  refreshError: string | undefined,
+  information: InformationLevel | undefined,
+  actions: ReactNode,
+) {
   if (analysis.kind === 'situation') {
     const { situation } = analysis;
     const ended = situation.closedAt ?? undefined;
@@ -238,6 +261,7 @@ function headerFor(analysis: Analysis, refreshError: string | undefined, actions
           </>
         }
         confidence={situation.corroborationShare}
+        information={information}
         updatedAt={situation.updatedAt ?? situation.lastActivityAt}
         refreshError={refreshError}
         actions={actions}
@@ -262,6 +286,7 @@ function headerFor(analysis: Analysis, refreshError: string | undefined, actions
           )}
         </>
       }
+      information={information}
       updatedAt={investigation.updatedAt}
       refreshError={refreshError}
       actions={actions}
@@ -278,6 +303,7 @@ interface TabContext {
   rangeLabel: string;
   rangeSelect: ReactNode;
   related: ReturnType<typeof useRelatedObjects>;
+  sets: Part<HypothesisSet[]>;
 }
 
 /** The open tab's content. */
@@ -331,6 +357,8 @@ function renderTab(tab: AnalysisTab, analysis: Analysis, context: TabContext): R
       );
     case 'evidence':
       return <AnalysisEvidence api={context.api} analysis={analysis} onOpen={context.open} />;
+    case 'hypotheses':
+      return <HypothesesTab api={context.api} sets={context.sets} onOpen={context.open} />;
     case 'related':
       return <RelatedTab state={context.related} onOpen={context.open} />;
     case 'export':

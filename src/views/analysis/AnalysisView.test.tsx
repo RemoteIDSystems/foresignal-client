@@ -107,9 +107,9 @@ describe('the situation full-analysis view', () => {
 
   it('names the prompt that fills a tab this one does not', async () => {
     const { api } = standInApi(situationAnswers());
-    renderAt(`/intelligence/situations/${SITUATION_ID}?tab=hypotheses`, api);
+    renderAt(`/intelligence/situations/${SITUATION_ID}?tab=forecasts`, api);
     expect(await screen.findByTestId('pending-tab')).toHaveTextContent(
-      'This tab is filled by 021 (Hypotheses and ACH).',
+      'This tab is filled by 022 (Forecasts).',
     );
   });
 
