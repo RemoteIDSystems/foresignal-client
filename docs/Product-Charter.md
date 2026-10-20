@@ -91,7 +91,9 @@ invented, and not sourced from a prose document.
   timelines, entity graph, HUD chrome).
 - **CesiumJS (via Resium)** — the map/globe rendering engine: one component providing **2D map,
   3D globe** scene modes (2D default; contextual 3D on selection).
-- **deck.gl** — GPU-batched rendering for high-cardinality data layers.
+- **Cesium primitives** (decoded from MVT) — the batched rendering path for record layers (deck.gl
+  does not align with a WGS84/terrain Cesium host; it is kept only as a reserved escape hatch,
+  Architecture §5.2).
 - **A typed API layer generated from `docs/OpenAPI.json`** (openapi-typescript + a `fetch`
   wrapper), plus a resumable SSE change-stream client.
 - **Delivery:** `vite build` → static assets, served **same-origin** by the backend. One
@@ -109,7 +111,7 @@ strength; and a static SPA served by the backend keeps the whole solution to **t
 1. **Presentation only.** The client renders backend truth; it never re-derives correlation,
    history, forecasts or analysis.
 2. **No artificial limits.** The client scales to whatever the backend can emit. Dense layers use
-   batched primitives / vector tiles / deck.gl and lean on the backend's **hex-aggregation** and
+   batched Cesium primitives decoded from vector tiles, and lean on the backend's **hex-aggregation** and
    **viewport/bbox scoping** so only in-view data is drawn. A naive per-feature render path (one
    DOM marker or one `Entity` per feature for dense layers) is a defect.
 3. **Seamless rendering.** Heavy rendering (globe, relationship graph) stays on the GPU; the rest

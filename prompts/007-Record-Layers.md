@@ -14,9 +14,13 @@ Dashboard left panel (LAYERS/ENTITIES/FILTERS, per-layer counts and toggles).
 - `GET /v1/kinds` [`listKinds`] — kind list for layer definitions.
 
 **Build.**
-- Add **deck.gl** and render each enabled layer with an `MVTLayer` composited over the Cesium
-  canvas, styled from the 006 `StyleModel` (icon/color/size by kind). **Batched — never one
-  `Entity`/DOM node per feature.**
+- Render each enabled layer by **decoding its `.mvt` tiles** and drawing the features with **batched
+  Cesium primitive collections** per tile (`BillboardCollection`/`PointPrimitiveCollection` for
+  points, `PolylineCollection` for lines, polygons/ground primitives for fills), styled from the 006
+  `StyleModel` (icon/color/size by kind), applying the 006 `displayScale` to icon sizes. Rendering in
+  the Cesium scene makes records align on WGS84, sit on the 2× terrain and occlude behind the globe,
+  in 2D and 3D. **Batched — never one `Entity`/DOM node per feature.** deck.gl is **not** used here
+  (Architecture §5.1–5.2); it does not align with this WGS84/terrain Cesium map.
 - Take **concrete** tile templates from TileJSON (never `latest`/`now`); set `minzoom`/`maxzoom`/
   `bounds`; retina `@2x` with `tileSize: 256`.
 - **Left LAYERS rail** from `listTileLayers` + the style model: per-layer toggle, count, icon;

@@ -38,7 +38,7 @@ reference is the ForeSignal repo's `docs/OpenAPI.json`.** Date: 2026-10-18.
 5. **Two components, presentation only.** No backend changes, no BFF/proxy/Node service, no native
    wrapper. (Charter §2–3.)
 6. **US English** in all code, identifiers, UI strings, comments and commits.
-7. **No artificial limits.** Dense layers render batched (deck.gl / Cesium primitives) over
+7. **No artificial limits.** Dense layers render batched (**Cesium primitive collections** decoded from MVT) over
    server-aggregated, viewport-scoped data — never per-feature DOM or one `Entity` per record.
 8. **Generated code is never hand-edited** (`src/api/generated/`).
 9. **Runnable and visible.** Every prompt leaves the app runnable (`npm run dev`). A UI prompt also
@@ -87,10 +87,10 @@ in this list.
 |---|---|---|
 | 005 | Cesium-Viewer | Resium `<Viewer>`, 2D/3D toggle (2D default; contextual 3D on selection, 014), `CESIUM_BASE_URL`, base imagery, HUD (scale bar, lat/lon/elev, compass, zoom, mini inset) |
 | 006 | Map-Overlay-Style | `getMapStyle` + sprites/icons as the per-kind styling source; legend panel |
-| 007 | Record-Layers | Record vector tiles (`listTileLayers`/`getTileJson`/`getTile`) via deck.gl `MVTLayer`; left LAYERS rail with toggles |
+| 007 | Record-Layers | Record vector tiles (`listTileLayers`/`getTileJson`/`getTile`) decoded to **batched Cesium primitives**; left LAYERS rail with toggles |
 | 008 | Aggregation-And-Viewport | Hex aggregation below `aggBelowZoom`; viewport bbox+zoom scoping; `summarizeContext` counts |
 | 009 | Raster-Products & Wind | Weather/raster products as Cesium imagery layers + loop animation; **wind — barbs (`getProductVectorTile`), speed raster, animated particles (`getProductFieldPngUv`/`getProductFieldVelocityJson`)** |
-| 010 | Dense-Layer-Rendering | deck.gl batching for high-cardinality layers; enable the full catalog without a client cap |
+| 010 | Dense-Layer-Rendering | batched Cesium-primitive rendering for high-cardinality layers; enable the full catalog without a client cap |
 
 ### Live and time — prompts 011–013
 | # | Prompt | What it delivers |

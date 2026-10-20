@@ -6,9 +6,10 @@ layers enabled — up to the backend's full catalog — without becoming the bot
 **Read first.** 007-CR, 008-CR; [Architecture.md](../docs/Architecture.md) §5.2, §15; Charter §6.2.
 
 **Build.**
-- Consolidate layer rendering through a batched pipeline: deck.gl `MVTLayer`/`ScatterplotLayer`/
-  `PathLayer` (and Cesium primitive collections where a layer must live in the Cesium scene). No
-  per-feature DOM or per-feature Cesium `Entity` on any dense layer.
+- Consolidate layer rendering through a batched pipeline of **Cesium primitive collections**
+  (billboards / points / polylines / polygons) decoded from the MVT tiles — all record layers render
+  in the Cesium scene. No per-feature DOM or per-feature Cesium `Entity` on any dense layer. deck.gl
+  stays the reserved §5.2 escape hatch (camera-synced) for a layer that ever needs millions of points.
 - A layer manager that adds/removes many layers cheaply, reuses sources, and drives styling from the
   006 style model; respects `aggBelowZoom` (008) per layer.
 - Picking/hover that scales (tile-level feature picking), feeding selection (014).

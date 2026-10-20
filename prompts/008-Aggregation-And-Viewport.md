@@ -15,8 +15,8 @@ Dashboard (per-layer counts; dense layers like Aircraft 5,842 / Maritime 3,917).
 - `GET /v1/glance` [`getGlance`] — compact counts for widgets.
 
 **Build.**
-- Below a layer's `aggBelowZoom`, switch its deck layer to the hex-aggregation source and render
-  aggregated cells (count-driven styling); above it, switch to raw record tiles.
+- Below a layer's `aggBelowZoom`, switch its primitive set to the hex-aggregation tiles and render
+  aggregated cells (count-driven styling); above it, switch to the raw record tiles.
 - Track the committed viewport (bbox + zoom) in the store; debounce and feed it to `summarizeContext`
   and to any bbox-scoped tile/query requests.
 - Wire per-layer counts in the LAYERS rail from `layerCounts` / `glance` (aggregates, not features).

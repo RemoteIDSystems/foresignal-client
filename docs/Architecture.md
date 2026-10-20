@@ -14,10 +14,10 @@
 │  Java / Spring Boot + PostGIS│          │                                            │
 │                              │  HTTP    │  React UI shell ── panels, charts, graph,  │
 │  • /v1 REST + SSE API  ◄─────┼──────────┤  timelines, HUD, search, alerts            │
-│  • serves the static web ────┼── SSE ───┤  Cesium map/globe (2D/3D) + deck.gl        │
+│  • serves the static web ────┼── SSE ───┤  Cesium map/globe (2D/3D) + records        │
 │    build (same-origin)       │  tiles   │  API layer (generated from OpenAPI) + SSE  │
 └──────────────────────────────┘          └───────────────────────────────────────────┘
-        two runtime components. Vite/Resium/deck.gl are build-time only.
+        two runtime components. Vite/Resium are build-time only.
 ```
 
 The client is a **static single-page app**. In production the backend serves it (Operator Guide
@@ -42,7 +42,7 @@ foresignal-client/
     app/                  shell, routing, top-nav, layout, theme, error boundaries
     api/                  generated types + fetch client + SSE ChangeStream + auth
     state/                reactive store (viewport, layers, selection, time, inbox)
-    map/                  Cesium viewer, scene modes, layer pipeline, deck.gl overlays, HUD
+    map/                  Cesium viewer, scene modes, layer pipeline (MVT→primitives), HUD
     panels/               dossier, insights, timeline, entity graph, intelligence, alerts
     views/                screen compositions (global, situation, investigation, satellite)
     ui/                   design-system primitives (buttons, tabs, modals, lists, charts)
@@ -65,7 +65,7 @@ whose routes are client-side.
 | UI framework | **React 19 + TypeScript 5** | all non-map UI |
 | Map/globe | **CesiumJS 1.146+ via Resium 1.27+** | Resium verified on React 19 + Cesium 1.146 |
 | Cesium/Vite glue | `vite-plugin-cesium` (or `vite-plugin-cesium-engine`) | copies Cesium static assets, sets `CESIUM_BASE_URL` |
-| Dense layers | **deck.gl 9+** | GPU batching for high-cardinality layers; Cesium interop via overlay/`@deck.gl` layers |
+| Record rendering | **Cesium primitives** (decoded MVT) | batched collections per tile, rendered in the Cesium scene (WGS84 alignment, terrain, occlusion). deck.gl is **not** used as the primary path — it does not align with a WGS84/terrain Cesium host; it stays the §5.2 escape hatch only |
 | Relationship graph | **sigma.js (WebGL) + graphology** | the Analyst Workbench evidence graph |
 | API types | **openapi-typescript** (types) + **openapi-fetch** (client) | generated from `docs/OpenAPI.json` |
 | Charts | a WebGL/Canvas-capable lib (e.g. ECharts or uPlot/visx) | sparklines, trend charts, time series |
@@ -138,11 +138,11 @@ mechanism:
 
 | Backend data | Endpoint(s) | Client rendering |
 |---|---|---|
-| **Record vector tiles** (MVT) | `GET /v1/tiles.json` [`listTileLayers`], `/v1/tiles/{layer}.json` [`getTileJson`], `/v1/tiles/{layer}/{z}/{x}/{y}.mvt` [`getTile`] | deck.gl `MVTLayer` over Cesium (batched), or Cesium primitives from decoded tiles |
+| **Record vector tiles** (MVT) | `GET /v1/tiles.json` [`listTileLayers`], `/v1/tiles/{layer}.json` [`getTileJson`], `/v1/tiles/{layer}/{z}/{x}/{y}.mvt` [`getTile`] | **Cesium primitives decoded from the MVT tiles** (batched collections per tile) — renders in the Cesium scene so records align on WGS84, sit on the 2× terrain, and occlude behind the globe, in both 2D and 3D |
 | **Raster / weather products** | `GET /v1/products` [`listProducts`], `/{id}/tilejson` [`getProductTileJson`], `/{id}/frames/latest` [`getLatestProductFrame`], `/{id}/tiles/{frameKey}/{z}/{x}/{y}.png` [`getProductTile`], `/{id}/legend` [`getProductLegend`] | Cesium **imagery layers** (`UrlTemplateImageryProvider`), animated by swapping frame templates; legend from JSON |
 | **Wind fields** | `/{id}/vectors/{frameKey}/…mvt` [`getProductVectorTile`] (barbs); `/{id}/fields/{frameKey}.png-uv` [`getProductFieldPngUv`] / `.velocity-json` [`getProductFieldVelocityJson`] | barb symbol layer, speed raster, and an animated WebGL particle layer |
 | **Vector overlay style** | `GET /v1/map/style.json` [`getMapStyle`], sprites `/v1/map/sprites/{file}` [`getMapSprite`], icons `/v1/map/icons/{name}.png` [`getMapIcon`] | source of per-kind colors, icons and `aggBelowZoom`; drives deck/primitive styling (Cesium does not consume the MapLibre style directly) |
-| **Records as features** | `GET /v1/records` [`listRecords`] (GeoJSON), `/v1/kinds` [`listKinds`], `/v1/kinds/{kind}/schema` [`getKindSchema`] | GeoJSON → batched `BillboardCollection`/`PolylineCollection`, or deck layers |
+| **Records as features** | `GET /v1/records` [`listRecords`] (GeoJSON), `/v1/kinds` [`listKinds`], `/v1/kinds/{kind}/schema` [`getKindSchema`] | GeoJSON → batched `BillboardCollection`/`PolylineCollection` |
 
 **Concrete, never aliased templates.** Tile templates are taken from TileJSON / `frames/latest`
 and are content-addressed; the client never puts `latest`/`now` in a layer template (it swaps the
@@ -154,7 +154,7 @@ template when a new frame arrives via SSE). Retina uses the `@2x` template with 
 This is a first-class requirement (Charter §6.2). The guarantees:
 
 - **The number of layers is not a GPU cost; visible geometry is.** Dense layers render through
-  batched collections / `MVTLayer` / deck layers — never one DOM marker or one Cesium `Entity`
+  batched **Cesium primitive collections** (decoded from MVT) — never one DOM marker or one Cesium `Entity`
   per feature.
 - **Server-side bounding does the heavy lifting.** Below a layer's `aggBelowZoom` the backend
   serves **hex-aggregation** tiles (`agg=hex`), and record tiles / queries are **bbox/viewport
@@ -164,7 +164,10 @@ This is a first-class requirement (Charter §6.2). The guarantees:
 - **Raster is the only real ceiling** (blending many translucent rasters is GPU- and legibility-
   bound, for any engine). The UI keeps a small number of active raster overlays; vector layers are
   unconstrained.
-- **deck.gl** is the escape hatch for extreme point counts (millions), composited with Cesium.
+- **deck.gl** is a reserved escape hatch for a single layer that ever needs millions of points, and
+  only in the **camera-synced** form (driven by Cesium's own camera with a custom viewport,
+  projection and horizon culling). It is **not** part of the build now: deck.gl's spherical globe and
+  Mercator-only 2D do not otherwise align with this WGS84/terrain Cesium map.
 
 ---
 
@@ -330,8 +333,8 @@ Both are prompt 030. Native APNs/FCM push is for the future Flutter app, not thi
 
 ## 15. Performance and scale strategy (summary)
 
-1. **Batched GPU rendering** for all dense layers (deck.gl `MVTLayer`/`ScatterplotLayer`, Cesium
-   primitive collections). Never per-feature DOM/`Entity`.
+1. **Batched GPU rendering** for all dense layers — **Cesium primitive collections** decoded from the
+   MVT tiles. Never per-feature DOM/`Entity`.
 2. **Server-bounded data**: viewport bbox + zoom scoping, hex aggregation below `aggBelowZoom`,
    aggregate-only summary/glance endpoints. The client renders an in-view slice, never the globe's
    raw firehose.
