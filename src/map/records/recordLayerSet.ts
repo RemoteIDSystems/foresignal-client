@@ -27,6 +27,7 @@ export class RecordLayerSet {
   private timer?: ReturnType<typeof setTimeout>;
   private readonly removers: (() => void)[] = [];
   private view?: RecordView;
+  private hiddenSources: ReadonlySet<string> = new Set();
 
   /**
    * @param viewer The Cesium viewer to draw into.
@@ -67,6 +68,12 @@ export class RecordLayerSet {
     for (const id of ids) if (!this.layers.has(id)) this.add(id);
   }
 
+  /** Hides the records of these sources in every layer (the FILTERS tab). */
+  setHiddenSources(hidden: ReadonlySet<string>): void {
+    this.hiddenSources = hidden;
+    for (const layer of this.layers.values()) layer.setHiddenSources(hidden);
+  }
+
   /** Records drawn now, per layer. */
   counts(): Record<string, number> {
     return Object.fromEntries([...this.layers].map(([id, layer]) => [id, layer.featureCount]));
@@ -87,6 +94,7 @@ export class RecordLayerSet {
       (status) => this.onStatus(id, status),
     );
     this.layers.set(id, layer);
+    layer.setHiddenSources(this.hiddenSources);
     layer.update(this.currentView());
   }
 

@@ -1,4 +1,10 @@
 import type { components } from '../../api/generated/schema';
+import {
+  categoryOf,
+  DEFAULT_CATEGORIES,
+  KIND_CATEGORIES,
+  type CategoryId,
+} from '../../lib/kindCategories';
 import { prettifyId } from '../../lib/labels';
 import { sourceLayer, stylesForKind, type KindStyle, type StyleModel } from '../style/model';
 
@@ -7,44 +13,59 @@ export type TileLayerSummary = components['schemas']['TileLayerIndex']['layers']
 /** One entry of `listKinds`. */
 export type KindSummary = components['schemas']['KindSummary'];
 
-/** A record layer as the rail shows it. */
-export interface LayerEntry {
-  /** The layer id: a source id or a kind. */
+/** A record kind as the rail shows it: one toggle, drawn from the kind's merged tile layer. */
+export interface KindEntry {
+  /** The kind, which is also its tile layer id. */
   id: string;
-  /** `kind` layers merge every source of one kind; `source` layers are one feed. */
-  type: 'kind' | 'source';
-  /** Display name: the backend's name for a source, the prettified id for a kind. */
+  /** Display name, from the 006 prettifier. */
   label: string;
-  /** The kinds the layer draws. */
-  kinds: string[];
-  /**
-   * For a kind layer, the sources that supply its records now (`listKinds`); empty when it has
-   * none, in which case any source's style stands for it.
-   */
+  /** The rail category it is listed under. */
+  category: CategoryId;
+  /** The sources that supply its records now (`listKinds`); empty when it has none. */
   sources: string[];
-  /** The style that gives the layer its icon, when the overlay style has one. */
+  /** The style that gives the kind its icon: a current source's, else any source's. */
   swatch?: KindStyle;
-  /**
-   * Records the layer has now, from `listKinds`; undefined when that cannot be told (a source
-   * whose kinds other sources share). Per-view counts come in 008.
-   */
-  count?: number;
-  /** Zoom below which the layer is drawn as hexagon counts (008); undefined for never. */
+  /** Records it has now (`listKinds` `currentCount`); 0 when it is not listed. */
+  count: number;
+  /** Zoom below which it is drawn as hexagon counts (008); undefined for never. */
   aggBelowZoom?: number;
 }
 
-/** The rail's two lists. */
+/** A category of kinds, as the rail's top-level rows. */
+export interface CategoryGroup {
+  id: CategoryId;
+  label: string;
+  /** Its kinds, most records first, then by label. */
+  kinds: KindEntry[];
+  /** Records across its kinds now. */
+  count: number;
+}
+
+/** A source, as the FILTERS tab offers it. */
+export interface SourceEntry {
+  id: string;
+  /** The backend's name for it. */
+  label: string;
+  /** The kinds it draws, from the overlay style. */
+  kinds: string[];
+  /** Records it has now, when it is the only source of each of its kinds; else undefined. */
+  count?: number;
+}
+
+/** What the rail lists: kinds grouped by category, and the sources to filter them by. */
 export interface LayerCatalog {
-  kinds: LayerEntry[];
-  sources: LayerEntry[];
+  /** The non-empty categories, in the Global mock's order. */
+  categories: CategoryGroup[];
+  /** Every kind, in the index's order. */
+  kinds: KindEntry[];
+  /** Every source layer. */
+  sources: SourceEntry[];
 }
 
 /**
- * Builds the rail's layers from the tile layer index, the current kinds with their counts, and
- * the overlay style (for icons and a source's kinds). A kind's count is its `currentCount`, and 0
- * when `listKinds` does not list it (it lists only kinds present now). A source's count is the sum
- * over its kinds when it is the only source of each; otherwise it is unknown. Each list is sorted
- * by count, largest first, then by label.
+ * Builds the rail from the tile layer index, the current kinds and the overlay style. Kind layers
+ * become the toggles, grouped by the client's category table (`lib/kindCategories`); source
+ * layers become the FILTERS tab's sources, so a record is only ever drawn once, by its kind.
  */
 export function buildCatalog(
   index: readonly TileLayerSummary[],
@@ -52,44 +73,48 @@ export function buildCatalog(
   model: StyleModel | undefined,
 ): LayerCatalog {
   const byKind = new Map(kinds.map((summary) => [summary.kind, summary]));
-  const entries = index.map((layer): LayerEntry => {
-    const aggBelowZoom = layer.aggBelowZoom ?? undefined;
-    if (layer.type === 'kind') {
+  const kindEntries = index
+    .filter((layer) => layer.type === 'kind')
+    .map((layer): KindEntry => {
       const sources = byKind.get(layer.id)?.sources ?? [];
       return {
         id: layer.id,
-        type: 'kind',
         label: prettifyId(layer.id),
-        kinds: [layer.id],
+        category: categoryOf(layer.id),
         sources,
         swatch: model ? kindSwatch(model, layer.id, sources) : undefined,
         count: byKind.get(layer.id)?.currentCount ?? 0,
-        aggBelowZoom,
+        aggBelowZoom: layer.aggBelowZoom ?? undefined,
       };
-    }
-    const layerKinds = (model && sourceLayer(model, layer.id)?.kinds) ?? [];
+    });
+  const sources = index
+    .filter((layer) => layer.type === 'source')
+    .map((layer): SourceEntry => {
+      const sourceKinds = (model && sourceLayer(model, layer.id)?.kinds) ?? [];
+      return {
+        id: layer.id,
+        label: layer.name.trim() || prettifyId(layer.id),
+        kinds: sourceKinds,
+        count: sourceCount(layer.id, sourceKinds, byKind),
+      };
+    });
+  const order = (a: KindEntry, b: KindEntry) =>
+    b.count - a.count || a.label.localeCompare(b.label, 'en');
+  const categories = KIND_CATEGORIES.map((category): CategoryGroup => {
+    const members = kindEntries.filter((entry) => entry.category === category.id).sort(order);
     return {
-      id: layer.id,
-      type: 'source',
-      label: layer.name.trim() || prettifyId(layer.id),
-      kinds: layerKinds,
-      sources: [layer.id],
-      swatch: model?.styles.find((style) => style.layerId === layer.id),
-      count: sourceCount(layer.id, layerKinds, byKind),
-      aggBelowZoom,
+      id: category.id,
+      label: category.label,
+      kinds: members,
+      count: members.reduce((sum, entry) => sum + entry.count, 0),
     };
-  });
-  const order = (a: LayerEntry, b: LayerEntry) =>
-    (b.count ?? -1) - (a.count ?? -1) || a.label.localeCompare(b.label, 'en');
-  return {
-    kinds: entries.filter((entry) => entry.type === 'kind').sort(order),
-    sources: entries.filter((entry) => entry.type === 'source').sort(order),
-  };
+  }).filter((group) => group.kinds.length > 0);
+  return { categories, kinds: kindEntries, sources };
 }
 
 /**
- * The style a kind layer's icon comes from: the style of a source that supplies the kind now, so
- * the rail and legend show what the map draws; else the first style for the kind.
+ * The style a kind's icon comes from: the style of a source that supplies the kind now, so the
+ * rail and legend show what the map draws; else the first style for the kind.
  */
 function kindSwatch(
   model: StyleModel,
@@ -117,33 +142,69 @@ function sourceCount(
   return total;
 }
 
-/** The layers on by default: every kind layer that has records now. */
+/** The kinds on when the dashboard opens: those of the categories the Global mock shows checked. */
 export function defaultEnabled(catalog: LayerCatalog): string[] {
-  return catalog.kinds.filter((entry) => (entry.count ?? 0) > 0).map((entry) => entry.id);
+  return catalog.kinds
+    .filter((entry) => DEFAULT_CATEGORIES.includes(entry.category))
+    .map((entry) => entry.id);
 }
 
 /**
- * The kinds the enabled layers draw, and from which sources: a kind layer draws its kind from the
- * sources that supply it now, or from any source (`'*'`) when none does; a source layer draws its
- * kinds from itself. The legend shows only these.
+ * The tile layers to draw: the enabled kinds that have records now. A kind with none would only
+ * fetch empty tiles; it is drawn once `listKinds` lists it (the catalog refreshes its counts).
+ */
+export function drawnLayers(catalog: LayerCatalog, enabled: ReadonlySet<string>): string[] {
+  return catalog.kinds
+    .filter((entry) => enabled.has(entry.id) && entry.count > 0)
+    .map((entry) => entry.id);
+}
+
+/**
+ * What the map shows, for the legend: each drawn kind with the sources it is drawn from now, less
+ * the sources the FILTERS tab hides. A kind whose every source is hidden is not on the map.
  */
 export function enabledKinds(
   catalog: LayerCatalog,
   enabled: ReadonlySet<string>,
+  hiddenSources: ReadonlySet<string> = new Set(),
 ): Map<string, Set<string>> {
   const out = new Map<string, Set<string>>();
-  const add = (kind: string, source: string) => {
-    const set = out.get(kind) ?? new Set<string>();
-    set.add(source);
-    out.set(kind, set);
-  };
   for (const entry of catalog.kinds) {
-    if (!enabled.has(entry.id)) continue;
-    if (entry.sources.length === 0) add(entry.id, '*');
-    for (const source of entry.sources) add(entry.id, source);
-  }
-  for (const entry of catalog.sources) {
-    if (enabled.has(entry.id)) for (const kind of entry.kinds) add(kind, entry.id);
+    if (!enabled.has(entry.id) || entry.count === 0) continue;
+    // Should listKinds not name a counted kind's sources, any source's look stands for it.
+    if (entry.sources.length === 0) {
+      out.set(entry.id, new Set(['*']));
+      continue;
+    }
+    const shown = entry.sources.filter((source) => !hiddenSources.has(source));
+    if (shown.length > 0) out.set(entry.id, new Set(shown));
   }
   return out;
+}
+
+/** A source as the FILTERS tab lists it, for the kinds that are on. */
+export interface FilterSource extends SourceEntry {
+  /** True when it supplies an enabled kind's records now. */
+  live: boolean;
+}
+
+/**
+ * The sources the FILTERS tab offers: those that draw an enabled kind, by the overlay style or by
+ * `listKinds`. The ones supplying records now come first, then by count and name.
+ */
+export function filterSources(catalog: LayerCatalog, enabled: ReadonlySet<string>): FilterSource[] {
+  const liveSources = new Set(
+    catalog.kinds.filter((entry) => enabled.has(entry.id)).flatMap((entry) => entry.sources),
+  );
+  return catalog.sources
+    .filter(
+      (source) => liveSources.has(source.id) || source.kinds.some((kind) => enabled.has(kind)),
+    )
+    .map((source) => ({ ...source, live: liveSources.has(source.id) }))
+    .sort(
+      (a, b) =>
+        Number(b.live) - Number(a.live) ||
+        (b.count ?? -1) - (a.count ?? -1) ||
+        a.label.localeCompare(b.label, 'en'),
+    );
 }

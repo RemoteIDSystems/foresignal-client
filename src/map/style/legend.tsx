@@ -29,6 +29,8 @@ export interface MapLegendProps {
    * every kind the style knows.
    */
   scope?: LegendScope;
+  /** What a scoped legend says when nothing is on the map. */
+  emptyNote?: string;
 }
 
 /**
@@ -38,7 +40,7 @@ export interface MapLegendProps {
  * that draw it and the zoom it switches to hexagon counts are in the row's tooltip and in its
  * expanded detail. Built only from `getMapStyle` and its sprite; product legends join it in 009.
  */
-export function MapLegend({ state, api, onClose, scope }: MapLegendProps) {
+export function MapLegend({ state, api, onClose, scope, emptyNote }: MapLegendProps) {
   const [filter, setFilter] = useState('');
   const overlay = state.status === 'ready' ? state.overlay : undefined;
   const entries = useMemo(
@@ -63,7 +65,7 @@ export function MapLegend({ state, api, onClose, scope }: MapLegendProps) {
           <p className={styles.summary} data-testid="legend-summary">
             {scope
               ? scope.size === 0
-                ? 'No layers on. Turn one on in the Layers rail.'
+                ? (emptyNote ?? 'No layers on. Turn one on in the Layers rail.')
                 : kindsOnMap(buildLegend(overlay!.model, '', scope).length)
               : `${overlay!.model.kinds.length} kinds from ${overlay!.model.layers.length} layers`}
           </p>

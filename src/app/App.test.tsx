@@ -127,7 +127,7 @@ describe('App routing', () => {
     }
   });
 
-  it('lists the backend’s record layers in the Global rail, with records on by default', async () => {
+  it('groups the backend’s kinds into the Global rail’s categories, with the mock’s set on', async () => {
     backend();
     server.use(
       http.get('/v1/tiles.json', ({ response }) =>
@@ -148,6 +148,13 @@ describe('App routing', () => {
               tilejson: `${MOCK_BASE_URL}/v1/tiles/aircraft.json`,
               aggBelowZoom: 7,
             },
+            {
+              id: 'social-post',
+              type: 'kind',
+              name: 'social-post',
+              tilejson: `${MOCK_BASE_URL}/v1/tiles/social-post.json`,
+              aggBelowZoom: null,
+            },
           ],
         }),
       ),
@@ -163,9 +170,11 @@ describe('App routing', () => {
     );
     render(<App session={session()} initialPath="/global" />);
     const rail = await screen.findByRole('region', { name: 'Layers' });
-    const earthquake = await within(rail).findByRole('checkbox', { name: /Earthquake/ });
-    expect(earthquake).toBeChecked();
-    expect(within(rail).getByRole('checkbox', { name: /Aircraft/ })).not.toBeChecked();
+    // Events is checked in the mock, so social posts start on, though none are live now.
+    expect(await within(rail).findByRole('checkbox', { name: 'Events' })).toBeChecked();
+    // Earthquakes have records but sit under Disasters / Hazards, which the mock leaves off.
+    expect(within(rail).getByRole('checkbox', { name: 'Disasters / Hazards' })).not.toBeChecked();
+    expect(within(rail).getByRole('checkbox', { name: 'Aircraft (ADS-B)' })).not.toBeChecked();
     expect(within(rail).getByTestId('layers-on')).toHaveTextContent('1 on');
   });
 

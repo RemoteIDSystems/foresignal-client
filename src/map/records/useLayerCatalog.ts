@@ -19,9 +19,13 @@ type Loaded =
   | { status: 'ready'; index: TileLayerSummary[]; kinds: KindSummary[] }
   | { status: 'error'; error: unknown };
 
+/** How often the kind counts (`listKinds`) are read again, in ms. */
+export const KINDS_REFRESH_MS = 60_000;
+
 /**
- * Loads the record layer catalog (`listTileLayers` and `listKinds`) once per API client, and
- * builds the rail's lists with the overlay style's icons whenever the style changes.
+ * Loads the record layer catalog (`listTileLayers` and `listKinds`) once per API client, reads
+ * the kind counts again every {@link KINDS_REFRESH_MS}, and builds the rail's lists with the
+ * overlay style's icons whenever the style or the counts change.
  */
 export function useLayerCatalog(
   api: ForesignalClient | undefined,
@@ -40,8 +44,24 @@ export function useLayerCatalog(
         if (active) setLoaded({ api, result: { status: 'error', error } });
       },
     );
+    // The counts move as records arrive and expire; a kind that gains its first records is drawn
+    // once a refresh lists it. A failed refresh keeps the last counts.
+    const timer = setInterval(() => {
+      unwrap(api.GET('/v1/kinds')).then(
+        (kinds) => {
+          if (!active) return;
+          setLoaded((current) =>
+            current?.api === api && current.result.status === 'ready'
+              ? { api, result: { ...current.result, kinds } }
+              : current,
+          );
+        },
+        (error: unknown) => console.warn('ForeSignal: the kind counts did not refresh.', error),
+      );
+    }, KINDS_REFRESH_MS);
     return () => {
       active = false;
+      clearInterval(timer);
     };
   }, [api]);
 

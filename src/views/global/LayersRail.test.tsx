@@ -21,19 +21,21 @@ const layer = (id: string, type: 'kind' | 'source', name = id): TileLayerSummary
 const catalog = buildCatalog(
   [
     layer('aircraft', 'kind'),
+    layer('aviation-hazard', 'kind'),
     layer('conflict-event', 'kind'),
     layer('aprs-station', 'kind'),
     layer('acled', 'source', 'ACLED'),
     layer('gdelt-events', 'source', 'GDELT 2.0 Events'),
+    layer('ucdp-ged', 'source', 'UCDP GED'),
   ],
   [
-    { kind: 'conflict-event', currentCount: 1234, sources: ['gdelt-events'] },
-    { kind: 'aprs-station', currentCount: 40, sources: [] },
+    { kind: 'conflict-event', currentCount: 1234, sources: ['gdelt-events', 'acled'] },
+    { kind: 'aprs-station', currentCount: 40, sources: ['aprs-is'] },
   ] satisfies KindSummary[],
   model,
 );
 
-/** The rail inside a provider that keeps the enabled set, as the dashboard does. */
+/** The rail inside a provider that keeps the enabled kinds and hidden sources, as the dashboard does. */
 function Harness({
   initial,
   statuses = {},
@@ -43,17 +45,30 @@ function Harness({
   statuses?: Record<string, RecordLayerStatus>;
   value?: Partial<RecordLayersValue>;
 }) {
-  const [enabled, setEnabled] = useState(() => new Set(initial));
+  const [enabled, setEnabled] = useState<ReadonlySet<string>>(() => new Set(initial));
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
+  const flip = (set: ReadonlySet<string>, id: string) => {
+    const next = new Set(set);
+    if (!next.delete(id)) next.add(id);
+    return next;
+  };
   const context: RecordLayersValue = {
     catalog: { status: 'ready', catalog },
     enabled,
-    toggle: (id) =>
+    toggle: (id) => setEnabled((current) => flip(current, id)),
+    setKinds: (ids, on) =>
       setEnabled((current) => {
         const next = new Set(current);
-        if (!next.delete(id)) next.add(id);
+        for (const id of ids) {
+          if (on) next.add(id);
+          else next.delete(id);
+        }
         return next;
       }),
     clear: () => setEnabled(new Set()),
+    hiddenSources: hidden,
+    toggleSource: (id) => setHidden((current) => flip(current, id)),
+    showAllSources: () => setHidden(new Set()),
     statuses,
     ...value,
   };
@@ -64,66 +79,73 @@ function Harness({
   );
 }
 
-/** The rail's visible layer rows: id, label text and checkbox state. */
-function rows(container: HTMLElement) {
-  return [...container.querySelectorAll<HTMLElement>('li[data-layer]')].map((li) => ({
-    id: li.dataset.layer,
-    text: li.textContent,
-    checked: (li.querySelector('input[type="checkbox"]') as HTMLInputElement).checked,
-  }));
+/** The category rows: id, text and checkbox state ('on', 'some' or 'off'). */
+function categories(container: HTMLElement) {
+  return [...container.querySelectorAll<HTMLElement>('li[data-category]')].map((li) => [
+    li.dataset.category,
+    li.querySelector('label')?.textContent,
+    li.dataset.categoryState,
+  ]);
 }
 
+/** A category's checkbox. */
+const categoryBox = (container: HTMLElement, id: string) =>
+  container.querySelector(`li[data-category="${id}"] input[type="checkbox"]`) as HTMLInputElement;
+
 describe('LayersRail', () => {
-  it('lists kind layers with prettified labels and counts, enabled ones checked', () => {
-    const { container } = render(<Harness initial={['conflict-event']} />);
-    expect(rows(container)).toEqual([
-      { id: 'conflict-event', text: 'Conflict Event1,234', checked: true },
-      { id: 'aprs-station', text: 'APRS Station40', checked: false },
-      { id: 'aircraft', text: 'Aircraft0', checked: false },
+  it('lists the categories with their icons, summed counts and checkbox state', () => {
+    const { container } = render(<Harness initial={['conflict-event', 'aircraft']} />);
+    expect(categories(container)).toEqual([
+      ['aircraft', 'Aircraft (ADS-B)', 'some'],
+      ['rf', 'RF / Spectrum', 'off'],
+      ['conflicts', 'Conflicts / Security', 'on'],
     ]);
-    expect(screen.getByRole('tab', { name: 'Kinds 3' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByTestId('layers-on')).toHaveTextContent('1 on');
-  });
-
-  it('sets back a layer with no records now', () => {
-    const { container } = render(<Harness initial={[]} />);
-    const label = (id: string) => container.querySelector(`li[data-layer="${id}"] label`);
-    expect(label('aircraft')?.className).toMatch(/layerEmpty/);
-    expect(label('aprs-station')?.className).not.toMatch(/layerEmpty/);
-  });
-
-  it('toggles a layer and turns all off', async () => {
-    const { container } = render(<Harness initial={['conflict-event']} />);
-    await userEvent.click(
-      within(container.querySelector('li[data-layer="aircraft"]')!).getByRole('checkbox'),
-    );
-    expect(
-      rows(container)
-        .filter((row) => row.checked)
-        .map((row) => row.id),
-    ).toEqual(['conflict-event', 'aircraft']);
+    expect(categoryBox(container, 'aircraft').indeterminate).toBe(true);
+    expect(categoryBox(container, 'conflicts').checked).toBe(true);
+    const conflicts = container.querySelector('li[data-category="conflicts"]') as HTMLElement;
+    expect(within(conflicts).getByText('1,234')).toBeInTheDocument();
+    // Collapsed until opened: no kind rows yet.
+    expect(container.querySelectorAll('li[data-layer]')).toHaveLength(0);
     expect(screen.getByTestId('layers-on')).toHaveTextContent('2 on');
-    await userEvent.click(screen.getByRole('button', { name: 'Turn all off' }));
-    expect(rows(container).some((row) => row.checked)).toBe(false);
+  });
+
+  it('turns a whole category on, then off, from its checkbox', async () => {
+    const { container } = render(<Harness initial={['aircraft']} />);
+    await userEvent.click(categoryBox(container, 'aircraft'));
+    expect(screen.getByTestId('layers-on')).toHaveTextContent('2 on');
+    expect(categoryBox(container, 'aircraft').checked).toBe(true);
+    await userEvent.click(categoryBox(container, 'aircraft'));
     expect(screen.getByTestId('layers-on')).toHaveTextContent('No layers on');
   });
 
-  it('switches to sources, named by the backend, and filters by label or id', async () => {
+  it('opens a category to its kinds, and toggles one', async () => {
     const { container } = render(<Harness initial={[]} />);
-    await userEvent.click(screen.getByRole('tab', { name: 'Sources 2' }));
-    expect(rows(container).map((row) => row.id)).toEqual(['gdelt-events', 'acled']);
-    expect(container.querySelector('li[data-layer="acled"] label')).toHaveAttribute(
-      'title',
-      'acled',
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Show the kinds in Aircraft (ADS-B)' }),
     );
-    await userEvent.type(screen.getByLabelText('Filter layers'), 'gdelt');
-    expect(rows(container).map((row) => row.id)).toEqual(['gdelt-events']);
+    const rows = [...container.querySelectorAll<HTMLElement>('li[data-layer]')];
+    expect(rows.map((li) => li.textContent)).toEqual(['Aircraft0', 'Aviation Hazard0']);
+    // No records now: set back, still switchable.
+    expect(rows[0]?.querySelector('label')?.className).toMatch(/layerEmpty/);
+    await userEvent.click(within(rows[1]!).getByRole('checkbox'));
+    expect(categoryBox(container, 'aircraft').indeterminate).toBe(true);
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Hide the kinds in Aircraft (ADS-B)' }),
+    );
+    expect(container.querySelectorAll('li[data-layer]')).toHaveLength(0);
+  });
+
+  it('filters kinds by label, opening the categories that match', async () => {
+    const { container } = render(<Harness initial={[]} />);
+    await userEvent.type(screen.getByLabelText('Filter layers'), 'aprs');
+    expect(categories(container).map(([id]) => id)).toEqual(['rf']);
+    expect(container.querySelector('li[data-layer="aprs-station"]')).not.toBeNull();
     await userEvent.clear(screen.getByLabelText('Filter layers'));
     await userEvent.type(screen.getByLabelText('Filter layers'), 'zzz');
     expect(screen.getByText('No layers match “zzz”.')).toBeInTheDocument();
   });
 
-  it('marks an enabled layer that is loading, failed, or aggregated at this zoom', () => {
+  it('marks a drawn kind that is loading, failed, or aggregated at this zoom', async () => {
     const { container } = render(
       <Harness
         initial={['conflict-event', 'aprs-station', 'aircraft']}
@@ -134,15 +156,47 @@ describe('LayersRail', () => {
         }}
       />,
     );
-    const item = (id: string) => container.querySelector(`li[data-layer="${id}"]`) as HTMLElement;
-    expect(item('conflict-event')).toHaveAttribute('data-layer-state', 'loading');
-    expect(within(item('conflict-event')).getByLabelText('Loading')).toBeInTheDocument();
-    expect(
-      within(item('aprs-station')).getByLabelText('Did not load: HTTP 500'),
-    ).toBeInTheDocument();
-    expect(
-      within(item('aircraft')).getByLabelText('Zoom in past 7 to see records'),
-    ).toBeInTheDocument();
+    const category = (id: string) =>
+      container.querySelector(`li[data-category="${id}"]`) as HTMLElement;
+    expect(within(category('conflicts')).getByLabelText('Loading')).toBeInTheDocument();
+    expect(within(category('rf')).getByLabelText('A layer did not load')).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Filter layers'), 'a');
+    const kind = (id: string) => container.querySelector(`li[data-layer="${id}"]`) as HTMLElement;
+    expect(kind('aprs-station')).toHaveAttribute('data-layer-state', 'error');
+    expect(within(kind('aprs-station')).getByLabelText('Did not load: HTTP 500')).toBeVisible();
+    expect(within(kind('aircraft')).getByLabelText('Zoom in past 7 to see records')).toBeVisible();
+  });
+
+  it('filters sources within the enabled kinds, live ones first, and shows them all again', async () => {
+    const { container } = render(<Harness initial={['conflict-event']} />);
+    await userEvent.click(screen.getByRole('tab', { name: 'Filters' }));
+    const sources = () =>
+      [...container.querySelectorAll<HTMLElement>('li[data-source]')].map((li) => [
+        li.dataset.source,
+        (li.querySelector('input') as HTMLInputElement).checked,
+      ]);
+    // Both supply records now (by name), then ucdp-ged, which only the style links to the kind.
+    expect(sources()).toEqual([
+      ['acled', true],
+      ['gdelt-events', true],
+      ['ucdp-ged', true],
+    ]);
+    expect(screen.getByTestId('sources-shown')).toHaveTextContent('All 3 shown');
+    await userEvent.click(
+      within(container.querySelector('li[data-source="acled"]') as HTMLElement).getByRole(
+        'checkbox',
+      ),
+    );
+    expect(sources()[0]).toEqual(['acled', false]);
+    expect(screen.getByTestId('sources-shown')).toHaveTextContent('2 of 3 shown');
+    await userEvent.click(screen.getByRole('button', { name: 'Show all' }));
+    expect(screen.getByTestId('sources-shown')).toHaveTextContent('All 3 shown');
+  });
+
+  it('asks for a layer before offering sources', async () => {
+    render(<Harness initial={[]} />);
+    await userEvent.click(screen.getByRole('tab', { name: 'Filters' }));
+    expect(screen.getByText('Turn a layer on to choose its sources.')).toBeInTheDocument();
   });
 
   it('shows the loading and error states of the layer list', () => {

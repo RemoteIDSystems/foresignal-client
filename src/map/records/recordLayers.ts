@@ -24,6 +24,7 @@ import type { ForesignalClient } from '../../api/client';
 import type { StyleModel } from '../style/model';
 import type { RecordFeature } from './decodeTile';
 import { resolveSymbol, type LineSymbol } from './featureStyle';
+import { RecordClaims, recordId, shownRecords } from './recordFilter';
 import type { SymbolImages } from './symbolImages';
 import { fetchTile, loadLayerTiles, type LayerTiles } from './tileSource';
 import { visibleRectangle } from '../view';
@@ -80,6 +81,10 @@ interface DrawnTile {
   billboards: Billboard[];
   primitives: (GroundPrimitive | GroundPolylinePrimitive)[];
   features: number;
+  /** The tile's decoded records, kept so a source filter change redraws without refetching. */
+  records: RecordFeature[];
+  /** The zoom it was drawn for. */
+  zoom: number;
 }
 
 /**
@@ -102,6 +107,8 @@ export class RecordLayer {
   private view?: RecordView;
   private destroyed = false;
   private failure?: string;
+  private hiddenSources: ReadonlySet<string> = new Set();
+  private readonly claims = new RecordClaims();
 
   /**
    * @param id The layer id (`listTileLayers`: a source id or a kind).
@@ -131,6 +138,18 @@ export class RecordLayer {
       return;
     }
     this.plan(view);
+  }
+
+  /**
+   * Hides the records of these sources (the FILTERS tab) and redraws the tiles already loaded
+   * with the new filter; nothing is fetched again.
+   */
+  setHiddenSources(hidden: ReadonlySet<string>): void {
+    if (sameSet(hidden, this.hiddenSources)) return;
+    this.hiddenSources = new Set(hidden);
+    if (this.destroyed) return;
+    for (const [key, tile] of [...this.drawn]) this.drawTile(key, tile.records, tile.zoom);
+    this.report();
   }
 
   /** Removes everything the layer drew and cancels its requests. */
@@ -251,10 +270,13 @@ export class RecordLayer {
     const lines: GeometryInstance[] = [];
     const fills: GeometryInstance[] = [];
     let count = 0;
-    for (const feature of features) {
+    for (const feature of shownRecords(features, this.hiddenSources)) {
       const { properties, geometry } = feature;
       const symbol = resolveSymbol(model, feature.layer, properties, geometry.type, zoom);
       if (!symbol) continue;
+      // A point record two tiles both carry is drawn by the first only.
+      const record = geometry.type === 'point' ? recordId(properties) : undefined;
+      if (record !== undefined && !this.claims.claim(record, key)) continue;
       const id: RecordPickId = {
         layer: this.id,
         source: stringProperty(properties.source),
@@ -334,7 +356,7 @@ export class RecordLayer {
         ) as GroundPolylinePrimitive,
       );
     }
-    this.drawn.set(key, { billboards, primitives, features: count });
+    this.drawn.set(key, { billboards, primitives, features: count, records: features, zoom });
   }
 
   /** Removes one drawn tile. */
@@ -346,6 +368,7 @@ export class RecordLayer {
       for (const primitive of tile.primitives)
         this.context.scene.groundPrimitives.remove(primitive);
     }
+    this.claims.release(key);
     this.drawn.delete(key);
   }
 
@@ -402,6 +425,11 @@ function addLine(
 /** Degrees to Cartesian positions on the ellipsoid. */
 function positions(coordinates: [number, number][]): Cartesian3[] {
   return Cartesian3.fromDegreesArray(coordinates.flat());
+}
+
+/** True when two sets hold the same members. */
+function sameSet(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  return a.size === b.size && [...a].every((member) => b.has(member));
 }
 
 /** A string property, or undefined. */

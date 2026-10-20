@@ -4,17 +4,25 @@ import type { RecordLayerStatus } from '../../map/records/recordLayers';
 import type { LayerCatalogState } from '../../map/records/useLayerCatalog';
 import type { SpriteSheet } from '../../map/style/sprite';
 
-/** What the layer rail reads and changes. The enabled set moves to the store in 012. */
+/** What the rail reads and changes. The enabled set moves to the store in 012. */
 export interface RecordLayersValue {
-  /** The layer catalog: `listTileLayers` with counts and icons. */
+  /** The layer catalog: kinds by category, with counts and icons, and the sources. */
   catalog: LayerCatalogState;
-  /** Enabled layer ids. */
+  /** Enabled kinds. */
   enabled: ReadonlySet<string>;
-  /** Turns a layer on or off. */
-  toggle: (id: string) => void;
-  /** Turns every layer off. */
+  /** Turns one kind on or off. */
+  toggle: (kind: string) => void;
+  /** Turns several kinds on or off together (a category's checkbox). */
+  setKinds: (kinds: readonly string[], on: boolean) => void;
+  /** Turns every kind off. */
   clear: () => void;
-  /** What each enabled layer draws now. */
+  /** Sources whose records are hidden (the FILTERS tab). */
+  hiddenSources: ReadonlySet<string>;
+  /** Hides or shows one source's records. */
+  toggleSource: (source: string) => void;
+  /** Shows every source again. */
+  showAllSources: () => void;
+  /** What each drawn kind's layer shows now. */
   statuses: Readonly<Record<string, RecordLayerStatus>>;
   /** The overlay style's sprite, for icons. */
   sprite?: SpriteSheet;

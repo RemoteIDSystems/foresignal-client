@@ -217,14 +217,20 @@ export interface MapViewerProps {
   overlayStyle?: OverlayStyleState;
   /** Record layers to draw, by id (`listTileLayers`). */
   recordLayers?: readonly string[];
+  /** Sources whose records are hidden (the FILTERS tab). */
+  hiddenSources?: ReadonlySet<string>;
   /** The kinds those layers draw; the legend shows only these. */
   legendScope?: LegendScope;
+  /** What the scoped legend says when nothing is on the map. */
+  legendEmptyNote?: string;
   /** Told when a record layer's status changes (what it draws, whether it failed). */
   onLayerStatus?: (id: string, status: RecordLayerStatus) => void;
 }
 
 /** No record layers. */
 const NO_LAYERS: readonly string[] = [];
+/** No hidden sources. */
+const NO_SOURCES: ReadonlySet<string> = new Set();
 
 /**
  * The map engine: a Resium viewer with Cesium's own widgets removed, the self-hosted NASA
@@ -243,7 +249,9 @@ export function MapViewer({
   api,
   overlayStyle: sharedStyle,
   recordLayers = NO_LAYERS,
+  hiddenSources = NO_SOURCES,
   legendScope,
+  legendEmptyNote,
   onLayerStatus,
 }: MapViewerProps) {
   const [webgl] = useState(supportsWebGL);
@@ -354,6 +362,7 @@ export function MapViewer({
             api={api}
             overlay={overlay}
             layers={recordLayers}
+            hiddenSources={hiddenSources}
             onStatus={onStatus}
           />
         )}
@@ -374,6 +383,7 @@ export function MapViewer({
           state={overlayStyle}
           api={api}
           scope={legendScope}
+          emptyNote={legendEmptyNote}
           onClose={() => setLegendOpen(false)}
         />
       )}
