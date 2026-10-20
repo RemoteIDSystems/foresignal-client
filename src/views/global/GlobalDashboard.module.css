@@ -1259,3 +1259,52 @@
   padding: 6px 0;
   border-bottom: 1px solid var(--fs-color-border);
 }
+
+/* Glance strip and inset heat (018). */
+
+.glanceStrip {
+  position: absolute;
+  z-index: 2;
+  right: 12px;
+  bottom: 48px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: calc(100% - 24px);
+  height: 26px;
+  padding: 0 12px;
+  overflow: hidden;
+  border: 1px solid var(--fs-color-border-strong);
+  border-radius: var(--fs-radius-md);
+  background: rgba(6, 12, 20, 0.85);
+  color: var(--fs-color-text-secondary);
+  font-size: var(--fs-font-size-xs);
+  white-space: nowrap;
+}
+
+.glanceStatus,
+.glanceItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.glanceDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentcolor;
+}
+
+.insetHeat {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.insetHeat circle {
+  fill: #ff8a3d;
+  stroke: none;
+}

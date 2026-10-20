@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Crosshair, List, Minus, Plus } from 'lucide-react';
 import { IconButton } from '../ui/Button';
 import { Tabs } from '../ui/Tabs';
@@ -65,6 +66,8 @@ export interface MapHudProps extends MapHudActions {
   insetTiles: [string, string];
   /** Whether the legend is open, for the legend button's pressed state. */
   legendOpen?: boolean;
+  /** Drawn over the global-view inset, under the visible area (018's activity heat). */
+  insetOverlay?: ReactNode;
 }
 
 /** Why the elevation readout shows a dash: elevation is read only under the pointer. */
@@ -93,6 +96,7 @@ export function MapHud({
   onHome,
   onToggleLegend,
   legendOpen = false,
+  insetOverlay,
 }: MapHudProps) {
   const ground = camera?.ground;
   return (
@@ -156,6 +160,7 @@ export function MapHud({
           data-testid="inset"
           style={{ backgroundImage: insetTiles.map((url) => `url("${url}")`).join(', ') }}
         >
+          {insetOverlay}
           {camera?.view
             ? insetBoxes(camera.view, INSET_WIDTH, INSET_HEIGHT).map((box, i) => (
                 <span key={i} className={styles.insetBox} data-testid="inset-box" style={box} />

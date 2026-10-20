@@ -20,6 +20,7 @@ import { MapViewer } from '../../map/Viewer';
 import type { RecordHit } from '../../map/records/recordPicking';
 import { stressModeOn } from '../../map/stress/stressMode';
 import { useContextSummary } from '../../state/contextSummary';
+import { useGlance } from '../../glance/useGlance';
 import { parseObjectRef } from '../../lib/objectRef';
 import { hitForRef } from '../../objects/selectObject';
 import { useCommittedViewport, viewportOf } from '../../state/viewport';
@@ -27,6 +28,7 @@ import { appStore, useStoreKey, type AppState, type Store } from '../../state/st
 import { ActivityTimelinePanel, InsightsPanel, RecentImageryPanel } from './BottomPanels';
 import { RelatedEntitiesPanel } from './RelatedEntitiesPanel';
 import { AskPanel } from './AskPanel';
+import { GlanceStrip, InsetHeat } from './GlanceStrip';
 import { LayersRail } from './LayersRail';
 import { LocateBar } from './LocateBar';
 import {
@@ -292,6 +294,8 @@ export function GlobalDashboard({
     },
     [api, store, asOf],
   );
+  // The status strip and the inset's activity heat (018).
+  const glance = useGlance(api, stream);
   // The Ask ForeSignal panel (017), opened from the rail's tools, over the map's left side.
   const [askOpen, setAskOpen] = useState(false);
   const openAsk = useCallback(() => setAskOpen(true), []);
@@ -362,6 +366,7 @@ export function GlobalDashboard({
             stream={stream}
             store={store}
             viewport={storeViewport}
+            insetOverlay={<InsetHeat state={glance} />}
           >
             <TimeHud
               api={api}
@@ -372,6 +377,7 @@ export function GlobalDashboard({
             />
             <div className={styles.placeholderChip}>Placeholder panel data</div>
             <LocateBar />
+            <GlanceStrip state={glance} />
             {askOpen && <AskPanel onClose={() => setAskOpen(false)} />}
             {stress && StressHarness && (
               <Suspense fallback={null}>

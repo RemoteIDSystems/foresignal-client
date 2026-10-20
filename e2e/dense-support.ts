@@ -174,7 +174,10 @@ export async function standInCatalog(page: Page, request: APIRequestContext): Pr
   const records = new Map<string, StandInRecord[]>();
   await page.route('**/v1/kinds', async (route) => {
     // Read here, not through the page's request: the browser's may be a revalidation (304).
-    const live = (await (await getBackend(request, '/v1/kinds')).json()) as {
+    const answer = await getBackend(request, '/v1/kinds');
+    // Still rate limited after its retries: the page is given the refusal, and waits it out itself.
+    if (!answer.ok()) return route.fulfill({ response: answer });
+    const live = (await answer.json()) as {
       kind: string;
       currentCount: number;
     }[];

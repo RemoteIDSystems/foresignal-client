@@ -1,0 +1,21 @@
+.sparkline {
+  display: block;
+  flex: none;
+  overflow: visible;
+}
+
+.line {
+  fill: none;
+  stroke: var(--fs-color-accent);
+  stroke-linejoin: round;
+  stroke-width: 1.4;
+}
+
+.area {
+  fill: var(--fs-color-accent);
+  opacity: 0.15;
+}
+
+.dot {
+  fill: var(--fs-color-accent);
+}

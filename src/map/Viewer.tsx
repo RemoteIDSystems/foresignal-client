@@ -296,6 +296,8 @@ function LiveHud({ store, ...props }: Omit<MapHudProps, 'camera'> & { store: Cam
 export interface MapViewerProps {
   /** Extra overlays drawn above the map (e.g. the time HUD). */
   children?: ReactNode;
+  /** Drawn over the HUD's global-view inset (018's activity heat). */
+  insetOverlay?: ReactNode;
   /** Backend client for the overlay style, legend and attribution; without it the map has none. */
   api?: ForesignalClient;
   /**
@@ -368,6 +370,7 @@ const NO_PRODUCTS: readonly Product[] = [];
  */
 export function MapViewer({
   children,
+  insetOverlay,
   api,
   overlayStyle: sharedStyle,
   recordLayers = NO_LAYERS,
@@ -715,6 +718,7 @@ export function MapViewer({
         onHome={onHome}
         onToggleLegend={api ? onToggleLegend : undefined}
         legendOpen={legendOpen}
+        insetOverlay={insetOverlay}
       />
       {legend}
       <MapAttribution api={api} extra={productAttributions} />
