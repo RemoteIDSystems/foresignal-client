@@ -6,6 +6,7 @@ import type { RecordLayerStatus } from '../../map/records/recordLayers';
 import type { RecordHit } from '../../map/records/recordPicking';
 import type { LayerCatalogState } from '../../map/records/useLayerCatalog';
 import type { SpriteSheet } from '../../map/style/sprite';
+import type { ViewSummaryState } from '../../state/contextSummary';
 import type { AppState, Store } from '../../state/store';
 
 /** What the rail reads and changes. The enabled set moves to the store in 012. */
@@ -37,6 +38,10 @@ export interface RecordLayersValue {
   api?: ForesignalClient;
   /** The store the page reads (012), for the time cursor and the kinds' live state. */
   store?: Store<AppState>;
+  /** The view's context summary (015): counts, activity, insights and related objects. */
+  summary?: ViewSummaryState;
+  /** Selects an object by its ref, as if picked on the map (015, 016, 017); rejects if it cannot be read. */
+  selectRef?: (ref: string) => Promise<void>;
 }
 
 /** What the rail reads and changes of the product layers. */

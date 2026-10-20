@@ -19,7 +19,9 @@ import { useOverlayStyle } from '../../map/style/useOverlayStyle';
 import { MapViewer } from '../../map/Viewer';
 import type { RecordHit } from '../../map/records/recordPicking';
 import { stressModeOn } from '../../map/stress/stressMode';
-import { useViewCounts } from '../../state/contextSummary';
+import { useContextSummary } from '../../state/contextSummary';
+import { parseObjectRef } from '../../lib/objectRef';
+import { hitForRef } from '../../objects/selectObject';
 import { useCommittedViewport, viewportOf } from '../../state/viewport';
 import { appStore, useStoreKey, type AppState, type Store } from '../../state/store';
 import {
@@ -233,7 +235,12 @@ export function GlobalDashboard({
 
   // Counts in view: the map commits its viewport when the camera rests; the summary follows it.
   const viewport = useCommittedViewport(storeViewport);
-  const viewCounts = useViewCounts(api, viewport);
+  // One summary of the view (015) feeds the rail's counts, the activity timeline and the insights;
+  // pinned in the past (013), it is the view as of that instant.
+  const time = useStoreKey('time', store);
+  const asOf = time.mode === 'asOf' ? time.asOf : undefined;
+  const summary = useContextSummary(api, viewport, asOf);
+  const viewCounts = summary.summary;
   const railCatalog = useMemo(
     () =>
       catalogState.status === 'ready'
@@ -266,6 +273,27 @@ export function GlobalDashboard({
     (hit: RecordHit | undefined) => store.set('selection', hit),
     [store],
   );
+  // An object chosen in a panel (an activity row, a related object, a search result) is selected
+  // as if picked on the map, once its dossier says where it is; the map then brings it into view.
+  // A dossier that does not load still selects the object by its ref, so the panel says why.
+  const selectRef = useCallback(
+    async (ref: string) => {
+      if (!api) return;
+      try {
+        store.set('selection', await hitForRef(api, ref, asOf));
+      } catch {
+        const type = parseObjectRef(ref)?.type ?? 'object';
+        store.set('selection', {
+          id: { layer: type, kind: type, ref },
+          type: 'point',
+          longitude: Number.NaN,
+          latitude: Number.NaN,
+          distance: 0,
+        });
+      }
+    },
+    [api, store, asOf],
+  );
   const legendScope = useMemo(
     () => (catalog ? enabledKinds(catalog, enabled, hiddenSources) : undefined),
     [catalog, enabled, hiddenSources],
@@ -286,6 +314,8 @@ export function GlobalDashboard({
       sprite: overlay?.sprite,
       api,
       store,
+      summary,
+      selectRef,
     }),
     [
       railCatalog,
@@ -302,6 +332,8 @@ export function GlobalDashboard({
       overlay,
       api,
       store,
+      summary,
+      selectRef,
     ],
   );
 

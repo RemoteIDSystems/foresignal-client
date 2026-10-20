@@ -518,11 +518,11 @@ export function MapViewer({
   // Contextual 3D (014): a newly selected item with a 3D view switches the map to the globe and
   // flies to it; any other is brought into view on the 2D map. The selection the map opens with
   // (restored from the store) does not move it.
-  const selectionKey = shownSelection ? hitKey(shownSelection) : undefined;
-  const latestSelection = useRef(shownSelection);
+  const selectionKey = selection ? hitKey(selection) : undefined;
+  const latestSelection = useRef(selection);
   useEffect(() => {
-    latestSelection.current = shownSelection;
-  }, [shownSelection]);
+    latestSelection.current = selection;
+  }, [selection]);
   const [openingSelection] = useState(selectionKey);
   const focused = useRef(openingSelection);
   useEffect(() => {
@@ -533,7 +533,10 @@ export function MapViewer({
     }
     if (!viewer || selectionKey === focused.current) return;
     focused.current = selectionKey;
-    if (hit.id.source === undefined || hit.id.externalId === undefined) return;
+    // A counted cell is not an item; an object with no position has nowhere to go.
+    if (hit.type === 'cell' || !Number.isFinite(hit.longitude) || !Number.isFinite(hit.latitude)) {
+      return;
+    }
     return focusOn(viewer, hit, threeDViewOf(hit.id.kind) !== undefined, onSceneMode);
   }, [viewer, selectionKey, onSceneMode]);
   // The store's mode, whoever set it, is the scene's: a change morphs the map, keeping its place.

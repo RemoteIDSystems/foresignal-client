@@ -61,6 +61,58 @@ describe('summarizeViewport', () => {
     expect(result.counts.get('earthquake')).toBe(29);
   });
 
+  it('merges both halves’ activity newest first, and their insights and related objects once each', async () => {
+    const shared = { ref: 'situation:1', type: 'situation', title: 'Pacific outage' };
+    server.use(
+      http.post('/v1/context/summary', async ({ request, response }) => {
+        const east =
+          ((await request.json()) as { viewport: { bbox: number[] } }).viewport.bbox[0]! > 0;
+        return response(200).json({
+          generatedAt: '2026-10-20T12:00:00Z',
+          cacheAgeSeconds: east ? 4 : 11,
+          layerCounts: [],
+          activity: [
+            {
+              at: east ? '2026-10-20T11:00:00Z' : '2026-10-20T11:30:00Z',
+              ref: east ? 'record:a/1' : 'record:a/2',
+              type: 'record',
+              title: east ? 'older' : 'newer',
+            },
+          ],
+          insights: [{ ref: 'finding:9', kind: 'finding', title: 'Outage cluster' }],
+          related: [shared],
+          truncated: !east,
+        } as never);
+      }),
+    );
+    const result = await summarizeViewport(api(), { bbox: [170, -60, -170, 60], zoom: 2 }, now);
+    expect(result.activity.map((item) => item.title)).toEqual(['newer', 'older']);
+    expect(result.insights).toHaveLength(1);
+    expect(result.related).toEqual([shared]);
+    expect(result.cacheAgeSeconds).toBe(11);
+    expect(result.truncated).toBe(true);
+  });
+
+  it('asks as of the time machine’s instant, over the 24 hours before it', async () => {
+    const bodies: unknown[] = [];
+    serveSummaries(bodies);
+    const result = await summarizeViewport(
+      api(),
+      { bbox: [-130, 20, -60, 55], zoom: 3 },
+      now,
+      undefined,
+      '2026-10-18T06:00:00Z',
+    );
+    expect(bodies).toEqual([
+      {
+        viewport: { bbox: [-130, 20, -60, 55] },
+        timeRange: { start: '2026-10-17T06:00:00.000Z', end: '2026-10-18T06:00:00Z' },
+        asOf: '2026-10-18T06:00:00Z',
+      },
+    ]);
+    expect(result.asOf).toBe('2026-10-18T06:00:00Z');
+  });
+
   it('fails when the backend refuses the context', async () => {
     server.use(
       http.post('/v1/context/summary', ({ response }) =>

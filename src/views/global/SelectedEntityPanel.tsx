@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ChevronRight, Ellipsis, ExternalLink, X } from 'lucide-react';
 import type { ForesignalClient } from '../../api/client';
 import { prettifyId } from '../../lib/labels';
-import { recordRef } from '../../lib/objectRef';
+import { parseObjectRef, recordRef } from '../../lib/objectRef';
 import { KindSwatch } from '../../map/style/legend';
 import type { RecordHit } from '../../map/records/recordPicking';
 import {
@@ -50,9 +50,10 @@ export function SelectedEntityPanel({ onClose }: { onClose: () => void }) {
   const api = layers?.api;
   const selection = layers?.selection;
   const ref =
-    selection?.id.source !== undefined && selection.id.externalId !== undefined
+    selection?.id.ref ??
+    (selection?.id.source !== undefined && selection.id.externalId !== undefined
       ? recordRef(selection.id.source, selection.id.externalId)
-      : undefined;
+      : undefined);
   const time = useStoreKey('time', store);
   const asOf = time.mode === 'asOf' ? time.asOf : undefined;
   const live = useStoreKey(`layer:${selection?.id.kind ?? ''}`, store);
@@ -149,7 +150,9 @@ function TitleRow({
           {kindLabel && <Badge tone="info">{kindLabel}</Badge>}
           {envelope?.status && <Badge tone={statusTone(envelope.status)}>{envelope.status}</Badge>}
           {envelope?.severity && <Badge tone="warning">{envelope.severity}</Badge>}
-          <span className={styles.muted}>ID: {selection.id.externalId}</span>
+          <span className={styles.muted}>
+            ID: {selection.id.externalId ?? parseObjectRef(selection.id.ref ?? '')?.id}
+          </span>
         </div>
       </div>
     </div>

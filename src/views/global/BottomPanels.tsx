@@ -5,29 +5,30 @@ import {
   CircleCheck,
   Clock,
   Diamond,
-  Flame,
-  Orbit,
-  Plane,
-  Radio,
-  Shield,
-  Ship,
   TriangleAlert,
-  Zap,
-  Activity,
-  type LucideIcon,
 } from 'lucide-react';
-import { Badge, type BadgeTone } from '../../ui/Badge';
+import { Badge } from '../../ui/Badge';
 import { Button } from '../../ui/Button';
 import { List } from '../../ui/List';
 import { Panel } from '../../ui/Panel';
 import { Tabs } from '../../ui/Tabs';
+import { formatPanelTime } from '../../objects/dossierView';
+import type { ViewSummaryState } from '../../state/contextSummary';
 import {
-  PLACEHOLDER_ACTIVITY,
-  PLACEHOLDER_IMAGERY,
-  PLACEHOLDER_INSIGHTS,
-  PLACEHOLDER_RELATED,
-  type PlaceholderInsight,
-} from './placeholderData';
+  ALL_SOURCES,
+  activityLook,
+  activityTime,
+  familiesOf,
+  familyLabel,
+  filterActivity,
+  insightBasis,
+  insightsFor,
+  percent,
+  termTag,
+  type InsightTab,
+} from './insightsView';
+import { PLACEHOLDER_IMAGERY, PLACEHOLDER_RELATED } from './placeholderData';
+import { useRecordLayers } from './recordLayersContext';
 import styles from './GlobalDashboard.module.css';
 
 /** Placeholder thumbnail fills, one per imagery kind. */
@@ -93,67 +94,96 @@ export function RecentImageryPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-/** Icon per activity category, as in the mockup's timeline. */
-const CATEGORY_ICONS: Record<string, { icon: LucideIcon; color: string }> = {
-  Space: { icon: Orbit, color: '#7fb2f0' },
-  RF: { icon: Radio, color: '#c78bff' },
-  Maritime: { icon: Ship, color: '#6fb8f0' },
-  Energy: { icon: Zap, color: '#ff5a5f' },
-  Cyber: { icon: Shield, color: '#ff5a5f' },
-  Geologic: { icon: Activity, color: '#ff9b50' },
-  Aviation: { icon: Plane, color: '#6fb8f0' },
-  Hazard: { icon: Flame, color: '#ff7a3a' },
-  Conflict: { icon: Diamond, color: '#ff9b50' },
-};
-
-/** Activity timeline panel. Skeleton; prompt 015 fills it from `summarizeContext` activity. */
+/** Activity timeline panel: the view's merged activity feed (015), newest first, by family. */
 export function ActivityTimelinePanel() {
+  const { summary, selectRef } = useRecordLayers() ?? {};
+  const [family, setFamily] = useState(ALL_SOURCES);
+  const activity = summary?.summary?.activity ?? [];
+  const families = familiesOf(activity);
+  const shown = filterActivity(activity, families.includes(family) ? family : ALL_SOURCES);
   return (
     <Panel
       title="Activity Timeline"
       actions={
-        <button type="button" className={styles.select}>
-          All Sources <ChevronDown size={13} aria-hidden="true" />
-        </button>
+        <label className={styles.select}>
+          <span className={styles.visuallyHidden}>Filter activity by source</span>
+          <select
+            value={families.includes(family) ? family : ALL_SOURCES}
+            onChange={(event) => setFamily(event.target.value)}
+            data-testid="activity-filter"
+          >
+            <option>{ALL_SOURCES}</option>
+            {families.map((name) => (
+              <option key={name}>{name}</option>
+            ))}
+          </select>
+          <ChevronDown size={13} aria-hidden="true" />
+        </label>
       }
     >
-      <List
-        dense
-        label="Recent activity"
-        items={PLACEHOLDER_ACTIVITY}
-        getKey={(row) => `${row.time}-${row.text}`}
-        renderItem={(row) => {
-          const meta = CATEGORY_ICONS[row.category] ?? { icon: TriangleAlert, color: '#f0b070' };
-          const Icon = row.text.startsWith('Shipping') ? TriangleAlert : meta.icon;
-          return (
-            <>
-              <span className={styles.time}>{row.time}</span>
-              <Icon
-                size={15}
-                color={row.text.startsWith('Shipping') ? '#f0b070' : meta.color}
-                aria-hidden="true"
-              />
-              <span className={styles.rowText}>{row.text}</span>
-              <Badge tone={row.tone}>{row.category}</Badge>
-            </>
-          );
-        }}
-      />
+      <div data-testid="activity-timeline" data-count={shown.length}>
+        <SummaryNote state={summary} empty={shown.length === 0} what="activity" />
+        <List
+          dense
+          label="Recent activity"
+          items={shown}
+          getKey={(item) => `${item.at}|${item.ref}`}
+          renderItem={(item) => {
+            const look = activityLook(item);
+            const Icon = look.icon;
+            return (
+              <button
+                type="button"
+                className={styles.rowButton}
+                onClick={() => void selectRef?.(item.ref)}
+                title={item.title}
+              >
+                <span className={styles.time}>{activityTime(item.at)}</span>
+                <Icon size={15} color={look.color} aria-hidden="true" />
+                <span className={styles.rowText}>{item.title}</span>
+                <Badge tone={look.tone}>{familyLabel(item)}</Badge>
+              </button>
+            );
+          }}
+        />
+      </div>
     </Panel>
   );
 }
 
-const LEVEL_TONE: Record<PlaceholderInsight['level'], BadgeTone> = {
-  High: 'teal',
-  Medium: 'warning',
-  Low: 'info',
-};
+/**
+ * The line a summary panel shows above its rows: loading, the failed read (the last rows stay),
+ * or that the view has nothing.
+ */
+function SummaryNote({
+  state,
+  empty,
+  what,
+}: {
+  state: ViewSummaryState | undefined;
+  empty: boolean;
+  what: string;
+}) {
+  if (state?.error) {
+    return (
+      <p className={styles.summaryNote} role="alert">
+        The view summary did not load: {state.error}
+      </p>
+    );
+  }
+  if (!state?.summary) return <p className={styles.summaryNote}>Summarizing this view…</p>;
+  if (empty) return <p className={styles.summaryNote}>No {what} in this view.</p>;
+  return null;
+}
 
-/** Analytics & insights panel. Skeleton; prompts 015 and 022 fill it. */
+/** Analytics & insights panel: the view's findings, band changes, forecasts and situations (015). */
 export function InsightsPanel({ onClose }: { onClose: () => void }) {
-  const [tab, setTab] = useState<'detections' | 'hypotheses' | 'forecasts' | 'related'>(
-    'forecasts',
-  );
+  const { summary, selectRef } = useRecordLayers() ?? {};
+  const [tab, setTab] = useState<InsightTab>('forecasts');
+  const view = summary?.summary;
+  const insights = tab === 'related' ? [] : insightsFor(view?.insights ?? [], tab);
+  const related = view?.related ?? [];
+  const empty = tab === 'related' ? related.length === 0 : insights.length === 0;
   return (
     <Panel title="Analytics & Insights" onClose={onClose}>
       <Tabs
@@ -167,28 +197,75 @@ export function InsightsPanel({ onClose }: { onClose: () => void }) {
           { key: 'related', label: 'Related Events' },
         ]}
       />
-      <ol className={styles.insights}>
-        {PLACEHOLDER_INSIGHTS.map((insight, i) => (
-          <li key={insight.title}>
-            <span className={styles.rank}>{i + 1}</span>
-            <span className={styles.insightText}>
-              <span className={styles.insightTitle}>{insight.title}</span>
-              <span className={styles.insightDetail}>{insight.detail}</span>
-            </span>
-            <Badge tone="neutral" uppercase={false}>
-              {insight.probability}%
-            </Badge>
-            <span className={styles.level}>
-              <Badge tone={LEVEL_TONE[insight.level]} uppercase={false}>
-                {insight.level}
-              </Badge>
-            </span>
-          </li>
-        ))}
-      </ol>
+      <div data-testid="insights" data-tab={tab}>
+        <SummaryNote
+          state={summary}
+          empty={empty}
+          what={tab === 'related' ? 'related events' : `${tab}`}
+        />
+        <ol className={styles.insights}>
+          {tab === 'related'
+            ? related.map((object, i) => (
+                <li key={object.ref}>
+                  <button
+                    type="button"
+                    className={styles.rowButton}
+                    onClick={() => void selectRef?.(object.ref)}
+                  >
+                    <span className={styles.rank}>{i + 1}</span>
+                    <span className={styles.insightText}>
+                      <span className={styles.insightTitle}>{object.title}</span>
+                      <span className={styles.insightDetail}>
+                        {[object.type, object.status].filter(Boolean).join(' · ')}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              ))
+            : insights.map((insight, i) => {
+                const term = termTag(insight.estimativeTerm);
+                const basis = insightBasis(insight);
+                return (
+                  <li key={insight.ref}>
+                    <button
+                      type="button"
+                      className={styles.rowButton}
+                      onClick={() => void selectRef?.(insight.ref)}
+                    >
+                      <span className={styles.rank}>{i + 1}</span>
+                      <span className={styles.insightText}>
+                        <span className={styles.insightTitle}>{insight.title}</span>
+                        {basis && <span className={styles.insightDetail}>{basis}</span>}
+                      </span>
+                      {typeof insight.probability === 'number' && (
+                        <Badge tone="neutral" uppercase={false}>
+                          {percent(insight.probability)}
+                        </Badge>
+                      )}
+                      <span className={styles.level}>
+                        {term && (
+                          <Badge tone={term.tone} uppercase={false}>
+                            {term.label}
+                          </Badge>
+                        )}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+        </ol>
+      </div>
       <div className={styles.insightsFooter}>
-        <Button variant="primary">View Full Analysis</Button>
-        <span className={styles.muted}>Last Updated: 2025-09-18 14:30Z</span>
+        <Button
+          variant="primary"
+          disabled
+          title="The full analysis view comes with a later prompt."
+        >
+          View Full Analysis
+        </Button>
+        <span className={styles.muted} data-testid="insights-updated">
+          Last Updated: {view ? formatPanelTime(view.generatedAt) : '—'}
+        </span>
       </div>
     </Panel>
   );

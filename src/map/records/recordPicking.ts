@@ -21,6 +21,11 @@ export interface RecordPickId {
   kind?: string;
   /** For a hexagon cell: the records it counts. */
   count?: number;
+  /**
+   * The object's canonical ref, for an item selected from a panel (activity, related objects,
+   * search) rather than picked on the map; a record's is derived from its source and id.
+   */
+  ref?: string;
 }
 
 /** Where the pointer is on the map, and the map's scale there. */

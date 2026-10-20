@@ -102,10 +102,10 @@ export class MapPointer {
 
 /** A stable identity for a hit, to tell the owner only when the hovered record changes. */
 export function hitKey(hit: RecordHit): string {
-  const { layer, source, externalId, count } = hit.id;
-  return externalId !== undefined
-    ? `${layer}|${source ?? ''}|${externalId}`
-    : `${layer}|${hit.type}|${count ?? ''}|${hit.longitude.toFixed(4)},${hit.latitude.toFixed(4)}`;
+  const { layer, source, externalId, count, ref } = hit.id;
+  if (externalId !== undefined) return `${layer}|${source ?? ''}|${externalId}`;
+  if (ref !== undefined) return `${layer}|${ref}`;
+  return `${layer}|${hit.type}|${count ?? ''}|${hit.longitude.toFixed(4)},${hit.latitude.toFixed(4)}`;
 }
 
 /**

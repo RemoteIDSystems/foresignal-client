@@ -12,8 +12,20 @@ export const SUMMARY_WINDOW_MS = 24 * 60 * 60 * 1000;
 /** How long a new viewport must hold before it is summarized, in ms. */
 export const SUMMARY_DEBOUNCE_MS = 400;
 
-/** How often the summary of an unchanged viewport is read again, in ms. */
+/**
+ * How long the backend keeps a context's summary, in seconds (`summarizeContext` caches each
+ * context for 30 s). A summary is not asked for again before its copy expires.
+ */
+export const SUMMARY_CACHE_S = 30;
+
+/** The longest a summary of an unchanged viewport goes unread, in ms. */
 export const SUMMARY_REFRESH_MS = 60_000;
+
+/** One item of the merged activity feed (alerts, findings, situation changes, records). */
+export type ActivityItem = ContextSummary['activity'][number];
+
+/** One insight: a finding, an open forecast question, or a hypothesis band change. */
+export type InsightItem = ContextSummary['insights'][number];
 
 /** What the map's viewport holds now: records per layer (kind), aggregated by the backend. */
 export interface ViewCounts {
@@ -26,71 +38,123 @@ export interface ViewCounts {
 }
 
 /**
- * Summarizes a viewport (`summarizeContext`) over the last {@link SUMMARY_WINDOW_MS} and reads
- * its per-layer counts: aggregates, never feature lists. A viewport across the antimeridian is
- * asked about in its two halves ({@link splitAtAntimeridian}) and the counts are added.
+ * A viewport's whole summary: its counts, the merged activity feed (newest first), the insights
+ * and the related objects, with how old the backend's cached copy was.
+ */
+export interface ViewSummary extends ViewCounts {
+  activity: ActivityItem[];
+  insights: InsightItem[];
+  related: ContextSummary['related'];
+  /** Seconds the backend's copy had been cached when it answered. */
+  cacheAgeSeconds: number;
+  /** The instant the summary was asked as of, when the map is pinned (013). */
+  asOf?: string;
+  /** True when the backend cut a part short to stay within its size. */
+  truncated: boolean;
+}
+
+/**
+ * Summarizes a viewport (`summarizeContext`) over the {@link SUMMARY_WINDOW_MS} before now, or with
+ * `asOf` before that instant and as known then. A viewport across the antimeridian is asked about
+ * in its two halves ({@link splitAtAntimeridian}): their counts are added, and their activity,
+ * insights and related objects merged once each, the activity newest first.
  */
 export async function summarizeViewport(
   api: ForesignalClient,
   viewport: CommittedViewport,
   now: Date = new Date(),
   signal?: AbortSignal,
-): Promise<ViewCounts> {
-  const start = new Date(now.getTime() - SUMMARY_WINDOW_MS).toISOString();
+  asOf?: string,
+): Promise<ViewSummary> {
+  const end = asOf !== undefined ? new Date(asOf) : now;
+  const start = new Date(end.getTime() - SUMMARY_WINDOW_MS).toISOString();
+  const timeRange = asOf !== undefined ? { start, end: asOf } : { start };
   const summaries = await Promise.all(
     splitAtAntimeridian(viewport.bbox).map((bbox) =>
       unwrap(
         api.POST('/v1/context/summary', {
-          body: { viewport: { bbox }, timeRange: { start } },
+          body: { viewport: { bbox }, timeRange, ...(asOf !== undefined && { asOf }) },
           signal,
         }),
       ),
     ),
   );
   const counts = new Map<string, number>();
+  const activity = new Map<string, ActivityItem>();
+  const insights = new Map<string, InsightItem>();
+  const related = new Map<string, ContextSummary['related'][number]>();
   for (const summary of summaries) {
     for (const { layer, count } of summary.layerCounts) {
       counts.set(layer, (counts.get(layer) ?? 0) + count);
     }
+    for (const item of summary.activity) activity.set(`${item.ref}|${item.at}`, item);
+    for (const item of summary.insights) insights.set(`${item.kind}|${item.ref}`, item);
+    for (const item of summary.related) related.set(item.ref, item);
   }
-  return { viewport, counts, generatedAt: summaries[0]?.generatedAt ?? now.toISOString() };
+  return {
+    viewport,
+    counts,
+    generatedAt: summaries[0]?.generatedAt ?? now.toISOString(),
+    activity: [...activity.values()].sort((a, b) => Date.parse(b.at) - Date.parse(a.at)),
+    insights: [...insights.values()],
+    related: [...related.values()],
+    cacheAgeSeconds: Math.max(0, ...summaries.map((summary) => summary.cacheAgeSeconds ?? 0)),
+    ...(asOf !== undefined && { asOf }),
+    truncated: summaries.some((summary) => summary.truncated === true),
+  };
+}
+
+/** The state of the view's summary: the last one in, and why the latest read failed, if it did. */
+export interface ViewSummaryState {
+  summary?: ViewSummary;
+  error?: string;
 }
 
 /**
- * The per-layer counts of the committed viewport, kept current: summarized
- * {@link SUMMARY_DEBOUNCE_MS} after the viewport settles, and again every
- * {@link SUMMARY_REFRESH_MS}. A request for an older viewport is canceled. Undefined until the
- * first summary arrives; a failed refresh keeps the last counts.
+ * The committed viewport's summary, kept current: read {@link SUMMARY_DEBOUNCE_MS} after the
+ * viewport (or the time machine's instant) settles, then again once the backend's cached copy has
+ * expired ({@link SUMMARY_CACHE_S} after it was made), and at least every
+ * {@link SUMMARY_REFRESH_MS}. A request for an older viewport is canceled. A failed read keeps
+ * the last summary and says why.
  */
-export function useViewCounts(
+export function useContextSummary(
   api: ForesignalClient | undefined,
   viewport: CommittedViewport | undefined,
-): ViewCounts | undefined {
-  const [counts, setCounts] = useState<ViewCounts>();
+  asOf?: string,
+): ViewSummaryState {
+  const [state, setState] = useState<ViewSummaryState>({});
   useEffect(() => {
     if (!api || !viewport) return;
     let controller: AbortController | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const load = () => {
       controller?.abort();
       const mine = new AbortController();
       controller = mine;
-      summarizeViewport(api, viewport, new Date(), mine.signal).then(
-        (next) => {
-          if (!mine.signal.aborted) setCounts(next);
+      summarizeViewport(api, viewport, new Date(), mine.signal, asOf).then(
+        (summary) => {
+          if (mine.signal.aborted) return;
+          setState({ summary });
+          // The backend's copy is fresh for the rest of its 30 s; asked again once it expires.
+          const fresh = Math.max(0, SUMMARY_CACHE_S - summary.cacheAgeSeconds) * 1_000;
+          timer = setTimeout(load, Math.min(SUMMARY_REFRESH_MS, Math.max(fresh + 1_000, 30_000)));
         },
         (error: unknown) => {
-          if (!mine.signal.aborted)
-            console.warn('ForeSignal: the view summary did not load.', error);
+          if (mine.signal.aborted) return;
+          console.warn('ForeSignal: the view summary did not load.', error);
+          setState((current) => ({
+            ...current,
+            error: error instanceof Error ? error.message : 'The view summary did not load.',
+          }));
+          timer = setTimeout(load, SUMMARY_REFRESH_MS);
         },
       );
     };
-    const first = setTimeout(load, SUMMARY_DEBOUNCE_MS);
-    const refresh = setInterval(load, SUMMARY_REFRESH_MS);
+    timer = setTimeout(load, SUMMARY_DEBOUNCE_MS);
     return () => {
-      clearTimeout(first);
-      clearInterval(refresh);
+      clearTimeout(timer);
       controller?.abort();
     };
-  }, [api, viewport]);
-  return counts;
+  }, [api, viewport, asOf]);
+  return state;
 }
