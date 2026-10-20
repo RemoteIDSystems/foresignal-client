@@ -2,7 +2,12 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { createForesignalClient } from '../../api/client';
 import { http, MOCK_BASE_URL, server } from '../../api/testing/mock-server';
 import { MapAttribution } from './attribution';
-import { requiredAttributions, type Attribution } from './attributionModel';
+import {
+  attributionHref,
+  creditList,
+  requiredAttributions,
+  type Attribution,
+} from './attributionModel';
 
 beforeAll(() => server.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => server.resetHandlers());
@@ -28,6 +33,28 @@ describe('requiredAttributions', () => {
     expect(requiredAttributions([shown, notRequired, { ...shown, count: 3 }, missing])).toEqual([
       shown,
     ]);
+  });
+});
+
+describe('creditList', () => {
+  it('keeps every attribution, required or not, once per text and license, sorted by text', () => {
+    const other = { ...notRequired, licence: 'CC0-1.0' };
+    const lower = { text: 'acme feed', licence: 'x', requiredDisplay: false };
+    expect(creditList([shown, notRequired, { ...shown }, other, lower])).toEqual([
+      lower,
+      shown,
+      notRequired,
+      other,
+    ]);
+  });
+
+  it('links an attribution to its URL, else its terms, else its license page', () => {
+    expect(attributionHref(shown)).toBe('https://www.openstreetmap.org/copyright');
+    expect(
+      attributionHref({ ...notRequired, termsUrl: 'https://t', licenceUrl: 'https://l' }),
+    ).toBe('https://t');
+    expect(attributionHref({ ...notRequired, licenceUrl: 'https://l' })).toBe('https://l');
+    expect(attributionHref({ ...notRequired, url: null, termsUrl: null })).toBeUndefined();
   });
 });
 

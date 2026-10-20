@@ -225,7 +225,7 @@ describe('expression readers', () => {
   });
 
   it('labels kinds for people', () => {
-    expect(kindLabel('conflict-event')).toBe('Conflict event');
-    expect(kindLabel('aprs_station')).toBe('Aprs station');
+    expect(kindLabel('conflict-event')).toBe('Conflict Event');
+    expect(kindLabel('aprs_station')).toBe('APRS Station');
   });
 });

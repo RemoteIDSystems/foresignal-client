@@ -1,0 +1,4 @@
+/* License ids are single tokens such as provider-terms-nc; breaking them at the hyphen misreads. */
+.license {
+  white-space: nowrap;
+}

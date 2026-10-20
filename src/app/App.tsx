@@ -43,7 +43,7 @@ export function App({ session, initialPath }: AppProps) {
         <Route path="/intelligence" element={<IntelligenceView />} />
         <Route path="/operations" element={<OperationsView />} />
         <Route path="/settings" element={<SettingsView session={session} />} />
-        <Route path="/about" element={<AboutView />} />
+        <Route path="/about" element={<AboutView api={session.api} />} />
         <Route path="*" element={<Navigate to={DEFAULT_ROUTE} replace />} />
       </Route>
     </Routes>

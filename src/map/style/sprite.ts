@@ -22,6 +22,12 @@ export function spriteFileName(
   return SPRITE_FILE.test(name) ? name : undefined;
 }
 
+/** Where MapLibre's SDF shader puts an icon's fill edge, as a fraction of the distance range. */
+export const SDF_INNER_EDGE = 0.75;
+
+/** How many times the sprite's median shape size an icon must exceed to be scaled down. */
+export const OVERSIZED_FACTOR = 1.5;
+
 /** A CSS hex color (`#rgb` or `#rrggbb`) as 0–255 channels; black for anything else. */
 export function hexToRgb(color: string): [number, number, number] {
   const hex = color.trim().replace(/^#/, '');
@@ -58,7 +64,7 @@ export function renderSdf(
   const halo = paint.haloColor ? hexToRgb(paint.haloColor) : undefined;
   const haloWidth = halo ? (paint.haloWidth ?? 0) : 0;
   const gamma = 0.105 / (paint.pixelRatio ?? 1);
-  const innerEdge = 0.75;
+  const innerEdge = SDF_INNER_EDGE;
   const haloEdge = (6 - haloWidth) / 8;
   for (let i = 0; i < distance.length; i++) {
     const d = (distance[i] ?? 0) / 255;
@@ -94,6 +100,8 @@ function smoothstep(edge0: number, edge1: number, x: number): number {
 /** A loaded sprite: its index and the sheet's alpha channel, ready to render icons from. */
 export class SpriteSheet {
   private readonly cache = new Map<string, string>();
+  private readonly glyphSizes = new Map<string, number>();
+  private reference: number | undefined;
 
   /**
    * @param index The sprite index.
@@ -123,6 +131,68 @@ export class SpriteSheet {
       data.set(this.alpha.subarray(start, start + entry.width), row * entry.width);
     }
     return { data, width: entry.width, height: entry.height };
+  }
+
+  /**
+   * The size of an icon's drawn shape in CSS pixels: the larger side of the box around the pixels
+   * inside the fill edge. This is what the eye compares, not the sprite cell, whose padding differs
+   * between icons. Undefined when the sprite lacks the icon.
+   */
+  glyphSize(name: string): number | undefined {
+    const cached = this.glyphSizes.get(name);
+    if (cached !== undefined) return cached;
+    const field = this.distanceField(name);
+    if (!field) return undefined;
+    const threshold = SDF_INNER_EDGE * 255;
+    let minX = field.width;
+    let minY = field.height;
+    let maxX = -1;
+    let maxY = -1;
+    for (let y = 0; y < field.height; y++) {
+      for (let x = 0; x < field.width; x++) {
+        if ((field.data[y * field.width + x] ?? 0) < threshold) continue;
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+      }
+    }
+    const size = maxX < 0 ? 0 : Math.max(maxX - minX + 1, maxY - minY + 1) / this.pixelRatio;
+    this.glyphSizes.set(name, size);
+    return size;
+  }
+
+  /** The median shape size across the sprite: the size icons are meant to share. */
+  referenceGlyphSize(): number {
+    if (this.reference === undefined) {
+      const sizes = Object.keys(this.index)
+        .map((name) => this.glyphSize(name) ?? 0)
+        .filter((size) => size > 0)
+        .sort((a, b) => a - b);
+      this.reference = sizes[Math.floor(sizes.length / 2)] ?? 0;
+    }
+    return this.reference;
+  }
+
+  /**
+   * The factor to draw an icon at so it matches the others: 1 for an icon of ordinary size, and
+   * `reference / size` for one whose shape is more than {@link OVERSIZED_FACTOR} times the
+   * sprite's median (the live sprite's fighter-jet, sailboat and snow are about 3.5 times). The map
+   * multiplies the style's `icon-size` by it; the legend draws the cell at this scale.
+   */
+  displayScale(name: string): number {
+    const size = this.glyphSize(name);
+    const reference = this.referenceGlyphSize();
+    if (!size || !reference || size <= reference * OVERSIZED_FACTOR) return 1;
+    return reference / size;
+  }
+
+  /** The icon's cell in CSS pixels at its {@link displayScale}; undefined when it is missing. */
+  displaySize(name: string): { width: number; height: number } | undefined {
+    const entry = this.index[name];
+    if (!entry) return undefined;
+    const scale = this.displayScale(name) / entry.pixelRatio;
+    return { width: entry.width * scale, height: entry.height * scale };
   }
 
   /**

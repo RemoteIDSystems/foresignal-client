@@ -16,3 +16,24 @@ export function requiredAttributions(attributions: readonly Attribution[]): Attr
     return true;
   });
 }
+
+/**
+ * Every attribution for the credits page, whatever `requiredDisplay` says: one per distinct text
+ * and license, sorted by text. Nothing a source asks to be credited for is left out.
+ */
+export function creditList(attributions: readonly Attribution[]): Attribution[] {
+  const seen = new Set<string>();
+  return attributions
+    .filter((item) => {
+      const key = `${item.text}\u0000${item.licence}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => a.text.localeCompare(b.text, 'en', { sensitivity: 'base' }));
+}
+
+/** The link an attribution offers: its own URL, else its terms, else its license page. */
+export function attributionHref(item: Attribution): string | undefined {
+  return item.url ?? item.termsUrl ?? item.licenceUrl ?? undefined;
+}

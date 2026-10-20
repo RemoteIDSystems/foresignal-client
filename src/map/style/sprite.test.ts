@@ -90,3 +90,63 @@ describe('SpriteSheet', () => {
     });
   });
 });
+
+/** A one-row sheet of square icons, each a filled square of `glyph` pixels centered in its cell. */
+function sheetOf(icons: { name: string; cell: number; glyph: number }[], pixelRatio = 1) {
+  const width = icons.reduce((sum, icon) => sum + icon.cell, 0);
+  const height = Math.max(...icons.map((icon) => icon.cell));
+  const alpha = new Uint8Array(width * height);
+  const index: SpriteIndex = {};
+  let x = 0;
+  for (const { name, cell, glyph } of icons) {
+    index[name] = { x, y: 0, width: cell, height: cell, pixelRatio, sdf: true };
+    const pad = Math.floor((cell - glyph) / 2);
+    for (let row = pad; row < pad + glyph; row++) {
+      // Inside the fill edge, with a halo-range ring around it that must not count.
+      alpha.fill(200, row * width + x + pad, row * width + x + pad + glyph);
+    }
+    for (let col = x; col < x + cell; col++) if (alpha[col] === 0) alpha[col] = 150;
+    x += cell;
+  }
+  return new SpriteSheet(index, alpha, width, pixelRatio);
+}
+
+describe('SpriteSheet display size', () => {
+  const sprite = sheetOf([
+    { name: 'a', cell: 21, glyph: 13 },
+    { name: 'b', cell: 21, glyph: 15 },
+    { name: 'c', cell: 21, glyph: 11 },
+    { name: 'fighter-jet', cell: 54, glyph: 48 },
+  ]);
+
+  it('measures the shape inside the fill edge, not the cell', () => {
+    expect(sprite.glyphSize('a')).toBe(13);
+    expect(sprite.glyphSize('fighter-jet')).toBe(48);
+    expect(sprite.glyphSize('missing')).toBeUndefined();
+  });
+
+  it('leaves ordinary icons alone and scales an oversized one to the median shape', () => {
+    expect(sprite.referenceGlyphSize()).toBe(15);
+    expect(sprite.displayScale('a')).toBe(1);
+    expect(sprite.displayScale('c')).toBe(1);
+    expect(sprite.displayScale('fighter-jet')).toBeCloseTo(15 / 48);
+    expect(sprite.displaySize('a')).toEqual({ width: 21, height: 21 });
+    const jet = sprite.displaySize('fighter-jet');
+    expect(jet?.width).toBeCloseTo((54 * 15) / 48);
+    expect(jet!.width * (48 / 54)).toBeCloseTo(15);
+  });
+
+  it('reads sizes in CSS pixels on a 2x sheet', () => {
+    const retina = sheetOf(
+      [
+        { name: 'a', cell: 42, glyph: 26 },
+        { name: 'b', cell: 42, glyph: 26 },
+        { name: 'big', cell: 108, glyph: 96 },
+      ],
+      2,
+    );
+    expect(retina.glyphSize('a')).toBe(13);
+    expect(retina.displaySize('a')).toEqual({ width: 21, height: 21 });
+    expect(retina.displayScale('big')).toBeCloseTo(13 / 48);
+  });
+});

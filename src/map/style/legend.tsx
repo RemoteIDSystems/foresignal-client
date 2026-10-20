@@ -1,8 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { X } from 'lucide-react';
+import { ChevronRight, X } from 'lucide-react';
 import type { ForesignalClient } from '../../api/client';
 import { IconButton } from '../../ui/Button';
-import { buildLegend, type LegendEntry, type LegendVariant } from './legendModel';
+import {
+  buildLegend,
+  legendTooltip,
+  zoomNotes,
+  type LegendEntry,
+  type LegendVariant,
+} from './legendModel';
 import { loadMapIcon, type OverlayStyle } from './loadOverlayStyle';
 import { representativeColor, type KindStyle } from './model';
 import type { SpriteSheet } from './sprite';
@@ -20,10 +26,11 @@ export interface MapLegendProps {
 }
 
 /**
- * The map legend: every record kind the overlay style draws, with its icon or symbol in the style's
- * own color (SDF sprite icons rendered as the map renders them), the sources that draw it, the
- * severity colors a kind uses, and the zoom below which a layer shows hexagon counts. Built only
- * from `getMapStyle` and its sprite; product legends join it in 009.
+ * The map legend: every record kind the overlay style draws, one compact row each as in the
+ * Conflict mockup: its icon in the style's own color (SDF sprite icons rendered as the map renders
+ * them, oversized ones scaled to match), its label, and the severity colors it uses. The sources
+ * that draw it and the zoom it switches to hexagon counts are in the row's tooltip and in its
+ * expanded detail. Built only from `getMapStyle` and its sprite; product legends join it in 009.
  */
 export function MapLegend({ state, api, onClose }: MapLegendProps) {
   const [filter, setFilter] = useState('');
@@ -70,7 +77,10 @@ export function MapLegend({ state, api, onClose }: MapLegendProps) {
   );
 }
 
-/** One kind: its looks with their sources, its color cases and its aggregation zoom. */
+/**
+ * One kind: a compact row (icon, label, severity colors) that expands to the looks with their
+ * sources, the named severity cases and the zoom notes.
+ */
 function LegendRow({
   entry,
   overlay,
@@ -80,75 +90,93 @@ function LegendRow({
   overlay: OverlayStyle;
   api?: ForesignalClient;
 }) {
-  const [first, ...others] = entry.variants;
+  const [first] = entry.variants;
   if (!first) return null;
+  const cases = entry.colorCases;
   return (
     <li className={styles.entry} data-kind={entry.kind}>
-      <div className={styles.row}>
-        <Swatch style={first.style} sprite={overlay.sprite} api={api} />
-        <span className={styles.label}>{entry.label}</span>
-      </div>
-      <VariantSources variant={first} />
-      {others.map((variant) => (
-        <div key={variant.layerIds[0]} className={styles.variant}>
-          <Swatch style={variant.style} sprite={overlay.sprite} api={api} />
-          <VariantSources variant={variant} inline />
-        </div>
-      ))}
-      {entry.colorCases && (
-        <div className={styles.cases} aria-label={`Color by ${entry.colorCases.field}`}>
-          {entry.colorCases.cases.map((item) => (
-            <span
-              key={item.color + item.values[0]}
-              className={styles.case}
-              title={item.values.join(', ')}
-            >
-              <i style={{ background: item.color }} />
-              {item.values[0]}
+      <details>
+        <summary className={styles.row} title={legendTooltip(entry)}>
+          <Swatch style={first.style} sprite={overlay.sprite} api={api} />
+          <span className={styles.label}>{entry.label}</span>
+          {cases && (
+            <span className={styles.dots} aria-label={`Color by ${cases.field}`}>
+              {cases.cases.map((item) => (
+                <i
+                  key={item.color + item.values[0]}
+                  style={{ background: item.color }}
+                  title={item.values.join(', ')}
+                />
+              ))}
             </span>
+          )}
+          <ChevronRight className={styles.chevron} size={12} aria-hidden="true" />
+        </summary>
+        <div className={styles.detail} data-testid="legend-detail">
+          {entry.variants.map((variant) => (
+            <VariantLine key={variant.layerIds[0]} variant={variant} overlay={overlay} api={api} />
           ))}
-          <span className={styles.case} title="Any other value">
-            <i style={{ background: entry.colorCases.fallback }} />
-            other
-          </span>
-        </div>
-      )}
-      {(entry.aggBelowZoom !== undefined || entry.minzoom !== undefined) && (
-        <div className={styles.zoom}>
-          {entry.aggBelowZoom !== undefined && (
-            <span>
-              Hexagon counts below zoom {entry.aggBelowZoom}
-              {entry.aggRamp && (
+          {cases && (
+            <div className={styles.cases}>
+              {cases.cases.map((item) => (
+                <span
+                  key={item.color + item.values[0]}
+                  className={styles.case}
+                  title={item.values.join(', ')}
+                >
+                  <i style={{ background: item.color }} />
+                  {item.values[0]}
+                </span>
+              ))}
+              <span className={styles.case} title="Any other value">
+                <i style={{ background: cases.fallback }} />
+                other
+              </span>
+            </div>
+          )}
+          {zoomNotes(entry).map((note) => (
+            <div key={note} className={styles.zoom}>
+              {note}
+              {entry.aggBelowZoom !== undefined && entry.aggRamp && (
                 <span className={styles.ramp} aria-hidden="true">
                   {entry.aggRamp.map(([count, color]) => (
                     <i key={count} style={{ background: color }} title={`${count}+`} />
                   ))}
                 </span>
               )}
-            </span>
-          )}
-          {entry.minzoom !== undefined && entry.aggBelowZoom === undefined && (
-            <span>From zoom {entry.minzoom}</span>
-          )}
+            </div>
+          ))}
         </div>
-      )}
+      </details>
     </li>
   );
 }
 
-/** The sources that draw a look, as one truncated line with the full list in its tooltip. */
-function VariantSources({ variant, inline = false }: { variant: LegendVariant; inline?: boolean }) {
+/** One look in a row's detail: its symbol and the sources that draw it. */
+function VariantLine({
+  variant,
+  overlay,
+  api,
+}: {
+  variant: LegendVariant;
+  overlay: OverlayStyle;
+  api?: ForesignalClient;
+}) {
   const text = variant.sources.join(' · ');
   return (
-    <span className={inline ? styles.sourcesInline : styles.sources} title={text}>
-      {text}
-    </span>
+    <div className={styles.variant}>
+      <Swatch style={variant.style} sprite={overlay.sprite} api={api} />
+      <span className={styles.sources} title={text}>
+        {text}
+      </span>
+    </div>
   );
 }
 
 /**
- * A kind's symbol: its SDF icon tinted in the style's color with its halo, a circle, or for kinds
- * with no point style a line or fill chip. Icons the sprite lacks come from `getMapIcon`.
+ * A kind's symbol: its SDF icon tinted in the style's color with its halo, at the sprite's
+ * normalized display size; a circle; or for kinds with no point style a line or fill chip. Icons
+ * the sprite lacks come from `getMapIcon`.
  */
 function Swatch({
   style,
@@ -167,9 +195,19 @@ function Swatch({
       haloColor: point.haloColor,
       haloWidth: point.haloWidth,
     });
-    if (url) {
+    const size = sprite?.displaySize(point.icon);
+    if (url && size) {
       return (
-        <img className={styles.swatch} src={url} alt="" data-icon={point.icon} data-color={color} />
+        <span className={styles.swatch} aria-hidden="true">
+          <img
+            src={url}
+            alt=""
+            width={size.width}
+            height={size.height}
+            data-icon={point.icon}
+            data-color={color}
+          />
+        </span>
       );
     }
     return <FallbackIcon name={point.icon} api={api} />;
@@ -223,9 +261,11 @@ function FallbackIcon({ name, api }: { name: string; api?: ForesignalClient }) {
       active = false;
     };
   }, [api, name]);
-  return url ? (
-    <img className={styles.swatch} src={url} alt="" data-icon={name} data-fallback="" />
-  ) : (
-    <span className={styles.swatch} aria-hidden="true" />
+  return (
+    <span className={styles.swatch} aria-hidden="true">
+      {url && (
+        <img className={styles.fallback} src={url} alt="" data-icon={name} data-fallback="" />
+      )}
+    </span>
   );
 }

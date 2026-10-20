@@ -1,12 +1,15 @@
 import { buildModuleUrl } from 'cesium';
+import type { ForesignalClient } from '../api/client';
 import { DATA_CREDITS, PACKAGE_CREDITS } from './credits';
+import { SourceCredits } from './SourceCredits';
 import styles from './SettingsView.module.css';
 
 /**
- * About and credits: the client's version, the map imagery's sources, and every open-source
- * package with its version and license. Cesium's logo credit lives here instead of over the map.
+ * About and credits: the client's version, the map imagery's sources, every data source the
+ * backend attributes, and every open-source package with its version and license. Cesium's logo
+ * credit lives here instead of over the map.
  */
-export function AboutView() {
+export function AboutView({ api }: { api?: ForesignalClient }) {
   return (
     <div className={styles.view}>
       <div className={styles.card}>
@@ -38,6 +41,9 @@ export function AboutView() {
             </li>
           ))}
         </ul>
+
+        <h3>Data sources</h3>
+        <SourceCredits api={api} />
 
         <h3>Open-source software</h3>
         <table data-testid="package-credits">

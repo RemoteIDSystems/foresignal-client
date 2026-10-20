@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { unwrap, type ForesignalClient } from '../../api/client';
-import { requiredAttributions, type Attribution } from './attributionModel';
+import { attributionHref, requiredAttributions, type Attribution } from './attributionModel';
 import styles from './attribution.module.css';
 
 /** Props for {@link MapAttribution}. */
@@ -44,7 +44,7 @@ export function MapAttribution({ api, sources }: MapAttributionProps) {
   return (
     <div className={styles.attribution} data-testid="map-attribution">
       {items.map((item, i) => {
-        const href = item.url ?? item.termsUrl ?? item.licenceUrl;
+        const href = attributionHref(item);
         return (
           <span key={item.text}>
             {i > 0 && ' · '}

@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { contract, systemInfo } from '../api/testing/fixtures';
 import { http, MOCK_BASE_URL, server } from '../api/testing/mock-server';
@@ -145,6 +145,24 @@ describe('App routing', () => {
 describe('About', () => {
   it('opens from Settings and credits Cesium, the NASA imagery and every package', async () => {
     backend();
+    server.use(
+      http.get('/v1/attributions', ({ response }) =>
+        response(200).json({
+          text: '',
+          attributions: [
+            // Not required on the map, still credited here.
+            {
+              text: 'USGS Earthquake Hazards Program',
+              licence: 'us-gov-public-domain',
+              requiredDisplay: false,
+              termsUrl:
+                'https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits',
+            },
+            { text: 'abuse.ch URLhaus', licence: 'provider-terms-nc', requiredDisplay: false },
+          ],
+        }),
+      ),
+    );
     const user = userEvent.setup();
     render(<App session={session()} initialPath="/settings" />);
     await user.click(await screen.findByRole('link', { name: 'About and credits' }));
@@ -154,5 +172,22 @@ describe('About', () => {
     expect(screen.getByTestId('data-credits')).toHaveTextContent('Black Marble');
     expect(screen.getByTestId('data-credits')).toHaveTextContent('ETOPO 2022');
     expect(screen.getByRole('row', { name: /cesium 1\.146\.0 Apache-2\.0/ })).toBeVisible();
+    const sources = await screen.findByTestId('source-credits');
+    expect(
+      within(sources)
+        .getAllByRole('row')
+        .slice(1)
+        .map((row) => row.textContent),
+    ).toEqual([
+      'abuse.ch URLhausprovider-terms-nc',
+      'USGS Earthquake Hazards Programus-gov-public-domain',
+    ]);
+    expect(
+      within(sources).getByRole('link', { name: 'USGS Earthquake Hazards Program' }),
+    ).toHaveAttribute(
+      'href',
+      'https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits',
+    );
+    expect(screen.getByTestId('source-credits-count')).toHaveTextContent('2 attributions');
   });
 });

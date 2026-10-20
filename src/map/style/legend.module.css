@@ -57,38 +57,110 @@
 }
 
 .entry {
-  padding: 5px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .entry:first-child {
   border-top: 0;
 }
 
-.row,
-.variant {
+/* One compact line per kind, as in the Conflict mockup: icon, label, severity colors. */
+.row {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
+  padding: 3px 2px;
+  border-radius: var(--fs-radius-sm);
+  cursor: pointer;
+  list-style: none;
 }
 
-.variant {
-  margin-top: 3px;
-  padding-left: 4px;
+.row::-webkit-details-marker {
+  display: none;
+}
+
+.row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.row:focus-visible {
+  outline: 1px solid var(--fs-color-accent);
 }
 
 .label {
-  font-weight: 500;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
+.dots {
+  display: inline-flex;
+  flex: none;
+  gap: 2px;
+}
+
+.dots i,
+.case i,
+.ramp i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.chevron {
+  flex: none;
+  color: var(--fs-color-text-secondary);
+  transition: transform 120ms ease;
+}
+
+details[open] > .row .chevron {
+  transform: rotate(90deg);
+}
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 2px 0 6px 30px;
+  color: var(--fs-color-text-secondary);
+  font-size: var(--fs-font-size-xs);
+}
+
+.variant {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sources {
+  overflow: hidden;
+  min-width: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* A fixed cell: the icon inside is drawn at its normalized size, centered. */
 .swatch {
   display: inline-grid;
   flex: none;
   place-items: center;
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
+  width: 22px;
+  height: 22px;
+}
+
+.swatch img {
+  display: block;
+  max-width: none;
+}
+
+.fallback {
+  width: 16px;
+  height: 16px;
 }
 
 .circle {
@@ -105,53 +177,16 @@
   opacity: 0.85;
 }
 
-.sources,
-.sourcesInline {
-  overflow: hidden;
-  color: var(--fs-color-text-secondary);
-  font-size: var(--fs-font-size-xs);
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.sources {
-  display: block;
-  padding-left: 26px;
-}
-
-.sourcesInline {
-  min-width: 0;
-}
-
 .cases {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 8px;
-  margin-top: 4px;
-  padding-left: 26px;
-  color: var(--fs-color-text-secondary);
-  font-size: var(--fs-font-size-xs);
 }
 
 .case {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-}
-
-.case i,
-.ramp i {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-}
-
-.zoom {
-  margin-top: 3px;
-  padding-left: 26px;
-  color: var(--fs-color-text-secondary);
-  font-size: var(--fs-font-size-xs);
 }
 
 .ramp {

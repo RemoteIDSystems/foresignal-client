@@ -1,6 +1,6 @@
 // @vitest-environment node
 import fixture from './fixtures/overlay-style.json';
-import { buildLegend } from './legendModel';
+import { buildLegend, legendTooltip, zoomNotes } from './legendModel';
 import { parseOverlayStyle, type MapStyle } from './parseStyle';
 
 /**
@@ -13,10 +13,10 @@ describe('buildLegend', () => {
   it('lists one entry per kind, sorted by label', () => {
     expect(buildLegend(model).map((entry) => [entry.kind, entry.label])).toEqual([
       ['aircraft', 'Aircraft'],
-      ['aprs-message', 'Aprs message'],
-      ['aprs-station', 'Aprs station'],
-      ['aviation-hazard', 'Aviation hazard'],
-      ['conflict-event', 'Conflict event'],
+      ['aprs-message', 'APRS Message'],
+      ['aprs-station', 'APRS Station'],
+      ['aviation-hazard', 'Aviation Hazard'],
+      ['conflict-event', 'Conflict Event'],
     ]);
   });
 
@@ -64,5 +64,17 @@ describe('buildLegend', () => {
     ]);
     expect(buildLegend(model, 'gdelt').map((entry) => entry.kind)).toEqual(['conflict-event']);
     expect(buildLegend(model, 'nothing like this')).toEqual([]);
+  });
+
+  it('puts the sources and zoom notes in the tooltip text', () => {
+    const entries = buildLegend(model);
+    const aircraft = entries.find((entry) => entry.kind === 'aircraft');
+    const conflict = entries.find((entry) => entry.kind === 'conflict-event');
+    const station = entries.find((entry) => entry.kind === 'aprs-station');
+    expect(zoomNotes(aircraft!)).toEqual(['Hexagon counts below zoom 7']);
+    expect(legendTooltip(aircraft!)).toBe('adsb.fi (https://adsb.fi)\nHexagon counts below zoom 7');
+    expect(legendTooltip(conflict!).split('\n')).toHaveLength(3);
+    expect(zoomNotes(station!)).toEqual([]);
+    expect(zoomNotes({ ...station!, minzoom: 5 })).toEqual(['From zoom 5']);
   });
 });

@@ -86,6 +86,20 @@ function buildEntry(model: StyleModel, kind: string): LegendEntry {
   return entry;
 }
 
+/** The detail a row's tooltip shows: the sources per look, then the zoom notes. */
+export function legendTooltip(entry: LegendEntry): string {
+  const lines = entry.variants.map((variant) => variant.sources.join(' · '));
+  for (const note of zoomNotes(entry)) lines.push(note);
+  return lines.join('\n');
+}
+
+/** The zoom facts of an entry, as sentences: where it turns into hexagon counts, or starts. */
+export function zoomNotes(entry: LegendEntry): string[] {
+  if (entry.aggBelowZoom !== undefined) return [`Hexagon counts below zoom ${entry.aggBelowZoom}`];
+  if (entry.minzoom !== undefined) return [`From zoom ${entry.minzoom}`];
+  return [];
+}
+
 /** What makes two styles look the same in the legend. */
 function lookKey(style: KindStyle): string {
   const point = style.point;

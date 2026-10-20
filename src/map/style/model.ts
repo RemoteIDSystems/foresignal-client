@@ -1,3 +1,5 @@
+import { prettifyId } from '../../lib/labels';
+
 /**
  * The overlay styling model: what the backend's MapLibre overlay style (`getMapStyle`) says about
  * how each record kind is drawn, in a form the layer pipeline (007, 010) and the legend can use
@@ -213,8 +215,7 @@ export function valueAtZoom(value: ZoomValue, zoom: number): number {
   return previous[1];
 }
 
-/** A readable label for a kind id: `conflict-event` → `Conflict event`. */
+/** A readable label for a kind id (see {@link prettifyId}): `aprs-station` → `APRS Station`. */
 export function kindLabel(kind: string): string {
-  const words = kind.split(/[-_]+/).filter(Boolean).join(' ');
-  return words.charAt(0).toUpperCase() + words.slice(1);
+  return prettifyId(kind);
 }
