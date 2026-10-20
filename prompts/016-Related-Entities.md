@@ -16,6 +16,11 @@ RELATED ENTITIES panel (Nearby/Operational/Infrastructure/Historical tabs with d
 - Reuse the dossier's `related` section where already fetched to avoid a second call; otherwise call
   `listRelatedObjects` for the full lists.
 
+**Match the mock (RELATED ENTITIES panel).** Tabs **Nearby / Operational / Infrastructure /
+Historical**; each row: thumbnail/icon, name, kind tag, distance (e.g. `45 km`) and a status
+(Operational / Underway / Congestion Alert / Responding …) with a chevron. Row click selects and
+flies to the object.
+
 **Done when.** Selecting an object populates Related Entities with the four classes; a row selects
 and flies the map to that object. Playwright: related rows appear and navigate.
 

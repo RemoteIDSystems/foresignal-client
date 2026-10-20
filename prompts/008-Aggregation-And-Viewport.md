@@ -21,6 +21,9 @@ Dashboard (per-layer counts; dense layers like Aircraft 5,842 / Maritime 3,917).
   and to any bbox-scoped tile/query requests.
 - Wire per-layer counts in the LAYERS rail from `layerCounts` / `glance` (aggregates, not features).
 
+**Note.** Per-kind/category counts shown in the 007 rail come from `summarizeContext` / `glance`
+(aggregates, never raw features). Aggregation and scoping apply per the kind-based rail (007).
+
 **Done when.** Zooming out collapses dense layers to hex aggregates and back; layer counts come from
 the summary; panning updates the scoped context. Verify frame rate stays interactive with several
 dense layers on at world zoom.

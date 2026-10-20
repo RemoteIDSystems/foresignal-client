@@ -22,6 +22,10 @@ Watchlists entries in the left rails.
 - Places: create/list places (AOIs), fly-to, show place weather.
 - Watchlists: list/add items; a watchlist widget surfacing its entities' current state.
 
+**Match the mock.** Saved Views and Watchlists appear as entries in the left rails (Global rail and
+the Workbench WORKSPACE section), each row openable; Places are AOIs with fly-to. Saving the current
+layer/filter set creates a view that reopens with the same state.
+
 **Done when.** A view saved from the current map reopens with the same layers; a place recenters the
 map; a watchlist shows its items. Playwright: save view → reopen restores layers.
 

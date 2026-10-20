@@ -18,6 +18,11 @@ Dashboard's COMPETING HYPOTHESES and the Analyst Workbench hypotheses.
 - An ACH matrix view from `getAchMatrix` (hypotheses × evidence, consistency scoring).
 - Information-value ranking of pending indicators from `getInformationValue`.
 
+**Match the mock (COMPETING HYPOTHESES).** Rows **H1…Hn**, each: statement, one-line basis, a
+probability pill with a trend delta (e.g. `72% ↑`), an `Indicators x/y` count and a Low/Medium/High
+confidence tag; `+ Add hypothesis`, `View hypothesis analysis`. The **ACH matrix** (`getAchMatrix`)
+is a separate view — hypotheses × evidence with consistency scoring.
+
 **Done when.** A situation/investigation shows its competing hypotheses with probabilities and an
 ACH matrix. Playwright: hypotheses panel + matrix render.
 

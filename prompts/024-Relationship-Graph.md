@@ -19,6 +19,14 @@ graph/list/matrix views, mini-map, selected-entity side panel).
 - Filters (type, source, time window) re-query the subgraph; a common-dependencies mode via
   `findCommonDependencies`.
 
+**Match the mock (Analyst Workbench EVIDENCE GRAPH).** Center graph with a **Graph / List / Matrix**
+view toggle, a search box, and type/source/time filters; a node-type legend (Event / Entity /
+Location / Infrastructure / Source-Data / Document) and an edge-type legend (**Supports / Contradicts
+/ Related / Causal / Temporal**, color/dash-coded); a **mini-map** bottom-right. Left ANALYSIS TOOLS
+rail (Evidence Graph / Timeline / Geospatial / Entity Explorer / Correlation Finder / Pattern Search
+/ What Changed / Hypothesis Builder / Forecasts / Reports). Right: Selected Entity + Key Evidence;
+bottom: Competing Hypotheses + Evidence Timeline.
+
 **Done when.** Opening the workbench for an investigation renders its graph; selecting a node drives
 the side panel; the layout stays interactive with a large subgraph. Playwright: graph renders and a
 node selects.

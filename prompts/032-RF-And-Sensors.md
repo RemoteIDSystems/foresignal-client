@@ -24,6 +24,11 @@ map, right detail panel), review-gated so the owner can redirect the layout.
   dossier for the selected sensor or signal.
 - Selecting a sensor/signal drives the shared `selection` (014) and flies the map to it.
 
+**Match the design (no mock).** Build in the established dashboard language: left rail (RF/sensor
+layers + sensor catalog), center map focused on RF/spectrum/SIGINT, right detail panel for the
+selected sensor/signal, ground-station polar plots. Keep chrome, spacing, icons and dark theme
+consistent with the Global/Satellite mocks; introduce no new visual idioms.
+
 **Done when.** The RF / Sensors tab opens a working space: RF layers on the map, a populated sensor
 catalog, a live polar plot for a ground station, and a detail panel for a selected item.
 Playwright: open tab → catalog + map + a selected-sensor detail render.

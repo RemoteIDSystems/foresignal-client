@@ -20,6 +20,11 @@ PREDICTIONS (1/3/6/12-month, probability + trend arrows, forecast ledger link).
 - A "forecast ledger" view: scorecard (`getForecastScorecard`) and calibration curve
   (`getForecastCalibration`).
 
+**Match the mock (FORECASTS & PREDICTIONS).** A horizon selector **1 month / 3 months / 6 months /
+1 year**; rows, each with a question title + target date, a probability pill (e.g. `68%`), and a
+small trend sparkline colored High/Medium/Low; a `View forecast ledger →` link. The ledger view
+shows the scorecard + calibration curve.
+
 **Done when.** The panel shows forecast questions with probabilities and trend sparklines; the
 ledger view renders a scorecard. Playwright: forecasts panel + trends render.
 

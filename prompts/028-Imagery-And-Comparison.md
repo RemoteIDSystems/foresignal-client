@@ -25,6 +25,11 @@ confidence, "Run Change Detection"); Global RECENT IMAGERY strip.
   capability is surfaced, never faked in the client) and render the comparison from supplied
   results. Either way the comparison and metrics are built now, not deferred.
 
+**Match the mock.** **Recent Imagery** grid (thumbnail, satellite/source, date, resolution; filter
+Optical / SAR / Thermal / Change Detection). **Imagery Comparison** panel: a before/after **swipe**
+between two dated frames with metric tiles (e.g. `Building count +12 (+150%)`, `Disturbed area
++4.2 ha`, `Confidence 87%`) and a `Run Change Detection →` button.
+
 **Done when.** Recent imagery renders and opens full frames; the swipe compare works between two
 dates with metrics; the run action either invokes its backend op or is reported as an owner question
 with the comparison still functional. Playwright: imagery strip + swipe compare render.

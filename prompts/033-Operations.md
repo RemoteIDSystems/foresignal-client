@@ -26,6 +26,10 @@ dedicated mockup exists** — build it in the established design language, revie
 - Read-only status views; create/edit actions link to the owning feature (rules → 030) where the
   object envelope allows them. The client renders; the backend owns execution.
 
+**Match the design (no mock).** Build in the established language as a three-section console
+(**Tasks / Assets / Workflows**), each a panel of status rows with chips, consistent with the
+dashboard's panels. No new visual idioms.
+
 **Done when.** The Operations tab opens a working console: a Tasks queue, an Assets/health board, and
 a Workflows list, all populated from the backend and updating live. Playwright: open tab → the three
 sections render with data.

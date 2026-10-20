@@ -23,6 +23,11 @@ box, the map find/locate bar, and the "Ask ForeSignal" tool in the left rail.
   and thread history (`listAskThreads` / `getAskThread`, delete). Show the `409 LLM_NOT_CONFIGURED`
   state plainly when no LLM provider is assigned.
 
+**Match the mock.** The search box is in the top nav ("Search entities, locations, events…"); results
+drop down grouped by type with icon + title + summary. The **Ask ForeSignal** panel is reached from
+the left tool rail (Conflict/Workbench mocks) — a threaded Q&A with cited-object chips inline in the
+streamed answer.
+
 **Done when.** Search returns grouped results and selecting one moves the map; Ask returns a
 streamed, cited answer whose citations navigate. Playwright: query → result → map centered;
 ask → answer with a clickable citation.

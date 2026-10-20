@@ -37,6 +37,10 @@ the Alerts area and a "Create alert" affordance from the map / situation / watch
   deep-link into the app (reuse the 029 action handling). Allow unsubscribe.
 - Honor the Charter: no rule evaluation in the client, no second service.
 
+**Match the design.** The rule-authoring form uses the dashboard's panel/form styling; prefill scope
+from the current viewport / selected situation / watchlist, and show the dry-run (`testTrigger`)
+result inline before save. Web-Push opt-in is a clear toggle in Settings/Alerts.
+
 **Done when.** A user can create a threshold rule scoped to a region/situation (e.g. a Russia–NATO
 watch), dry-run it, save it, and see it fire as an alert (029); the browser receives a Web Push for
 a firing alert with the tab closed, and activating it opens the alert. Playwright: author a rule →

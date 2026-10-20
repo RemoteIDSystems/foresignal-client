@@ -25,6 +25,12 @@ SELECTED ENTITY panel (Overview/Imagery/Forecast/Impacts/Related tabs, Track/Add
   permissions; wire the read-scope ones (e.g. add-to-workspace in 025, annotate in 026).
 - `If-None-Match` on the dossier (it carries an ETag).
 
+**Match the mock (Global SELECTED ENTITY panel).** Right panel: entity header (icon, title, kind +
+state badges, `ID: …`), a thumbnail, key fields, tabs **Overview / Imagery / Forecast / Impacts /
+Related (n)**, action buttons rendered from the envelope (Track, Add to Workspace, …, plus a `…`
+overflow), and a **Forecast Track** mini-map for storm-like objects (Current / Forecast / Cone of
+Uncertainty legend). Close (×) and expand controls top-right.
+
 **Done when.** Clicking a map feature opens its dossier with populated sections and the correct
 action buttons; a 3D-applicable item switches the scene to 3D and flies to it while a 2D-only item
 stays in 2D; an unavailable section shows its message while others render. Playwright: select →

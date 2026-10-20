@@ -21,6 +21,11 @@ Satellite time scrubbers (−24h … Now … +24h), Tropical-Storm track.
 - Entity trails via `getRecordTrack` for the selected entity.
 - Surface `approximate` flags to the user.
 
+**Match the mock.** The scrubber matches the Global/Satellite mock: a date-time box (e.g.
+`2025-09-18 14:32:17Z`), a green **LIVE** indicator, and a track labeled `−24h · −6h · Now · +6h ·
++24h` with a handle at Now. Dragging left pauses the map at an asOf instant (history); the future
+side shows forecast tracks where a product provides them; returning the handle to Now resumes live.
+
 **Done when.** Dragging the scrubber pauses the map at an instant (asOf tiles), playback steps
 through frames, returning to Now resumes the live stream cleanly, and a selected entity shows a
 trail. Playwright captures a paused vs live map.

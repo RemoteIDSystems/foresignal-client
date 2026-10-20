@@ -21,6 +21,11 @@ model + generated-at, View prompt / Re-run).
 - Cited objects (from the bundle) are clickable → selection (014).
 - "Re-run" calls `createSituationAssessment` only when offered; show progress and refresh.
 
+**Match the mock (AI ANALYSIS).** Tabs **Executive Summary / Key Insights / What Changed / Outlook /
+Risks / Analyst Notes**; a header with **Model** (e.g. Claude, local), **Generated** timestamp, and
+`View prompt` / `Re-run`. Below the summary, **Key Takeaways** cards (numbered, each a one-line point
+with a Confidence %). `textOrigin` makes clear it's LLM-written; cited objects are clickable.
+
 **Done when.** A situation shows its latest assessment across the tabs with model/timestamp, cited
 objects navigate, and re-run works where permitted. Playwright: AI-Analysis tabs render.
 

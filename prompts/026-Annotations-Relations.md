@@ -19,6 +19,10 @@ Analysis Notes (All/My/Shared) and evidence annotation.
 - Draw an operator relation between two selected objects (`createRelation`) and remove it.
 - Notes scoping (All / My / Shared) from what the API returns for the caller.
 
+**Match the mock (Analysis Notes).** A notes panel with **All Notes / My Notes / Shared** filters and
+`+ Add Note`; each note shows author initials, timestamp, text, and (where allowed) edit/delete.
+Evidence annotations attach to objects in the graph/dossier.
+
 **Done when.** A note can be added to an object and appears in its annotations; a relation can be
 created and shows in the graph (024); unpermitted actions are not offered. Playwright: add note →
 appears.

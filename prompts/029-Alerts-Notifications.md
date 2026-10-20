@@ -24,6 +24,11 @@ bell/badge, alert toasts, and a top alerts strip.
   never acknowledges an alert.
 - Presence heartbeat (`updatePresence`) while the window is focused (active/idle/background).
 
+**Match the mock.** A notifications **bell with an unread badge** in the top nav; severity-colored
+alert **toasts** and an optional top **alerts strip**. A firing alert offers Ack / Snooze / Resolve
+inline where the envelope allows; clicking opens the alert's object. The inbox lists notifications
+with per-device read state.
+
 **Done when.** A firing alert shows a toast with working ack/snooze; the inbox lists notifications
 with a correct unread badge that clears on read; presence is reported. Playwright: alert toast + ack,
 inbox badge.

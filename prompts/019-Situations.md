@@ -31,6 +31,18 @@ Hypotheses / Forecasts.
   and AI-Analysis tabs are filled by 020–023.
 - Investigation items can be added/removed; an investigation can be exported.
 
+**Match the mocks (Conflict Dashboard + Tropical-Storm investigation).** Header: title + status
+badge (ACTIVE), started date + duration + scope, a **Confidence** gauge (e.g. 72% MODERATE), an
+**Information Value** meter (High), **Last Updated** + Auto-refresh, and Add Note / Share / …
+actions. Tab strip: **Overview / Full Analysis / Timeline / Map / Entities (n) / Evidence (n) /
+Hypotheses / Forecasts / Related (n) / Reports / Export**. Left ANALYSIS rail (Situations / Findings
+/ Hypotheses / Forecasts / Indicators / Base Rates / Comparisons / Reports) + DATA + TOOLS. The Map
+tab reuses the map on the bbox with member layers, the mock's **Layers** dropdown (Conflicts /
+Military / Infrastructure / Energy / Displacement / Custom) + legend + time range. The Tropical-Storm
+investigation uses the same frame with the investigation header (INV-…, date range, UTC) and Key
+Findings + Filters + Sources rails. 020–023 fill Evidence / Metrics / Hypotheses / Forecasts /
+AI-Analysis.
+
 **Done when.** Selecting a situation opens its full-analysis view; selecting an investigation opens
 the investigation workspace; both show a populated header, timeline, members/items and a focused
 map. Playwright: open each → tabs populate.

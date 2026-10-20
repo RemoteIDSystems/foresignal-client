@@ -21,6 +21,12 @@ ACTIVITY TIMELINE and ANALYTICS & INSIGHTS (Detections/Hypotheses/Forecasts/Rela
   terms, base rates, confidence.
 - Handle `409 WORKSPACE_CONTEXT_INCOMPLETE` (a workspace without a viewport/time) gracefully.
 
+**Match the mock.** Two bottom panels of the Global dashboard: **ACTIVITY TIMELINE** (an
+`All Sources` filter; time-stamped rows newest first, each with a source/family tag chip) and
+**ANALYTICS & INSIGHTS** (tabs **Detections / Hypotheses / Forecasts / Related Events**; numbered
+insight rows with a title, one-line basis, a % confidence pill and a Low/Medium/High tag; a
+`View Full Analysis` link; a `Last Updated` stamp).
+
 **Done when.** Both panels populate for the current view and refresh as the viewport/time change;
 items link to selection. Playwright: panels show live activity/insights for a region.
 

@@ -17,6 +17,11 @@ status strip and small activity widgets.
 - Small widgets: top sources/kinds (`getStatsTop`), an activity sparkline (`getStatsTimeseries`),
   and a spatial activity heat widget (`getStatsGrid`), using the chart lib. Aggregates only.
 
+**Match the mock.** Glance/stats back **small, subtle status widgets** (live counts, top
+sources/kinds, an activity sparkline, optional activity-grid heat), placed in the dashboard's
+available chrome — not a large panel, and not a prominent ticker the mocks don't show. Keep density
+and styling consistent with the surrounding panels.
+
 **Done when.** The ticker shows live counts and the widgets render current top/series data; they
 update as activity changes. Playwright: ticker and a sparkline render with data.
 

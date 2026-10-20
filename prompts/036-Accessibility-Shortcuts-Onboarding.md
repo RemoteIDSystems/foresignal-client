@@ -16,6 +16,10 @@ shortcuts overlay and first-run affordances implied across the mockups.
   each panel.
 - Theming polish to match the mockups.
 
+**Match the mock.** The keyboard-shortcuts overlay matches the dashboard's modal styling; onboarding
+is brief and dismissible. The final theming pass aligns colors, spacing and typography with the mocks
+across every screen.
+
 **Done when.** Shortcuts work and are discoverable; onboarding shows once; the app is keyboard- and
 screen-reader-navigable for the core flows; every view recovers from an error. Playwright: shortcut
 toggles a layer; keyboard navigates the rail.

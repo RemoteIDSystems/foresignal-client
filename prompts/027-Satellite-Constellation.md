@@ -23,6 +23,15 @@ panel, passes, ground stations).
 - Upcoming passes and ground stations lists; sensor discovery via `listSensors` for an AOI.
 - 2D/3D reuse the 005 scene toggle.
 
+**Match the mock (Satellite Operations).** Left SATELLITE OPERATIONS rail (Constellation View / Live
+Tracking / Sensor Catalog / Tasking & Events / Imagery Analysis / Change Detection / Ground Stations
+/ Pass Predictions / Acquisition Queue) + DATA SOURCES (CelesTrak / NORAD / Starlink / Planet /
+Sentinel / GOES / Weather Satellites / SatDump / Custom). Center globe with the constellation
+(satellites colored by type, orbit paths, labels, the time scrubber + LIVE). Right **Selected
+Satellite** panel: thumbnail, Operator, NORAD ID, Launch Date, Orbit Type, Altitude, Inclination,
+Period, Status, `View Details`, and a **Sensors** list (e.g. PAN / MSI / SWIR / CAVIS) each with
+resolution and a **Taskable** tag. Bottom: Upcoming Passes.
+
 **Done when.** The constellation renders live orbits that animate with the scrubber; selecting a
 satellite shows its details and next pass; arcs occlude correctly in 3D. Playwright: constellation
 renders and a satellite selects.

@@ -21,6 +21,12 @@ CONFLICT METRICS (Military/Strikes/Casualties/Economic/Humanitarian charts) and 
   probabilities/intervals.
 - Dismiss a finding where the envelope action allows it (`updateFinding`) — only if offered.
 
+**Match the mock (CONFLICT METRICS + EVIDENCE).** Metrics panel: tabs **Military / Strikes /
+Casualties / Economic / Humanitarian**, each a time-series chart (7-day-average style) plus a row of
+**stat tiles** (big number + label + delta vs prior, e.g. `1,946 Combat events +12%`). Evidence
+panel: tabs **All / Imagery / Signals / Reports / Docs** with rows (thumbnail, title, source + family
+tags, a confidence tag) and `View all evidence`.
+
 **Done when.** The situation view shows findings and metric charts from real series; impacts render
 with probabilities. Playwright: metrics tab renders charts.
 

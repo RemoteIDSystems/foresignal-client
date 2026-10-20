@@ -25,6 +25,10 @@ Add-to-workspace actions and Share across screens.
   context-link to restore selection/viewport/layers.
 - A Share action (read-only) via `shareWorkspace`; render the workspace list.
 
+**Match the mock (Workbench header).** Header: title, **Classify** (Unclassified…), **Status**
+(Active), **Owner**, **Created**, **Last Updated**, and Share / Export / More actions. Add-to-workspace
+comes from the envelope action; a Workspaces list sits in the left WORKSPACE section.
+
 **Done when.** Adding objects to a workspace, moving the view, and reopening a deep link restores
 the same selection/viewport/layers; a stale PATCH recovers via re-read+retry. Playwright: deep-link
 round-trip restores state.

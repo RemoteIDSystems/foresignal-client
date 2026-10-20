@@ -29,6 +29,11 @@ particles — the weather and wind overlays in the Global and Tropical-Storm vie
 - **Animated wind particles:** a WebGL particle layer fed by the png-uv / velocity-json field
   (`getProductFieldPngUv` / `getProductFieldVelocityJson`), animated over the globe.
 
+**Match the mock.** Weather is a toggle in the Global rail and the hero raster in the Tropical-Storm
+mock (the animated storm). Draw cloud/weather rasters **over** the Blue/Black Marble basemap,
+translucent enough to keep the night lights visible. The product legend sits with the map legend
+(006). Weather is off by default unless the 007 curated default set includes it. Animate via `/loop`.
+
 **Done when.** A weather product renders, animates through a loop, and shows a correct legend; wind
 renders as barbs, as a speed raster, and as animated particles. Playwright captures an animated
 overlay and the wind particles.
