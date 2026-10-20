@@ -54,7 +54,7 @@
 - **Attended (default):** one session runs prompt after prompt, pausing at each gate (step 5); the
   owner looks and replies "continue" to go on. A single session can run the whole roadmap this way.
 - **Unattended range (opt-in):** only when the owner says, in that message, "run prompts X–Y without
-  pausing" — then skip the per-prompt pause for that range, still capture each screenshot, and pause
+  pausing" — then skip the per-prompt pause for that range and pause
   at the end of the range (and on any failure).
 
 ## Stop conditions
