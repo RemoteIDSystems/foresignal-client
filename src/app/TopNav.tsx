@@ -1,15 +1,15 @@
 import { useSyncExternalStore } from 'react';
 import { NavLink, useNavigate } from 'react-router';
-import { Bell, ChevronDown, Search, Settings, User } from 'lucide-react';
+import { Bell, ChevronDown, Settings, User } from 'lucide-react';
 import { IconButton } from '../ui/Button';
 import { Logo } from './Logo';
 import { NAV_TABS } from './routes';
+import { SearchBox } from './SearchBox';
 import type { Session } from './session';
 import styles from './TopNav.module.css';
 
 /**
- * The top navigation bar shared by every screen: wordmark, the primary tabs, search (wired in
- * 017), notifications (wired in 029), settings and the access menu.
+ * The top navigation bar shared by every screen: wordmark, the primary tabs, search (017), notifications (wired in 029), settings and the access menu.
  */
 export function TopNav({ session }: { session: Session }) {
   const navigate = useNavigate();
@@ -43,15 +43,7 @@ export function TopNav({ session }: { session: Session }) {
       </ul>
 
       <div className={styles.right}>
-        <label className={styles.search} title="Search is wired in prompt 017">
-          <Search size={14} aria-hidden="true" />
-          <input
-            type="search"
-            placeholder="Search entities, locations, events…"
-            aria-label="Search"
-            readOnly
-          />
-        </label>
+        <SearchBox session={session} />
         <IconButton label="Notifications" icon={<Bell size={17} strokeWidth={1.75} />} />
         <IconButton
           label="Settings"

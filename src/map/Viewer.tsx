@@ -40,7 +40,7 @@ import { viewportStore, type CommittedViewport, type ViewportStore } from '../st
 import type { RecordLayerStatus } from './records/recordLayers';
 import { RecordMarker } from './records/RecordMarker';
 import { TrailBridge } from './records/TrailBridge';
-import { focusOn } from './focus';
+import { focusOn, locateTo } from './focus';
 import { threeDViewOf } from '../objects/threeD';
 import type { RecordFeature } from './records/decodeTile';
 import { frameFeature } from '../time/history';
@@ -539,6 +539,14 @@ export function MapViewer({
     }
     return focusOn(viewer, hit, threeDViewOf(hit.id.kind) !== undefined, onSceneMode);
   }, [viewer, selectionKey, onSceneMode]);
+  // A place asked for by search or the find bar (017): the map moves there and clears the request,
+  // including one made before the map opened (a search from another screen).
+  const locate = useStoreKey('locate', store);
+  useEffect(() => {
+    if (!viewer || !locate) return;
+    locateTo(viewer, locate);
+    store.set('locate', undefined);
+  }, [viewer, locate, store]);
   // The store's mode, whoever set it, is the scene's: a change morphs the map, keeping its place.
   useEffect(() => {
     if (viewer) switchSceneMode(viewer, mode, cameraRef.current, MORPH_SECONDS);

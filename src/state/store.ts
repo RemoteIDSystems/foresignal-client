@@ -64,7 +64,19 @@ export interface AppState {
   inbox: InboxBadge;
   /** Bumped whenever the workspace context changes, for the views that cache against it. */
   workspaceContextVersion: number;
+  /** A place the map is asked to move to (017's search and find bar); the map clears it. */
+  locate: LocateRequest | undefined;
   [key: `layer:${string}`]: LayerLive | undefined;
+}
+
+/** A request to move the map to a place (017). */
+export interface LocateRequest {
+  longitude: number;
+  latitude: number;
+  /** The camera height to show it from, in meters; the current height (at most 8,000 km) if absent. */
+  height?: number;
+  /** When it was asked (`Date.now()`), so asking for the same place again moves the map again. */
+  at: number;
 }
 
 /** The state a store starts with. */
@@ -77,6 +89,7 @@ export const INITIAL_STATE: AppState = {
   playback: undefined,
   inbox: { unread: 0 },
   workspaceContextVersion: 0,
+  locate: undefined,
 };
 
 /**

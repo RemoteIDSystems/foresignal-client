@@ -16,6 +16,7 @@ import {
   RadioTower,
   Satellite,
   Ship,
+  Sparkles,
   TriangleAlert,
   Zap,
 } from 'lucide-react';
@@ -107,6 +108,14 @@ export function LayersRail() {
         <LayersTab layers={layers} categories={layers.catalog.catalog.categories} />
       ) : (
         <FiltersTab layers={layers} />
+      )}
+      {layers?.openAsk && (
+        <div className={styles.railTools}>
+          <h3 className={styles.sectionLabel}>Tools</h3>
+          <button type="button" className={styles.railTool} onClick={layers.openAsk}>
+            <Sparkles size={15} aria-hidden="true" /> Ask ForeSignal
+          </button>
+        </div>
       )}
     </section>
   );

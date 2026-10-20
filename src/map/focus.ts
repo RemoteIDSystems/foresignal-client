@@ -61,6 +61,22 @@ export function focusOn(
   return () => {};
 }
 
+/**
+ * Moves the camera over a place (017's search and find bar), from `height` meters, or from the
+ * current height (at most {@link MAX_2D_HEIGHT_M}), looking straight down, in either scene mode.
+ */
+export function locateTo(
+  viewer: Viewer,
+  at: { longitude: number; latitude: number; height?: number },
+): void {
+  if (viewer.isDestroyed()) return;
+  const height = at.height ?? Math.min(viewer.camera.positionCartographic.height, MAX_2D_HEIGHT_M);
+  viewer.camera.flyTo({
+    destination: Cartesian3.fromDegrees(at.longitude, at.latitude, height),
+    duration: 1,
+  });
+}
+
 /** True when a point shows within {@link IN_VIEW_FRACTION} of the canvas's center. */
 function inView(viewer: Viewer, target: Cartesian3): boolean {
   const at = SceneTransforms.worldToWindowCoordinates(viewer.scene, target, new Cartesian2());

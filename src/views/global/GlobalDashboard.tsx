@@ -26,7 +26,9 @@ import { useCommittedViewport, viewportOf } from '../../state/viewport';
 import { appStore, useStoreKey, type AppState, type Store } from '../../state/store';
 import { ActivityTimelinePanel, InsightsPanel, RecentImageryPanel } from './BottomPanels';
 import { RelatedEntitiesPanel } from './RelatedEntitiesPanel';
+import { AskPanel } from './AskPanel';
 import { LayersRail } from './LayersRail';
+import { LocateBar } from './LocateBar';
 import {
   RecordLayersContext,
   type ProductLayersValue,
@@ -290,6 +292,9 @@ export function GlobalDashboard({
     },
     [api, store, asOf],
   );
+  // The Ask ForeSignal panel (017), opened from the rail's tools, over the map's left side.
+  const [askOpen, setAskOpen] = useState(false);
+  const openAsk = useCallback(() => setAskOpen(true), []);
   const legendScope = useMemo(
     () => (catalog ? enabledKinds(catalog, enabled, hiddenSources) : undefined),
     [catalog, enabled, hiddenSources],
@@ -312,6 +317,7 @@ export function GlobalDashboard({
       store,
       summary,
       selectRef,
+      openAsk,
     }),
     [
       railCatalog,
@@ -330,6 +336,7 @@ export function GlobalDashboard({
       store,
       summary,
       selectRef,
+      openAsk,
     ],
   );
 
@@ -364,6 +371,8 @@ export function GlobalDashboard({
               bbox={viewport?.bbox}
             />
             <div className={styles.placeholderChip}>Placeholder panel data</div>
+            <LocateBar />
+            {askOpen && <AskPanel onClose={() => setAskOpen(false)} />}
             {stress && StressHarness && (
               <Suspense fallback={null}>
                 <StressHarness

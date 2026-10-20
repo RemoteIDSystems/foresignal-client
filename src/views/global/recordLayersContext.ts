@@ -42,6 +42,8 @@ export interface RecordLayersValue {
   summary?: ViewSummaryState;
   /** Selects an object by its ref, as if picked on the map (015, 016, 017); rejects if it cannot be read. */
   selectRef?: (ref: string) => Promise<void>;
+  /** Opens the Ask ForeSignal panel (017). */
+  openAsk?: () => void;
 }
 
 /** What the rail reads and changes of the product layers. */
