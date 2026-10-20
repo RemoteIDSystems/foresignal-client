@@ -6,12 +6,13 @@ export {
   requiredAttributions,
   type Attribution,
 } from './attributionModel';
-export { MapLegend, type MapLegendProps } from './legend';
+export { KindSwatch, MapLegend, type MapLegendProps } from './legend';
 export {
   buildLegend,
   legendTooltip,
   zoomNotes,
   type LegendEntry,
+  type LegendScope,
   type LegendVariant,
 } from './legendModel';
 export {

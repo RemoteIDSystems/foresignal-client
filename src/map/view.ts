@@ -1,4 +1,12 @@
-import { Cartesian3, Color, type Viewer as CesiumViewer } from 'cesium';
+import {
+  Cartesian2,
+  Cartesian3,
+  Color,
+  Math as CesiumMath,
+  SceneMode,
+  type Viewer as CesiumViewer,
+} from 'cesium';
+import { boundsAround, type GeoRect } from './records/tileMath';
 import { applySceneMode, type MorphableScene, type SceneModeKey } from './sceneMode';
 
 /** The default view: the western Atlantic and North America, as in the primary mockup. */
@@ -79,4 +87,52 @@ export function switchSceneMode(
   const changed = applySceneMode(viewer.scene, key, duration);
   if (!changed) remove?.();
   return changed;
+}
+
+/** The whole world in degrees: a flat map zoomed out far enough to show its own edge. */
+const WORLD: GeoRect = { west: -180, south: -90, east: 180, north: 90 };
+
+/**
+ * The ground the view shows, in degrees (`west > east` across the antimeridian); undefined when a
+ * 3D view sees no globe at all. In 3D this is Cesium's `computeViewRectangle`. On the 2D map it is
+ * read from the canvas corners picked on the map, because `computeViewRectangle` tests the 2D
+ * camera against a sphere at the origin and, once the map is zoomed in away from the origin,
+ * returns nothing; a corner past the map's edge gives the whole world. Not meaningful mid-morph.
+ */
+export function visibleRectangle(viewer: CesiumViewer): GeoRect | undefined {
+  const { camera, scene } = viewer;
+  const ellipsoid = scene.globe.ellipsoid;
+  if (scene.mode === SceneMode.SCENE2D) return flatViewRectangle(viewer) ?? WORLD;
+  const rect = camera.computeViewRectangle(ellipsoid);
+  if (!rect) return undefined;
+  return {
+    west: CesiumMath.toDegrees(rect.west),
+    south: CesiumMath.toDegrees(rect.south),
+    east: CesiumMath.toDegrees(rect.east),
+    north: CesiumMath.toDegrees(rect.north),
+  };
+}
+
+/** The 2D map's view from its picked canvas center and corners; undefined if one misses the map. */
+function flatViewRectangle(viewer: CesiumViewer): GeoRect | undefined {
+  const { camera, scene } = viewer;
+  const ellipsoid = scene.globe.ellipsoid;
+  const width = scene.canvas.clientWidth;
+  const height = scene.canvas.clientHeight;
+  const picks: [number, number][] = [];
+  // The center first: corner longitudes are read relative to it.
+  for (const [x, y] of [
+    [width / 2, height / 2],
+    [0, 0],
+    [width, 0],
+    [width, height],
+    [0, height],
+  ] as const) {
+    const picked = camera.pickEllipsoid(new Cartesian2(x, y), ellipsoid);
+    if (!picked) return undefined;
+    const point = ellipsoid.cartesianToCartographic(picked);
+    picks.push([CesiumMath.toDegrees(point.longitude), CesiumMath.toDegrees(point.latitude)]);
+  }
+  const [center, ...corners] = picks;
+  return center && boundsAround(center[0], corners);
 }

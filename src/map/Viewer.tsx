@@ -15,12 +15,21 @@ import { useTheme } from '../app/theme';
 import { createBaseLayers, insetTileUrls } from './imagery';
 import { MapAttribution } from './style/attribution';
 import { MapLegend } from './style/legend';
-import { useOverlayStyle } from './style/useOverlayStyle';
+import type { LegendScope } from './style/legendModel';
+import { useOverlayStyle, type OverlayStyleState } from './style/useOverlayStyle';
+import { RecordLayersBridge } from './records/RecordLayersBridge';
+import type { RecordLayerStatus } from './records/recordLayers';
 import { createTerrainProvider, TerrainSampler } from './terrain';
 import { MapHud, type CameraState, type GroundPoint } from './MapHud';
 import { niceScale } from './readout';
 import { DEFAULT_SCENE_MODE, SCENE_MODES, type SceneModeKey } from './sceneMode';
-import { homeDestination, styleScene, supportsWebGL, switchSceneMode } from './view';
+import {
+  homeDestination,
+  styleScene,
+  supportsWebGL,
+  switchSceneMode,
+  visibleRectangle,
+} from './view';
 import styles from './Viewer.module.css';
 
 /** How long a 2D/3D switch animates, in seconds. */
@@ -85,15 +94,8 @@ function readCamera(
     if (elevation !== undefined) ground.elevation = elevation;
     state.ground = ground;
   }
-  const rect = camera.computeViewRectangle(scene.globe.ellipsoid);
-  if (rect) {
-    state.view = {
-      west: CesiumMath.toDegrees(rect.west),
-      south: CesiumMath.toDegrees(rect.south),
-      east: CesiumMath.toDegrees(rect.east),
-      north: CesiumMath.toDegrees(rect.north),
-    };
-  }
+  const view = visibleRectangle(viewer);
+  if (view) state.view = view;
   state.scale = measureScale(viewer);
   return state;
 }
@@ -181,6 +183,8 @@ function SceneBridge({
     viewer.scene.canvas.addEventListener('pointerleave', onLeave);
     let last = '';
     const remove = viewer.scene.postRender.addEventListener(() => {
+      // Mid-morph the camera has no heading (Cesium returns undefined); keep the last reading.
+      if (viewer.scene.mode === SceneMode.MORPHING) return;
       const state = readCamera(viewer, pointer, sampler);
       const key = stateKey(state);
       if (key !== last) {
@@ -206,7 +210,21 @@ export interface MapViewerProps {
   children?: ReactNode;
   /** Backend client for the overlay style, legend and attribution; without it the map has none. */
   api?: ForesignalClient;
+  /**
+   * The overlay style, when the page loads it to share with other panels (the layer rail); the
+   * viewer loads it itself otherwise.
+   */
+  overlayStyle?: OverlayStyleState;
+  /** Record layers to draw, by id (`listTileLayers`). */
+  recordLayers?: readonly string[];
+  /** The kinds those layers draw; the legend shows only these. */
+  legendScope?: LegendScope;
+  /** Told when a record layer's status changes (what it draws, whether it failed). */
+  onLayerStatus?: (id: string, status: RecordLayerStatus) => void;
 }
+
+/** No record layers. */
+const NO_LAYERS: readonly string[] = [];
 
 /**
  * The map engine: a Resium viewer with Cesium's own widgets removed, the self-hosted NASA
@@ -216,9 +234,18 @@ export interface MapViewerProps {
  * device pixel ratio for sharp output. The clock runs in real time so the terminator moves; 013's
  * time machine takes it over. Cesium's credits go to a detached element: they are shown on the
  * About page instead of over the map. With an API client it loads the backend's overlay style for
- * the theme, offers its legend from the HUD, and shows the attributions the data licenses require.
+ * the theme, draws the enabled record layers from their vector tiles with it, shows the legend for
+ * what is on the map (open by default, toggled from the HUD), and the attributions the data licenses
+ * require. `data-record-features` on the region is the number of records drawn.
  */
-export function MapViewer({ children, api }: MapViewerProps) {
+export function MapViewer({
+  children,
+  api,
+  overlayStyle: sharedStyle,
+  recordLayers = NO_LAYERS,
+  legendScope,
+  onLayerStatus,
+}: MapViewerProps) {
   const [webgl] = useState(supportsWebGL);
   const [viewer, setViewer] = useState<CesiumViewer>();
   const [camera, setCamera] = useState<CameraState>();
@@ -226,8 +253,21 @@ export function MapViewer({ children, api }: MapViewerProps) {
   const insetTiles = useMemo(() => insetTileUrls(), []);
   const [creditContainer] = useState(() => document.createElement('div'));
   const theme = useTheme();
-  const overlayStyle = useOverlayStyle(api, theme.name);
-  const [legendOpen, setLegendOpen] = useState(false);
+  const ownStyle = useOverlayStyle(sharedStyle ? undefined : api, theme.name);
+  const overlayStyle = sharedStyle ?? ownStyle;
+  const overlay = overlayStyle.status === 'ready' ? overlayStyle.overlay : undefined;
+  // Open by default, as in the Conflict mockup.
+  const [legendOpen, setLegendOpen] = useState(true);
+  const [layerStatus, setLayerStatus] = useState<Record<string, RecordLayerStatus>>({});
+  const statusListener = useRef(onLayerStatus);
+  useEffect(() => {
+    statusListener.current = onLayerStatus;
+  }, [onLayerStatus]);
+  const onStatus = useCallback((id: string, status: RecordLayerStatus) => {
+    setLayerStatus((current) => ({ ...current, [id]: status }));
+    statusListener.current?.(id, status);
+  }, []);
+  const drawnRecords = recordLayers.reduce((sum, id) => sum + (layerStatus[id]?.features ?? 0), 0);
   const onToggleLegend = useCallback(() => setLegendOpen((open) => !open), []);
 
   // The latest camera state, read when switching mode without re-creating the callback each frame.
@@ -282,7 +322,12 @@ export function MapViewer({ children, api }: MapViewerProps) {
   }
 
   return (
-    <div className={styles.region} data-testid="map-viewer" data-scene-mode={mode}>
+    <div
+      className={styles.region}
+      data-testid="map-viewer"
+      data-scene-mode={mode}
+      data-record-features={drawnRecords}
+    >
       <ResiumViewer
         className={styles.viewer}
         baseLayer={false}
@@ -304,6 +349,14 @@ export function MapViewer({ children, api }: MapViewerProps) {
         creditContainer={creditContainer}
       >
         <SceneBridge onReady={setViewer} onCamera={onCamera} />
+        {api && (
+          <RecordLayersBridge
+            api={api}
+            overlay={overlay}
+            layers={recordLayers}
+            onStatus={onStatus}
+          />
+        )}
       </ResiumViewer>
       <MapHud
         mode={mode}
@@ -317,7 +370,12 @@ export function MapViewer({ children, api }: MapViewerProps) {
         legendOpen={legendOpen}
       />
       {legendOpen && (
-        <MapLegend state={overlayStyle} api={api} onClose={() => setLegendOpen(false)} />
+        <MapLegend
+          state={overlayStyle}
+          api={api}
+          scope={legendScope}
+          onClose={() => setLegendOpen(false)}
+        />
       )}
       <MapAttribution api={api} />
       {children}

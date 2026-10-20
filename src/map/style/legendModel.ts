@@ -35,15 +35,25 @@ export interface LegendEntry {
 }
 
 /**
+ * Which kinds the legend shows, and from which sources: kind → source layer ids, or `'*'` for
+ * every source. Undefined shows every kind the style knows.
+ */
+export type LegendScope = ReadonlyMap<string, ReadonlySet<string>>;
+
+/**
  * Groups the style model into legend entries: one per kind, sorted by label, each listing its
  * distinct looks (icon or circle, and representative color) with the sources that use them, the
- * field-driven color cases, and where it switches to hexagon counts. `filter` keeps kinds whose
- * label, id or source text contains it, case-insensitively.
+ * field-driven color cases, and where it switches to hexagon counts. With a `scope` (the map's
+ * enabled layers) only those kinds appear, each with only the looks of the sources drawn, or the
+ * kind's first look when none of those sources is styled (the look the map falls back to). `filter`
+ * keeps kinds whose label, id or source text contains it, case-insensitively.
  */
-export function buildLegend(model: StyleModel, filter = ''): LegendEntry[] {
+export function buildLegend(model: StyleModel, filter = '', scope?: LegendScope): LegendEntry[] {
   const needle = filter.trim().toLowerCase();
-  const entries = model.kinds.map((kind) => buildEntry(model, kind));
+  const kinds = scope ? model.kinds.filter((kind) => scope.has(kind)) : model.kinds;
+  const entries = kinds.map((kind) => buildEntry(model, kind, scope?.get(kind)));
   return entries
+    .filter((entry) => entry.variants.length > 0)
     .filter(
       (entry) =>
         !needle ||
@@ -55,12 +65,17 @@ export function buildLegend(model: StyleModel, filter = ''): LegendEntry[] {
 }
 
 /** Builds one kind's entry. */
-function buildEntry(model: StyleModel, kind: string): LegendEntry {
+function buildEntry(model: StyleModel, kind: string, sources?: ReadonlySet<string>): LegendEntry {
   const variants: LegendVariant[] = [];
   const byLook = new Map<string, LegendVariant>();
   const entry: LegendEntry = { kind, label: kindLabel(kind), variants };
   let minzoom = Infinity;
-  for (const style of stylesForKind(model, kind)) {
+  const forKind = stylesForKind(model, kind);
+  const scoped =
+    !sources || sources.has('*') ? forKind : forKind.filter((style) => sources.has(style.layerId));
+  // Sources the style does not draw are drawn in the kind's first style (see `styleForRecord`).
+  const shown = scoped.length > 0 ? scoped : forKind.slice(0, 1);
+  for (const style of shown) {
     const key = lookKey(style);
     let variant = byLook.get(key);
     if (!variant) {

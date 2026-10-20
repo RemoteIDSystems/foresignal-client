@@ -91,6 +91,11 @@ export function renderSdf(
   return out;
 }
 
+/** The cache key for an icon in a paint: stable, so equal paints share one image. */
+export function paintKey(name: string, paint: SdfPaint): string {
+  return `${name}|${paint.color}|${paint.haloColor ?? ''}|${paint.haloWidth ?? 0}`;
+}
+
 /** GLSL `smoothstep`. */
 function smoothstep(edge0: number, edge1: number, x: number): number {
   const t = Math.min(Math.max((x - edge0) / (edge1 - edge0), 0), 1);
@@ -100,6 +105,7 @@ function smoothstep(edge0: number, edge1: number, x: number): number {
 /** A loaded sprite: its index and the sheet's alpha channel, ready to render icons from. */
 export class SpriteSheet {
   private readonly cache = new Map<string, string>();
+  private readonly canvases = new Map<string, HTMLCanvasElement>();
   private readonly glyphSizes = new Map<string, number>();
   private reference: number | undefined;
 
@@ -196,12 +202,13 @@ export class SpriteSheet {
   }
 
   /**
-   * The icon drawn in `paint` as a PNG data URL, cached per icon and paint; undefined when the
-   * sprite lacks it or the browser has no 2D canvas.
+   * The icon drawn in `paint` on a canvas at the sheet's pixel ratio, cached per icon and paint;
+   * undefined when the sprite lacks it or the browser has no 2D canvas. The map's billboards use the
+   * canvas directly; draw it at {@link displaySize}.
    */
-  iconUrl(name: string, paint: SdfPaint): string | undefined {
-    const key = `${name}|${paint.color}|${paint.haloColor ?? ''}|${paint.haloWidth ?? 0}`;
-    const cached = this.cache.get(key);
+  iconCanvas(name: string, paint: SdfPaint): HTMLCanvasElement | undefined {
+    const key = paintKey(name, paint);
+    const cached = this.canvases.get(key);
     if (cached) return cached;
     const field = this.distanceField(name);
     if (!field) return undefined;
@@ -212,8 +219,20 @@ export class SpriteSheet {
     if (!context) return undefined;
     const pixels = renderSdf(field.data, { ...paint, pixelRatio: this.pixelRatio });
     context.putImageData(new ImageData(pixels, field.width, field.height), 0, 0);
-    const url = canvas.toDataURL('image/png');
-    this.cache.set(key, url);
+    this.canvases.set(key, canvas);
+    return canvas;
+  }
+
+  /**
+   * The icon drawn in `paint` as a PNG data URL, cached per icon and paint; undefined when the
+   * sprite lacks it or the browser has no 2D canvas.
+   */
+  iconUrl(name: string, paint: SdfPaint): string | undefined {
+    const key = paintKey(name, paint);
+    const cached = this.cache.get(key);
+    if (cached) return cached;
+    const url = this.iconCanvas(name, paint)?.toDataURL('image/png');
+    if (url) this.cache.set(key, url);
     return url;
   }
 

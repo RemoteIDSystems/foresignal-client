@@ -127,6 +127,48 @@ describe('App routing', () => {
     }
   });
 
+  it('lists the backend’s record layers in the Global rail, with records on by default', async () => {
+    backend();
+    server.use(
+      http.get('/v1/tiles.json', ({ response }) =>
+        response(200).json({
+          tilejson: '3.0.0',
+          layers: [
+            {
+              id: 'earthquake',
+              type: 'kind',
+              name: 'earthquake',
+              tilejson: `${MOCK_BASE_URL}/v1/tiles/earthquake.json`,
+              aggBelowZoom: null,
+            },
+            {
+              id: 'aircraft',
+              type: 'kind',
+              name: 'aircraft',
+              tilejson: `${MOCK_BASE_URL}/v1/tiles/aircraft.json`,
+              aggBelowZoom: 7,
+            },
+          ],
+        }),
+      ),
+      http.get('/v1/kinds', ({ response }) =>
+        response(200).json([
+          { kind: 'earthquake', currentCount: 540, sources: ['usgs-earthquakes'] },
+        ]),
+      ),
+      // No overlay style: the rail still lists the layers, without icons.
+      http.get('/v1/map/style.json', ({ response }) =>
+        response(403).json({ title: 'Forbidden', status: 403 }),
+      ),
+    );
+    render(<App session={session()} initialPath="/global" />);
+    const rail = await screen.findByRole('region', { name: 'Layers' });
+    const earthquake = await within(rail).findByRole('checkbox', { name: /Earthquake/ });
+    expect(earthquake).toBeChecked();
+    expect(within(rail).getByRole('checkbox', { name: /Aircraft/ })).not.toBeChecked();
+    expect(within(rail).getByTestId('layers-on')).toHaveTextContent('1 on');
+  });
+
   it('sends unknown paths to the Global dashboard', async () => {
     backend();
     render(<App session={session()} initialPath="/no-such-screen" />);

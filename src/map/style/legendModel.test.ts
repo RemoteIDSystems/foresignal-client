@@ -77,4 +77,20 @@ describe('buildLegend', () => {
     expect(zoomNotes(station!)).toEqual([]);
     expect(zoomNotes({ ...station!, minzoom: 5 })).toEqual(['From zoom 5']);
   });
+
+  it('scopes to the enabled kinds and the sources drawn', () => {
+    const scope = new Map([
+      ['conflict-event', new Set(['gdelt-events', 'ucdp-ged'])],
+      ['aircraft', new Set(['*'])],
+    ]);
+    const entries = buildLegend(model, '', scope);
+    expect(entries.map((entry) => entry.kind)).toEqual(['aircraft', 'conflict-event']);
+    expect(entries[1]?.variants.map((v) => v.layerIds)).toEqual([['gdelt-events'], ['ucdp-ged']]);
+    expect(buildLegend(model, '', new Map())).toEqual([]);
+  });
+
+  it('shows the look the map falls back to when no drawn source is styled', () => {
+    const scope = new Map([['conflict-event', new Set(['unstyled-feed'])]]);
+    expect(buildLegend(model, '', scope)[0]?.variants.map((v) => v.layerIds)).toEqual([['acled']]);
+  });
 });

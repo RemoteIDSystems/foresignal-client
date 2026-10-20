@@ -3,3 +3,5 @@ dist/
 coverage/
 *.local
 .env*.local
+test-results/
+playwright-report/

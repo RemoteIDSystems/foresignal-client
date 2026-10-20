@@ -117,4 +117,23 @@ describe('MapLegend', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Close legend' }));
     expect(onClose).toHaveBeenCalledOnce();
   });
+
+  it('scoped to the enabled layers, shows only their kinds and counts them', () => {
+    const scope = new Map([['aircraft', new Set(['*'])]]);
+    const { container, rerender } = render(
+      <MapLegend state={ready(fakeSprite())} onClose={() => {}} scope={scope} />,
+    );
+    expect(screen.getByTestId('legend-summary')).toHaveTextContent('1 kind on the map');
+    expect(
+      [...container.querySelectorAll<HTMLElement>('li[data-kind]')].map((li) => li.dataset.kind),
+    ).toEqual(['aircraft']);
+    scope.set('aprs-station', new Set(['aprs-is']));
+    rerender(<MapLegend state={ready(fakeSprite())} onClose={() => {}} scope={new Map(scope)} />);
+    expect(screen.getByTestId('legend-summary')).toHaveTextContent('2 kinds on the map');
+    rerender(<MapLegend state={ready(fakeSprite())} onClose={() => {}} scope={new Map()} />);
+    expect(screen.getByTestId('legend-summary')).toHaveTextContent(
+      'No layers on. Turn one on in the Layers rail.',
+    );
+    expect(container.querySelectorAll('li[data-kind]')).toHaveLength(0);
+  });
 });

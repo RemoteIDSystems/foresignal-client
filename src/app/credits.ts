@@ -62,4 +62,6 @@ export const PACKAGE_CREDITS: readonly PackageCredit[] = [
   { name: 'openapi-fetch', license: 'MIT', use: 'Backend API client' },
   { name: 'lucide-react', license: 'ISC', use: 'Icons' },
   { name: '@fontsource-variable/inter', license: 'OFL-1.1', use: 'Inter typeface' },
+  { name: '@mapbox/vector-tile', license: 'BSD-3-Clause', use: 'Record tile decoding' },
+  { name: 'pbf', license: 'BSD-3-Clause', use: 'Record tile decoding' },
 ];

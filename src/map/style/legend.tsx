@@ -7,6 +7,7 @@ import {
   legendTooltip,
   zoomNotes,
   type LegendEntry,
+  type LegendScope,
   type LegendVariant,
 } from './legendModel';
 import { loadMapIcon, type OverlayStyle } from './loadOverlayStyle';
@@ -23,21 +24,26 @@ export interface MapLegendProps {
   api?: ForesignalClient;
   /** Closes the panel. */
   onClose: () => void;
+  /**
+   * The kinds on the map, from the enabled layers; the legend shows only these. Undefined shows
+   * every kind the style knows.
+   */
+  scope?: LegendScope;
 }
 
 /**
- * The map legend: every record kind the overlay style draws, one compact row each as in the
- * Conflict mockup: its icon in the style's own color (SDF sprite icons rendered as the map renders
+ * The map legend: the record kinds on the map (or, unscoped, every kind the overlay style draws),
+ * one compact row each as in the Conflict mockup: its icon in the style's own color (SDF sprite icons rendered as the map renders
  * them, oversized ones scaled to match), its label, and the severity colors it uses. The sources
  * that draw it and the zoom it switches to hexagon counts are in the row's tooltip and in its
  * expanded detail. Built only from `getMapStyle` and its sprite; product legends join it in 009.
  */
-export function MapLegend({ state, api, onClose }: MapLegendProps) {
+export function MapLegend({ state, api, onClose, scope }: MapLegendProps) {
   const [filter, setFilter] = useState('');
   const overlay = state.status === 'ready' ? state.overlay : undefined;
   const entries = useMemo(
-    () => (overlay ? buildLegend(overlay.model, filter) : []),
-    [overlay, filter],
+    () => (overlay ? buildLegend(overlay.model, filter, scope) : []),
+    [overlay, filter, scope],
   );
 
   return (
@@ -55,7 +61,11 @@ export function MapLegend({ state, api, onClose }: MapLegendProps) {
       ) : (
         <>
           <p className={styles.summary} data-testid="legend-summary">
-            {overlay!.model.kinds.length} kinds from {overlay!.model.layers.length} layers
+            {scope
+              ? scope.size === 0
+                ? 'No layers on. Turn one on in the Layers rail.'
+                : kindsOnMap(buildLegend(overlay!.model, '', scope).length)
+              : `${overlay!.model.kinds.length} kinds from ${overlay!.model.layers.length} layers`}
           </p>
           <input
             className={styles.filter}
@@ -70,7 +80,9 @@ export function MapLegend({ state, api, onClose }: MapLegendProps) {
               <LegendRow key={entry.kind} entry={entry} overlay={overlay!} api={api} />
             ))}
           </ul>
-          {entries.length === 0 && <p className={styles.note}>No kinds match “{filter}”.</p>}
+          {entries.length === 0 && filter && (
+            <p className={styles.note}>No kinds match “{filter}”.</p>
+          )}
         </>
       )}
     </section>
@@ -97,7 +109,7 @@ function LegendRow({
     <li className={styles.entry} data-kind={entry.kind}>
       <details>
         <summary className={styles.row} title={legendTooltip(entry)}>
-          <Swatch style={first.style} sprite={overlay.sprite} api={api} />
+          <KindSwatch style={first.style} sprite={overlay.sprite} api={api} />
           <span className={styles.label}>{entry.label}</span>
           {cases && (
             <span className={styles.dots} aria-label={`Color by ${cases.field}`}>
@@ -165,7 +177,7 @@ function VariantLine({
   const text = variant.sources.join(' · ');
   return (
     <div className={styles.variant}>
-      <Swatch style={variant.style} sprite={overlay.sprite} api={api} />
+      <KindSwatch style={variant.style} sprite={overlay.sprite} api={api} />
       <span className={styles.sources} title={text}>
         {text}
       </span>
@@ -174,11 +186,11 @@ function VariantLine({
 }
 
 /**
- * A kind's symbol: its SDF icon tinted in the style's color with its halo, at the sprite's
- * normalized display size; a circle; or for kinds with no point style a line or fill chip. Icons
- * the sprite lacks come from `getMapIcon`.
+ * A kind's symbol, as the legend and the layer rail show it: its SDF icon tinted in the style's
+ * color with its halo, at the sprite's normalized display size; a circle; or for kinds with no
+ * point style a line or fill chip. Icons the sprite lacks come from `getMapIcon`.
  */
-function Swatch({
+export function KindSwatch({
   style,
   sprite,
   api,
@@ -268,4 +280,9 @@ function FallbackIcon({ name, api }: { name: string; api?: ForesignalClient }) {
       )}
     </span>
   );
+}
+
+/** The scoped legend's summary: how many kinds the enabled layers put on the map. */
+function kindsOnMap(count: number): string {
+  return `${count} ${count === 1 ? 'kind' : 'kinds'} on the map`;
 }

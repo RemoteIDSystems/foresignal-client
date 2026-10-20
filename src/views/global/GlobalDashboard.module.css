@@ -57,6 +57,11 @@
   border-bottom: 0;
 }
 
+/* A layer with no records now: still listed and switchable, but set back from the ones with data. */
+.layerEmpty > :not(input) {
+  opacity: 0.5;
+}
+
 .layerRow:hover {
   background: rgba(255, 255, 255, 0.025);
 }
@@ -96,6 +101,56 @@
   border-bottom: 2px solid #fff;
   border-left: 2px solid #fff;
   transform: rotate(-45deg);
+}
+
+.railTools {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px 4px;
+}
+
+.railFilter {
+  padding: 4px 8px;
+  border: 1px solid var(--fs-color-border-strong);
+  border-radius: var(--fs-radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fs-color-text);
+  font: inherit;
+  font-size: var(--fs-font-size-xs);
+}
+
+.railSummary {
+  display: flex;
+  justify-content: space-between;
+  color: var(--fs-color-text-secondary);
+  font-size: var(--fs-font-size-xs);
+}
+
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fs-color-accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.noSwatch {
+  flex: none;
+  width: 22px;
+}
+
+.spin {
+  flex: none;
+  color: var(--fs-color-text-secondary);
+  animation: rail-spin 1s linear infinite;
+}
+
+@keyframes rail-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .railFooter {

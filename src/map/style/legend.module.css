@@ -1,13 +1,16 @@
 .legend {
   position: absolute;
-  top: 58px;
-  right: 64px;
+  /* Left of the map, under the time box and above the global-view inset: the Conflict mockup's
+     place for it, beside the layer rail. */
+  top: 100px;
+  left: 10px;
   z-index: 3;
   display: flex;
   flex-direction: column;
-  width: 300px;
-  /* Clears the attribution line above the coordinate bar. */
-  max-height: calc(100% - 140px);
+  width: 232px;
+  /* Clears the global-view inset (12px from the bottom, about 130px tall). */
+  max-height: calc(100% - 252px);
+  min-height: 96px;
   padding: 8px 10px 10px;
   border: 1px solid var(--fs-color-border-strong);
   border-radius: var(--fs-radius-md);
