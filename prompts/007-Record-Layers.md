@@ -20,7 +20,9 @@ Dashboard left panel (LAYERS/ENTITIES/FILTERS, per-layer counts and toggles).
 - Take **concrete** tile templates from TileJSON (never `latest`/`now`); set `minzoom`/`maxzoom`/
   `bounds`; retina `@2x` with `tileSize: 256`.
 - **Left LAYERS rail** from `listTileLayers` + the style model: per-layer toggle, count, icon;
-  FILTERS tab stub. Enabled-layer set is held in the store (012).
+  FILTERS tab stub. Enabled-layer set is held in the store (012). Labels use the 006 prettifier.
+- **Scope the 006 legend to the enabled layers** (a kind whose layer is off is hidden), and settle
+  the legend's placement against the Conflict mock now that the layer rail exists.
 - Retry tiles on `503 RENDER_BUSY`/`429` per `Retry-After` (reuse 002's retry).
 
 **Done when.** Toggling a layer shows/hides its features on the globe and 2D map; layers render
