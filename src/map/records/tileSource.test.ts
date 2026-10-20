@@ -126,6 +126,22 @@ describe('fetchTile', () => {
     ]);
   });
 
+  it('asks for hexagon cells or records when told, keeping the template’s query', async () => {
+    const seen: string[] = [];
+    server.use(
+      http.get('/v1/tiles/{layer}/{z}/{x}/{y}.mvt', ({ request, response }) => {
+        seen.push(new URL(request.url).search);
+        return response.untyped(mvt(new Uint8Array(0)));
+      }),
+    );
+    await fetchTile(api(), template, tile, undefined, 'hex');
+    await fetchTile(api(), template, tile, undefined, 'none');
+    expect(seen).toEqual([
+      '?asOf=2026-10-19T00%3A00%3A00Z&agg=hex',
+      '?asOf=2026-10-19T00%3A00%3A00Z&agg=none',
+    ]);
+  });
+
   it('retries a 429 per Retry-After, then draws the tile', async () => {
     let calls = 0;
     server.use(

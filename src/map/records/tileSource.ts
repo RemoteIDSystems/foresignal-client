@@ -63,20 +63,26 @@ export type TileResult =
   | { status: 'missing'; message: string }
   | { status: 'failed'; message: string };
 
+/** What a tile is asked for as: `none` for records, `hex` for aggregate cells (008). */
+export type TileAggregation = 'none' | 'hex';
+
 /**
  * Fetches one record tile (`getTile`) with the template's query, as binary, and decodes it. The
  * request goes through the API client, so it carries the client's credentials and is retried on
  * 429/503 per `Retry-After` (002). An empty body (no records in the tile) decodes to no features.
- * Throws only when `signal` aborts.
+ * `agg` says whether the tile holds records or hexagon counts; without it the template's own
+ * `agg` (or the backend's `auto`) applies. Throws only when `signal` aborts.
  */
 export async function fetchTile(
   api: ForesignalClient,
   template: RecordTileTemplate,
   tile: TileId,
   signal?: AbortSignal,
+  agg?: TileAggregation,
 ): Promise<TileResult> {
+  const query = agg ? { ...template.query, agg } : template.query;
   const { data, error, response } = await api.GET('/v1/tiles/{layer}/{z}/{x}/{y}.mvt', {
-    params: { path: { layer: template.layer, ...tile }, query: template.query },
+    params: { path: { layer: template.layer, ...tile }, query },
     parseAs: 'arrayBuffer',
     headers: { Accept: 'application/vnd.mapbox-vector-tile' },
     signal,

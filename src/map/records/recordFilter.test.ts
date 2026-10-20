@@ -45,8 +45,25 @@ describe('RecordClaims', () => {
     expect(claims.claim('r1', '2/0/1')).toBe(true);
     expect(claims.claim('r1', '2/1/1')).toBe(false);
     expect(claims.claim('r2', '2/1/1')).toBe(true);
-    claims.release('2/0/1');
+    // The tile refused r1 is told to draw again once r1's holder goes.
+    expect(claims.release('2/0/1')).toEqual(['2/1/1']);
     expect(claims.size).toBe(1);
     expect(claims.claim('r1', '2/1/1')).toBe(true);
+  });
+
+  it('never refuses a tile for a record held at another zoom', () => {
+    const claims = new RecordClaims();
+    expect(claims.claim('r1', '6/13/26')).toBe(true);
+    // Zooming in: the z7 tile loads while the z6 tile is still drawn.
+    expect(claims.claim('r1', '7/26/52')).toBe(true);
+    expect(claims.release('6/13/26')).toEqual([]);
+  });
+
+  it('forgets a waiting tile once that tile goes', () => {
+    const claims = new RecordClaims();
+    claims.claim('r1', '2/0/1');
+    claims.claim('r1', '2/1/1');
+    expect(claims.release('2/1/1')).toEqual([]);
+    expect(claims.release('2/0/1')).toEqual([]);
   });
 });

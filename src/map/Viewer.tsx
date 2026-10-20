@@ -18,6 +18,8 @@ import { MapLegend } from './style/legend';
 import type { LegendScope } from './style/legendModel';
 import { useOverlayStyle, type OverlayStyleState } from './style/useOverlayStyle';
 import { RecordLayersBridge } from './records/RecordLayersBridge';
+import { ViewportTracker } from './ViewportTracker';
+import { viewportStore, type ViewportStore } from '../state/viewport';
 import type { RecordLayerStatus } from './records/recordLayers';
 import { createTerrainProvider, TerrainSampler } from './terrain';
 import { MapHud, type CameraState, type GroundPoint } from './MapHud';
@@ -225,6 +227,8 @@ export interface MapViewerProps {
   legendEmptyNote?: string;
   /** Told when a record layer's status changes (what it draws, whether it failed). */
   onLayerStatus?: (id: string, status: RecordLayerStatus) => void;
+  /** Where the map commits its viewport once the camera rests; the app-wide store by default. */
+  viewport?: ViewportStore;
 }
 
 /** No record layers. */
@@ -242,7 +246,8 @@ const NO_SOURCES: ReadonlySet<string> = new Set();
  * About page instead of over the map. With an API client it loads the backend's overlay style for
  * the theme, draws the enabled record layers from their vector tiles with it, shows the legend for
  * what is on the map (open by default, toggled from the HUD), and the attributions the data licenses
- * require. `data-record-features` on the region is the number of records drawn.
+ * require. `data-record-features` on the region is the number of records drawn one by one, and
+ * `data-record-cells` the number of hexagon cells drawn for layers below their aggregation zoom.
  */
 export function MapViewer({
   children,
@@ -253,6 +258,7 @@ export function MapViewer({
   legendScope,
   legendEmptyNote,
   onLayerStatus,
+  viewport = viewportStore,
 }: MapViewerProps) {
   const [webgl] = useState(supportsWebGL);
   const [viewer, setViewer] = useState<CesiumViewer>();
@@ -276,6 +282,7 @@ export function MapViewer({
     statusListener.current?.(id, status);
   }, []);
   const drawnRecords = recordLayers.reduce((sum, id) => sum + (layerStatus[id]?.features ?? 0), 0);
+  const drawnCells = recordLayers.reduce((sum, id) => sum + (layerStatus[id]?.cells ?? 0), 0);
   const onToggleLegend = useCallback(() => setLegendOpen((open) => !open), []);
 
   // The latest camera state, read when switching mode without re-creating the callback each frame.
@@ -335,6 +342,7 @@ export function MapViewer({
       data-testid="map-viewer"
       data-scene-mode={mode}
       data-record-features={drawnRecords}
+      data-record-cells={drawnCells}
     >
       <ResiumViewer
         className={styles.viewer}
@@ -357,6 +365,7 @@ export function MapViewer({
         creditContainer={creditContainer}
       >
         <SceneBridge onReady={setViewer} onCamera={onCamera} />
+        <ViewportTracker store={viewport} />
         {api && (
           <RecordLayersBridge
             api={api}

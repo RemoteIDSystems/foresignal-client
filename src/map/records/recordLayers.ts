@@ -16,6 +16,8 @@ import {
   PolygonGeometry,
   PolygonHierarchy,
   PolylineColorAppearance,
+  PolylineGeometry,
+  Primitive,
   type Billboard,
   type Scene,
   type Viewer,
@@ -24,9 +26,17 @@ import type { ForesignalClient } from '../../api/client';
 import type { StyleModel } from '../style/model';
 import type { RecordFeature } from './decodeTile';
 import { resolveSymbol, type LineSymbol } from './featureStyle';
+import {
+  aggregationFor,
+  cellsOfTile,
+  DEFAULT_AGGREGATION,
+  HexCellIndex,
+  rampColor,
+  type HexCell,
+} from './hexCells';
 import { RecordClaims, recordId, shownRecords } from './recordFilter';
 import type { SymbolImages } from './symbolImages';
-import { fetchTile, loadLayerTiles, type LayerTiles } from './tileSource';
+import { fetchTile, loadLayerTiles, type LayerTiles, type TileAggregation } from './tileSource';
 import { visibleRectangle } from '../view';
 import { planTiles, tileKey, zoomForResolution, type GeoRect, type TileId } from './tileMath';
 
@@ -39,15 +49,19 @@ const MAX_IN_FLIGHT = 6;
 /** What the map shows of a layer, for the rail and for tests. */
 export interface RecordLayerStatus {
   /**
-   * `loading` while the TileJSON or tiles for the view are in flight; `ready` when the view is
-   * drawn; `aggregated` when the view is below the layer's `aggBelowZoom`, where hexagon counts
-   * (008) take over and no records are drawn; `error` when the layer cannot load.
+   * `loading` while the TileJSON or tiles for the view are in flight; `ready` when the view's
+   * records are drawn; `aggregated` when the view is below the layer's `aggBelowZoom` and its
+   * hexagon counts are drawn instead; `error` when the layer cannot load.
    */
   state: 'loading' | 'ready' | 'aggregated' | 'error';
-  /** Records drawn now. */
+  /** Records drawn now, one by one (0 while aggregated). */
   features: number;
   /** Tiles drawn now. */
   tiles: number;
+  /** Hexagon cells drawn now, below `aggBelowZoom`. */
+  cells?: number;
+  /** Records the drawn cells count together. */
+  aggregated?: number;
   /** Why the layer failed, for `error`. */
   message?: string;
 }
@@ -68,13 +82,18 @@ export interface RecordLayerContext {
   images: SymbolImages;
 }
 
-/** The pick id each drawn record carries, for selection (014). */
+/** The pick id each drawn record (or hexagon cell) carries, for selection (014). */
 export interface RecordPickId {
   layer: string;
   source?: string;
   externalId?: string;
   kind?: string;
+  /** For a hexagon cell: the records it counts. */
+  count?: number;
 }
+
+/** The prefix of an aggregate tile's key, so it never collides with the same tile's records. */
+const HEX_KEY = 'hex:';
 
 /** One drawn tile: its billboards in the layer's collection and its ground primitives. */
 interface DrawnTile {
@@ -109,6 +128,18 @@ export class RecordLayer {
   private failure?: string;
   private hiddenSources: ReadonlySet<string> = new Set();
   private readonly claims = new RecordClaims();
+  private readonly cells = new HexCellIndex();
+  /** The primitives drawing the merged cells now. */
+  private cellPrimitives: Primitive[] = [];
+  /** Earlier cell primitives, removed once the current ones are ready. */
+  private retiring: Primitive[] = [];
+  private cellsDrawn = { cells: 0, records: 0 };
+  private cellTimer?: ReturnType<typeof setTimeout>;
+  /** The last status reported, to report only changes. */
+  private lastStatus?: string;
+  /** Whether the queued tiles are aggregate tiles. */
+  private queueHex = false;
+  private stopWaiting?: () => void;
 
   /**
    * @param id The layer id (`listTileLayers`: a source id or a kind).
@@ -148,7 +179,10 @@ export class RecordLayer {
     if (sameSet(hidden, this.hiddenSources)) return;
     this.hiddenSources = new Set(hidden);
     if (this.destroyed) return;
-    for (const [key, tile] of [...this.drawn]) this.drawTile(key, tile.records, tile.zoom);
+    // Cells count every source together, so the filter does not reach them.
+    for (const [key, tile] of [...this.drawn]) {
+      if (!key.startsWith(HEX_KEY)) this.drawTile(key, tile.records, tile.zoom);
+    }
     this.report();
   }
 
@@ -159,6 +193,11 @@ export class RecordLayer {
     for (const controller of this.inFlight.values()) controller.abort();
     this.inFlight.clear();
     for (const key of [...this.drawn.keys()]) this.removeTile(key);
+    clearTimeout(this.cellTimer);
+    this.stopWaiting?.();
+    this.removeCellPrimitives([...this.retiring, ...this.cellPrimitives]);
+    this.retiring = [];
+    this.cellPrimitives = [];
     if (!this.context.scene.isDestroyed()) this.context.scene.primitives.remove(this.billboards);
   }
 
@@ -181,29 +220,33 @@ export class RecordLayer {
     return this.tiles;
   }
 
-  /** Works out the tiles a view needs, starts loading the missing ones and tidies up. */
+  /** True when the view is below the layer's aggregation zoom, where it is drawn as cells. */
+  private aggregating(view: RecordView | undefined): boolean {
+    const below = this.tiles?.aggBelowZoom;
+    return below !== undefined && view !== undefined && Math.floor(view.zoom) < below;
+  }
+
+  /**
+   * Works out the tiles a view needs, starts loading the missing ones and tidies up. Below the
+   * layer's `aggBelowZoom` these are `agg=hex` tiles of hexagon counts, planned below that zoom;
+   * at or above it, record tiles (`agg=none`), never planned below it. The tiles of the other
+   * mode stay until the new ones are in, so crossing the zoom does not blink.
+   */
   private plan(view: RecordView): void {
     const tiles = this.tiles;
     if (!tiles || this.destroyed) return;
-    if (tiles.aggBelowZoom !== undefined && Math.floor(view.zoom) < tiles.aggBelowZoom) {
-      this.wanted = new Set();
-      this.queue = [];
-      for (const controller of this.inFlight.values()) controller.abort();
-      this.inFlight.clear();
-      for (const key of [...this.drawn.keys()]) this.removeTile(key);
-      this.report();
-      return;
-    }
+    const hex = this.aggregating(view);
+    const below = tiles.aggBelowZoom;
     const needed = planTiles({
       rect: view.rect,
       zoom: view.zoom,
-      // Never below aggBelowZoom: the backend answers there with aggregate cells, not records.
-      minzoom: Math.max(tiles.minzoom, tiles.aggBelowZoom ?? 0),
-      maxzoom: tiles.maxzoom,
+      minzoom: hex ? tiles.minzoom : Math.max(tiles.minzoom, below ?? 0),
+      maxzoom: hex && below !== undefined ? Math.min(tiles.maxzoom, below - 1) : tiles.maxzoom,
       bounds: tiles.bounds,
       maxTiles: MAX_TILES_PER_LAYER,
     });
-    this.wanted = new Set(needed.map(tileKey));
+    const keyOf = (tile: TileId) => (hex ? HEX_KEY : '') + tileKey(tile);
+    this.wanted = new Set(needed.map(keyOf));
     for (const [key, controller] of this.inFlight) {
       if (!this.wanted.has(key)) {
         controller.abort();
@@ -211,9 +254,10 @@ export class RecordLayer {
       }
     }
     this.queue = needed.filter((tile) => {
-      const key = tileKey(tile);
+      const key = keyOf(tile);
       return !this.drawn.has(key) && !this.inFlight.has(key);
     });
+    this.queueHex = hex;
     this.pump();
     this.settle();
   }
@@ -222,19 +266,32 @@ export class RecordLayer {
   private pump(): void {
     while (this.inFlight.size < MAX_IN_FLIGHT && this.queue.length > 0) {
       const tile = this.queue.shift()!;
-      void this.loadTile(tile);
+      void this.loadTile(
+        tile,
+        this.queueHex ? 'hex' : this.tiles?.aggBelowZoom !== undefined ? 'none' : undefined,
+      );
     }
     this.report();
   }
 
-  /** Fetches, decodes and draws one tile. */
-  private async loadTile(tile: TileId): Promise<void> {
-    const key = tileKey(tile);
+  /**
+   * Fetches, decodes and draws one tile: records, or with `agg` `hex` the hexagon counts. A layer
+   * that aggregates asks for its record tiles with `agg=none`, so they are records whatever the
+   * backend's `auto` would choose.
+   */
+  private async loadTile(tile: TileId, agg?: TileAggregation): Promise<void> {
+    const key = (agg === 'hex' ? HEX_KEY : '') + tileKey(tile);
     const tiles = this.tiles!;
     const controller = new AbortController();
     this.inFlight.set(key, controller);
     try {
-      const result = await fetchTile(this.context.api, tiles.template, tile, controller.signal);
+      const result = await fetchTile(
+        this.context.api,
+        tiles.template,
+        tile,
+        controller.signal,
+        agg,
+      );
       if (this.destroyed || controller.signal.aborted) return;
       if (result.status === 'missing') {
         this.fail(result.message);
@@ -262,9 +319,15 @@ export class RecordLayer {
     this.report();
   }
 
-  /** Draws a decoded tile's records, batched per tile. */
+  /** Draws a decoded tile's records, batched per tile; an aggregate tile joins the layer's cells. */
   private drawTile(key: string, features: RecordFeature[], zoom: number): void {
-    if (this.drawn.has(key)) this.removeTile(key);
+    if (this.drawn.has(key)) this.removeTile(key, true);
+    if (key.startsWith(HEX_KEY)) {
+      this.cells.set(key, cellsOfTile(features));
+      this.drawn.set(key, { billboards: [], primitives: [], features: 0, records: features, zoom });
+      this.scheduleCells();
+      return;
+    }
     const { model, images, scene } = this.context;
     const billboards: Billboard[] = [];
     const lines: GeometryInstance[] = [];
@@ -359,8 +422,12 @@ export class RecordLayer {
     this.drawn.set(key, { billboards, primitives, features: count, records: features, zoom });
   }
 
-  /** Removes one drawn tile. */
-  private removeTile(key: string): void {
+  /**
+   * Removes one drawn tile. Other tiles of its zoom that were refused one of its records (see
+   * {@link RecordClaims}) are drawn again to take them, unless `keepWaiting`, when the tile is
+   * about to be drawn again itself.
+   */
+  private removeTile(key: string, keepWaiting = false): void {
     const tile = this.drawn.get(key);
     if (!tile) return;
     for (const billboard of tile.billboards) this.billboards.remove(billboard);
@@ -368,8 +435,93 @@ export class RecordLayer {
       for (const primitive of tile.primitives)
         this.context.scene.groundPrimitives.remove(primitive);
     }
-    this.claims.release(key);
+    const waiting = this.claims.release(key);
+    if (this.cells.delete(key)) this.scheduleCells();
     this.drawn.delete(key);
+    if (keepWaiting || this.destroyed) return;
+    for (const other of waiting) {
+      const drawn = this.drawn.get(other);
+      if (drawn) this.drawTile(other, drawn.records, drawn.zoom);
+    }
+  }
+
+  /** Redraws the merged cells once the current burst of tiles has landed. */
+  private scheduleCells(): void {
+    clearTimeout(this.cellTimer);
+    this.cellTimer = setTimeout(() => this.drawCells(), CELL_REDRAW_MS);
+  }
+
+  /**
+   * Draws every cell of the layer once, merged across tiles ({@link HexCellIndex}), as one fill
+   * primitive and one outline primitive, colored by count on the kind's aggregation ramp from the
+   * overlay style. Cells are ordinary primitives at the ellipsoid, not ground primitives: the scene
+   * does not depth-test primitives against terrain, so they draw over the relief, and ground
+   * primitives' shadow volumes cost far more per frame over the large areas cells cover. The cells
+   * drawn before stay until the new ones are ready, so a redraw does not blink.
+   */
+  private drawCells(): void {
+    if (this.destroyed || this.context.scene.isDestroyed()) return;
+    const merged = this.cells.merged();
+    const style = aggregationFor(this.context.model, this.id) ?? DEFAULT_AGGREGATION;
+    const opacity = style.opacity ?? 0.6;
+    const outline = Color.fromCssColorString(style.outlineColor ?? '#FFFFFF').withAlpha(opacity);
+    const fills: GeometryInstance[] = [];
+    const lines: GeometryInstance[] = [];
+    let records = 0;
+    for (const cell of merged) {
+      records += cell.count;
+      const id: RecordPickId = { layer: this.id, kind: this.id, count: cell.count };
+      const color = Color.fromCssColorString(rampColor(style.ramp, cell.count)).withAlpha(opacity);
+      fills.push(cellFill(cell, color, id));
+      lines.push(cellOutline(cell, outline, id));
+    }
+    const next = this.addCellPrimitives(fills, lines);
+    this.retiring.push(...this.cellPrimitives);
+    this.cellPrimitives = next;
+    this.cellsDrawn = { cells: merged.length, records };
+    this.stopWaiting?.();
+    const retire = () => {
+      this.removeCellPrimitives(this.retiring);
+      this.retiring = [];
+    };
+    if (next.length === 0) retire();
+    else this.stopWaiting = whenReady(this.context.scene, next, retire);
+    this.report();
+  }
+
+  /** Adds the cells' fills and outlines as one primitive each. */
+  private addCellPrimitives(fills: GeometryInstance[], lines: GeometryInstance[]): Primitive[] {
+    const { scene } = this.context;
+    const primitives: Primitive[] = [];
+    if (fills.length) {
+      primitives.push(
+        scene.primitives.add(
+          new Primitive({
+            geometryInstances: fills,
+            appearance: new PerInstanceColorAppearance({ flat: true, translucent: true }),
+            asynchronous: true,
+          }),
+        ) as Primitive,
+      );
+    }
+    if (lines.length) {
+      primitives.push(
+        scene.primitives.add(
+          new Primitive({
+            geometryInstances: lines,
+            appearance: new PolylineColorAppearance({ translucent: true }),
+            asynchronous: true,
+          }),
+        ) as Primitive,
+      );
+    }
+    return primitives;
+  }
+
+  /** Removes cell primitives from the scene. */
+  private removeCellPrimitives(primitives: Primitive[]): void {
+    if (this.context.scene.isDestroyed()) return;
+    for (const primitive of primitives) this.context.scene.primitives.remove(primitive);
   }
 
   /** Marks the layer failed and clears it. */
@@ -386,16 +538,19 @@ export class RecordLayer {
     let state: RecordLayerStatus['state'];
     if (this.failure) state = 'error';
     else if (!this.tiles || this.inFlight.size > 0 || this.queue.length > 0) state = 'loading';
-    else if (
-      this.tiles.aggBelowZoom !== undefined &&
-      this.view &&
-      Math.floor(this.view.zoom) < this.tiles.aggBelowZoom
-    )
-      state = 'aggregated';
+    else if (this.aggregating(this.view)) state = 'aggregated';
     else state = 'ready';
-    this.onStatus(
-      this.failure ? { state, features, tiles, message: this.failure } : { state, features, tiles },
-    );
+    const status: RecordLayerStatus = { state, features, tiles };
+    if (this.cellsDrawn.cells > 0) {
+      status.cells = this.cellsDrawn.cells;
+      status.aggregated = this.cellsDrawn.records;
+    }
+    if (this.failure) status.message = this.failure;
+    // Told only of a change: each status re-renders the rail and the map's overlays.
+    const signature = JSON.stringify(status);
+    if (signature === this.lastStatus) return;
+    this.lastStatus = signature;
+    this.onStatus(status);
   }
 }
 
@@ -420,6 +575,50 @@ function addLine(
       id,
     }),
   );
+}
+
+/** How long a burst of aggregate tiles may take to land before the cells are redrawn, in ms. */
+const CELL_REDRAW_MS = 60;
+
+/** One cell's fill, on the ellipsoid. */
+function cellFill(cell: HexCell, color: Color, id: RecordPickId): GeometryInstance {
+  return new GeometryInstance({
+    geometry: new PolygonGeometry({
+      polygonHierarchy: new PolygonHierarchy(positions(cell.ring)),
+      arcType: ArcType.RHUMB,
+      vertexFormat: PerInstanceColorAppearance.FLAT_VERTEX_FORMAT,
+    }),
+    attributes: { color: ColorGeometryInstanceAttribute.fromColor(color) },
+    id,
+  });
+}
+
+/** One cell's outline, on the ellipsoid, one pixel wide. */
+function cellOutline(cell: HexCell, color: Color, id: RecordPickId): GeometryInstance {
+  return new GeometryInstance({
+    geometry: new PolylineGeometry({
+      positions: positions(cell.ring),
+      width: 1,
+      arcType: ArcType.RHUMB,
+      vertexFormat: PolylineColorAppearance.VERTEX_FORMAT,
+    }),
+    attributes: { color: ColorGeometryInstanceAttribute.fromColor(color) },
+    id,
+  });
+}
+
+/**
+ * Calls `done` after the frame in which every primitive is ready to render (Cesium builds ground
+ * geometry asynchronously). Returns a function that stops waiting.
+ */
+function whenReady(scene: Scene, primitives: readonly Primitive[], done: () => void): () => void {
+  const remove = scene.postRender.addEventListener(() => {
+    if (primitives.every((primitive) => primitive.ready)) {
+      remove();
+      done();
+    }
+  });
+  return remove;
 }
 
 /** Degrees to Cartesian positions on the ellipsoid. */

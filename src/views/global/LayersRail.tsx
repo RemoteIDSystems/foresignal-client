@@ -8,6 +8,7 @@ import {
   CircleDot,
   Cloud,
   Crosshair,
+  Hexagon,
   LoaderCircle,
   Network,
   Plane,
@@ -17,10 +18,14 @@ import {
   Ship,
   TriangleAlert,
   Zap,
-  ZoomIn,
 } from 'lucide-react';
 import type { CategoryId } from '../../lib/kindCategories';
-import { filterSources, type CategoryGroup, type KindEntry } from '../../map/records/catalog';
+import {
+  filterSources,
+  shownCount,
+  type CategoryGroup,
+  type KindEntry,
+} from '../../map/records/catalog';
 import type { RecordLayerStatus } from '../../map/records/recordLayers';
 import { KindSwatch } from '../../map/style/legend';
 import { Badge } from '../../ui/Badge';
@@ -196,7 +201,9 @@ function CategoryRow({
   return (
     <li data-category={group.id} data-category-state={all ? 'on' : some ? 'some' : 'off'}>
       <div
-        className={group.count === 0 ? `${styles.layerRow} ${styles.layerEmpty}` : styles.layerRow}
+        className={
+          shownCount(group) === 0 ? `${styles.layerRow} ${styles.layerEmpty}` : styles.layerRow
+        }
       >
         <label className={styles.categoryLabel}>
           <input
@@ -212,7 +219,7 @@ function CategoryRow({
           <span className={styles.layerName}>{group.label}</span>
         </label>
         <CategoryMark statuses={statuses} />
-        <Badge kind="count">{group.count.toLocaleString('en-US')}</Badge>
+        <CountBadge counted={group} />
         <button
           type="button"
           className={open ? `${styles.expandButton} ${styles.expanded}` : styles.expandButton}
@@ -264,7 +271,9 @@ function KindRow({
   return (
     <li data-layer={entry.id} data-layer-state={status?.state}>
       <label
-        className={entry.count === 0 ? `${styles.kindRow} ${styles.layerEmpty}` : styles.kindRow}
+        className={
+          shownCount(entry) === 0 ? `${styles.kindRow} ${styles.layerEmpty}` : styles.kindRow
+        }
       >
         <input
           type="checkbox"
@@ -279,9 +288,25 @@ function KindRow({
         )}
         <span className={styles.layerName}>{entry.label}</span>
         <StatusMark status={status} entry={entry} />
-        <Badge kind="count">{entry.count.toLocaleString('en-US')}</Badge>
+        <CountBadge counted={entry} />
       </label>
     </li>
+  );
+}
+
+/**
+ * A kind's or category's record count: in the map's view once the viewport summary is in (008),
+ * else anywhere now. Its tooltip says which.
+ */
+function CountBadge({ counted }: { counted: { count: number; viewCount?: number } }) {
+  const inView = counted.viewCount !== undefined;
+  return (
+    <span
+      title={inView ? 'Records in view' : 'Records now'}
+      data-count-scope={inView ? 'view' : 'all'}
+    >
+      <Badge kind="count">{shownCount(counted).toLocaleString('en-US')}</Badge>
+    </span>
   );
 }
 
@@ -303,14 +328,11 @@ function StatusMark({ status, entry }: { status?: RecordLayerStatus; entry: Kind
     );
   }
   if (status.state === 'aggregated') {
+    const label = `Hexagon counts below zoom ${entry.aggBelowZoom}; zoom in to see records`;
     return (
-      <ZoomIn
-        size={13}
-        color="#9fb4c8"
-        aria-label={`Zoom in past ${entry.aggBelowZoom} to see records`}
-      >
-        <title>{`Zoom in past ${entry.aggBelowZoom} to see records; hexagon counts arrive in 008`}</title>
-      </ZoomIn>
+      <Hexagon size={13} color="#9fb4c8" aria-label={label}>
+        <title>{label}</title>
+      </Hexagon>
     );
   }
   return null;

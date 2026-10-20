@@ -27,6 +27,8 @@ export interface KindEntry {
   swatch?: KindStyle;
   /** Records it has now (`listKinds` `currentCount`); 0 when it is not listed. */
   count: number;
+  /** Records in the map's view (`summarizeContext` `layerCounts`), once a summary is in. */
+  viewCount?: number;
   /** Zoom below which it is drawn as hexagon counts (008); undefined for never. */
   aggBelowZoom?: number;
 }
@@ -39,6 +41,8 @@ export interface CategoryGroup {
   kinds: KindEntry[];
   /** Records across its kinds now. */
   count: number;
+  /** Records across its kinds in the map's view, once a summary is in. */
+  viewCount?: number;
 }
 
 /** A source, as the FILTERS tab offers it. */
@@ -140,6 +144,33 @@ function sourceCount(
     total += summary.currentCount;
   }
   return total;
+}
+
+/**
+ * The catalog with each kind's and category's records in the map's view, from the viewport
+ * summary's per-layer counts (aggregates, never features). A kind the summary does not list has
+ * none in view. Without counts the catalog is returned as it is. The order is kept, so the rail
+ * does not reshuffle as the map pans.
+ */
+export function withViewCounts(
+  catalog: LayerCatalog,
+  counts: ReadonlyMap<string, number> | undefined,
+): LayerCatalog {
+  if (!counts) return catalog;
+  const inView = (entry: KindEntry): KindEntry => ({
+    ...entry,
+    viewCount: counts.get(entry.id) ?? 0,
+  });
+  const categories = catalog.categories.map((group) => {
+    const kinds = group.kinds.map(inView);
+    return { ...group, kinds, viewCount: kinds.reduce((sum, k) => sum + (k.viewCount ?? 0), 0) };
+  });
+  return { ...catalog, categories, kinds: catalog.kinds.map(inView) };
+}
+
+/** The count the rail shows: records in view once known, else records anywhere now. */
+export function shownCount(entry: { count: number; viewCount?: number }): number {
+  return entry.viewCount ?? entry.count;
 }
 
 /** The kinds on when the dashboard opens: those of the categories the Global mock shows checked. */

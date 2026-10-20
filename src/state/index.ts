@@ -10,3 +10,13 @@ export {
   type SystemInfo,
   type VersionCheck,
 } from './capabilities';
+export {
+  committedViewport,
+  createViewportStore,
+  splitAtAntimeridian,
+  useCommittedViewport,
+  viewportStore,
+  WORLD_BBOX,
+  type CommittedViewport,
+  type ViewportStore,
+} from './viewport';

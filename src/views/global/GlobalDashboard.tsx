@@ -2,11 +2,18 @@ import { useCallback, useMemo, useState } from 'react';
 import type { ForesignalClient } from '../../api/client';
 import { DashboardLayout, type DockPanel } from '../../app/DashboardLayout';
 import { useTheme } from '../../app/theme';
-import { defaultEnabled, drawnLayers, enabledKinds } from '../../map/records/catalog';
+import {
+  defaultEnabled,
+  drawnLayers,
+  enabledKinds,
+  withViewCounts,
+} from '../../map/records/catalog';
 import type { RecordLayerStatus } from '../../map/records/recordLayers';
 import { useLayerCatalog } from '../../map/records/useLayerCatalog';
 import { useOverlayStyle } from '../../map/style/useOverlayStyle';
 import { MapViewer } from '../../map/Viewer';
+import { useViewCounts } from '../../state/contextSummary';
+import { useCommittedViewport } from '../../state/viewport';
 import {
   ActivityTimelinePanel,
   InsightsPanel,
@@ -61,8 +68,9 @@ const PANELS: readonly DockPanel[] = [
  * The Global Intelligence Dashboard (primary mockup): layers rail, map, selected-entity panel and
  * the bottom row of imagery, activity, insights and related entities. The rail and the map share
  * the overlay style, the layer catalog, the enabled kinds (at first, the kinds of the categories the
- * mock shows checked) and the sources the FILTERS tab hides. The other panels are skeletons with
- * placeholder data until their prompts.
+ * mock shows checked) and the sources the FILTERS tab hides. The rail's counts are the records in
+ * the map's committed viewport, from the backend's viewport summary (008). The other panels are
+ * skeletons with placeholder data until their prompts.
  */
 export function GlobalDashboard({ api }: { api?: ForesignalClient }) {
   const theme = useTheme();
@@ -114,6 +122,17 @@ export function GlobalDashboard({ api }: { api?: ForesignalClient }) {
     setStatuses((current) => ({ ...current, [id]: status }));
   }, []);
 
+  // Counts in view: the map commits its viewport when the camera rests; the summary follows it.
+  const viewport = useCommittedViewport();
+  const viewCounts = useViewCounts(api, viewport);
+  const railCatalog = useMemo(
+    () =>
+      catalogState.status === 'ready'
+        ? { ...catalogState, catalog: withViewCounts(catalogState.catalog, viewCounts?.counts) }
+        : catalogState,
+    [catalogState, viewCounts],
+  );
+
   const recordLayers = useMemo(
     () => (catalog ? drawnLayers(catalog, enabled) : []),
     [catalog, enabled],
@@ -124,7 +143,7 @@ export function GlobalDashboard({ api }: { api?: ForesignalClient }) {
   );
   const value = useMemo<RecordLayersValue>(
     () => ({
-      catalog: catalogState,
+      catalog: railCatalog,
       enabled,
       toggle,
       setKinds,
@@ -137,7 +156,7 @@ export function GlobalDashboard({ api }: { api?: ForesignalClient }) {
       api,
     }),
     [
-      catalogState,
+      railCatalog,
       enabled,
       toggle,
       setKinds,

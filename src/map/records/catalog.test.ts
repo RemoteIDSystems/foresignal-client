@@ -7,6 +7,8 @@ import {
   drawnLayers,
   enabledKinds,
   filterSources,
+  shownCount,
+  withViewCounts,
   type KindSummary,
   type TileLayerSummary,
 } from './catalog';
@@ -146,5 +148,25 @@ describe('filterSources', () => {
       ['acled', false],
     ]);
     expect(filterSources(catalog, new Set(['social-post']))).toEqual([]);
+  });
+});
+
+describe('withViewCounts', () => {
+  const catalog = buildCatalog(index, kinds, model);
+
+  it('sets each kind’s and category’s records in view, keeping the order', () => {
+    const inView = withViewCounts(catalog, new Map([['aprs-station', 7]]));
+    const rf = inView.categories.find((group) => group.id === 'rf');
+    expect(rf?.viewCount).toBe(7);
+    expect(inView.kinds.find((e) => e.id === 'conflict-event')?.viewCount).toBe(0);
+    expect(inView.categories.map((group) => group.id)).toEqual(
+      catalog.categories.map((group) => group.id),
+    );
+    expect(shownCount(rf!)).toBe(7);
+  });
+
+  it('leaves the catalog as it is without counts', () => {
+    expect(withViewCounts(catalog, undefined)).toBe(catalog);
+    expect(shownCount(catalog.categories[0]!)).toBe(catalog.categories[0]!.count);
   });
 });

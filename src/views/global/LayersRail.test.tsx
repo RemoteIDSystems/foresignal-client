@@ -1,7 +1,12 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { buildCatalog, type KindSummary, type TileLayerSummary } from '../../map/records/catalog';
+import {
+  buildCatalog,
+  withViewCounts,
+  type KindSummary,
+  type TileLayerSummary,
+} from '../../map/records/catalog';
 import type { RecordLayerStatus } from '../../map/records/recordLayers';
 import fixture from '../../map/style/fixtures/overlay-style.json';
 import { parseOverlayStyle, type MapStyle } from '../../map/style/parseStyle';
@@ -164,7 +169,33 @@ describe('LayersRail', () => {
     const kind = (id: string) => container.querySelector(`li[data-layer="${id}"]`) as HTMLElement;
     expect(kind('aprs-station')).toHaveAttribute('data-layer-state', 'error');
     expect(within(kind('aprs-station')).getByLabelText('Did not load: HTTP 500')).toBeVisible();
-    expect(within(kind('aircraft')).getByLabelText('Zoom in past 7 to see records')).toBeVisible();
+    expect(
+      within(kind('aircraft')).getByLabelText(
+        'Hexagon counts below zoom 7; zoom in to see records',
+      ),
+    ).toBeVisible();
+  });
+
+  it('shows the records in view once the viewport summary is in, else the records now', () => {
+    const { container, rerender } = render(<Harness initial={[]} />);
+    const conflicts = () => container.querySelector('li[data-category="conflicts"]') as HTMLElement;
+    expect(within(conflicts()).getByTitle('Records now')).toHaveTextContent('1,234');
+    rerender(
+      <Harness
+        initial={[]}
+        value={{
+          catalog: {
+            status: 'ready',
+            catalog: withViewCounts(catalog, new Map([['conflict-event', 56]])),
+          },
+        }}
+      />,
+    );
+    expect(within(conflicts()).getByTitle('Records in view')).toHaveTextContent('56');
+    // A kind the summary does not list has none in view, and is set back.
+    const rf = container.querySelector('li[data-category="rf"]') as HTMLElement;
+    expect(within(rf).getByTitle('Records in view')).toHaveTextContent('0');
+    expect(rf.querySelector('div')?.className).toMatch(/layerEmpty/);
   });
 
   it('filters sources within the enabled kinds, live ones first, and shows them all again', async () => {
