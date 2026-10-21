@@ -1,5 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { expect, test, type Request } from '@playwright/test';
+import { CLUSTER_POINT_BUDGET } from '../src/map/records/clientClusters';
+import { SLOW_FRAME_MS } from '../src/map/stress/frameStats';
 import type { ScaleReport } from '../src/map/stress/scaleScenario';
 import { DENSE_KINDS, standInCatalog } from './dense-support';
 
@@ -12,6 +14,11 @@ import { DENSE_KINDS, standInCatalog } from './dense-support';
  * The change-stream connections are also counted from outside the page: every request to
  * `/v1/events/stream` the browser makes is open until it finishes or fails, so the most open at
  * once must be one, whatever the harness's own tally says.
+ *
+ * At world zoom the catalog's points are far more than the clustering budget, so the layers the
+ * backend does not aggregate are drawn as the client's cells (037): the world draws few records one
+ * by one and counts the rest in cells. With `E2E_GPU=1` the world's 95th-percentile frame must be
+ * within the 33.3 ms budget, as must region's and city's.
  */
 test('the full catalog at three zooms: one change stream, aggregated and in-view data, in budget', async ({
   page,
@@ -57,10 +64,15 @@ test('the full catalog at three zooms: one change stream, aggregated and in-view
   // Dense kinds draw as cells at world zoom (below their aggBelowZoom of 7).
   expect(DENSE_KINDS.length).toBeGreaterThan(0);
   expect(world!.totals.cells).toBeGreaterThan(0);
-  // Raw records load only in view: the city holds fewer than the world, and fewer tiles are read.
-  expect(city!.totals.features).toBeLessThan(world!.totals.features);
+  // The world's points are clustered (037): few drawn one by one, the rest counted in cells.
+  expect(world!.totals.features).toBeLessThanOrEqual(CLUSTER_POINT_BUDGET);
+  expect(world!.totals.aggregated).toBeGreaterThan(CLUSTER_POINT_BUDGET);
+  // Raw records load only in view: the city holds fewer than the world draws or counts.
+  expect(city!.totals.features).toBeLessThan(world!.totals.features + world!.totals.aggregated);
   expect(region).toBeDefined();
   // Software WebGL does not time frames as a GPU does, so the frame budget is held with E2E_GPU=1.
-  if (gpu) expect(report.problems).toEqual([]);
-  else expect(report.problems.filter((problem) => !problem.includes('frame'))).toEqual([]);
+  if (gpu) {
+    expect(world!.frames.p95).toBeLessThanOrEqual(SLOW_FRAME_MS);
+    expect(report.problems).toEqual([]);
+  } else expect(report.problems.filter((problem) => !problem.includes('frame'))).toEqual([]);
 });

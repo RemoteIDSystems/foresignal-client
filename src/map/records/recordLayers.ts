@@ -8,25 +8,18 @@ import {
   GeometryInstance,
   GroundPolylineGeometry,
   Math as CesiumMath,
-  PerInstanceColorAppearance,
   PolygonGeometry,
   PolygonHierarchy,
-  PolylineColorAppearance,
-  PolylineGeometry,
   type Billboard,
   type Viewer,
 } from 'cesium';
 import type { StyleModel } from '../style/model';
+import { drawCell, positions } from './cellGeometry';
+import type { ClientCellLayer } from './clientCellLayer';
+import { CLIENT_CLUSTER_BELOW_ZOOM, pointCells } from './clientClusters';
 import type { RecordFeature } from './decodeTile';
 import { resolveSymbol, type LineSymbol } from './featureStyle';
-import {
-  aggregationFor,
-  cellsOfTile,
-  DEFAULT_AGGREGATION,
-  HexCellIndex,
-  rampColor,
-  type HexCell,
-} from './hexCells';
+import { aggregationFor, cellsOfTile, DEFAULT_AGGREGATION, HexCellIndex } from './hexCells';
 import type { LayerSources } from './layerSources';
 import { parseTileKey, tileTouches, type Box } from './liveChanges';
 import type { RecordBatch } from './recordBatch';
@@ -34,7 +27,6 @@ import { RecordClaims, recordId, shownRecords } from './recordFilter';
 import {
   compareHits,
   hitTest,
-  ringBox,
   tileMayHold,
   type Pickable,
   type PickQuery,
@@ -62,10 +54,13 @@ const RETRY_MAX_MS = 30_000;
 export interface RecordLayerStatus {
   /**
    * `loading` while the TileJSON or tiles for the view are in flight; `ready` when the view's
-   * records are drawn; `aggregated` when the view is below the layer's `aggBelowZoom` and its
-   * hexagon counts are drawn instead; `error` when the layer cannot load.
+   * records are drawn; `aggregated` when hexagon counts are drawn instead: below the layer's
+   * `aggBelowZoom` (the backend's cells), or below {@link CLIENT_CLUSTER_BELOW_ZOOM} while the map
+   * clusters its points (the client's, 037); `error` when the layer cannot load.
    */
   state: 'loading' | 'ready' | 'aggregated' | 'error';
+  /** For `aggregated`: the zoom below which the layer is drawn as cells. */
+  belowZoom?: number;
   /** Records drawn now, one by one (0 while aggregated). */
   features: number;
   /** Tiles drawn now. */
@@ -74,6 +69,8 @@ export interface RecordLayerStatus {
   cells?: number;
   /** Records the drawn cells count together. */
   aggregated?: number;
+  /** Point records in the view's tiles, drawn or counted into cells (the clustering budget). */
+  points?: number;
   /** Why the layer failed, for `error`. */
   message?: string;
 }
@@ -99,6 +96,8 @@ export interface RecordLayerContext {
    * second; undefined for live data.
    */
   asOf?: string;
+  /** The client's cells, shared by every layer that clusters its points (037). */
+  clusters: ClientCellLayer;
 }
 
 /** The prefix of an aggregate tile's key, so it never collides with the same tile's records. */
@@ -110,6 +109,8 @@ interface DrawnTile {
   /** Whether it put lines or fills into the shared ground primitives. */
   ground: boolean;
   features: number;
+  /** Point records in it, drawn or counted into the client's cells. */
+  points: number;
   /** The tile's decoded records, kept so a source filter change redraws without refetching. */
   records: RecordFeature[];
   /** The records drawn, as picking tests them. */
@@ -157,6 +158,12 @@ export class RecordLayer {
   private readonly stale = new Set<string>();
   /** Tiles fetched again because they changed, for the status and tests. */
   refreshed = 0;
+  /** Whether the map clusters points now (more in view than its budget, 037). */
+  private clusterAllowed = false;
+  /** Whether this layer's points are drawn as the client's cells now. */
+  private clustered = false;
+  /** Points replaced by cells, kept on the map until the cells show, so the switch does not blink. */
+  private retiring: Billboard[] = [];
 
   /**
    * @param id The layer id (`listTileLayers`: a source id or a kind).
@@ -173,6 +180,7 @@ export class RecordLayer {
   update(view: RecordView): void {
     this.view = view;
     if (this.destroyed) return;
+    this.applyMode();
     if (!this.tiles) {
       this.tileJson ??= this.loadTileJson();
       void this.tileJson.then((tiles) => {
@@ -182,6 +190,27 @@ export class RecordLayer {
       return;
     }
     this.plan(view);
+  }
+
+  /**
+   * Lets the layer draw its points as the client's cells below {@link CLIENT_CLUSTER_BELOW_ZOOM}
+   * (the map holds more points than its budget), or not. A layer the backend aggregates never
+   * does: below its `aggBelowZoom` it draws the backend's cells. The tiles already loaded are
+   * drawn again in the new way; nothing is fetched again.
+   */
+  setClusterAllowed(allowed: boolean): void {
+    if (allowed === this.clusterAllowed) return;
+    this.clusterAllowed = allowed;
+    if (this.destroyed) return;
+    this.applyMode();
+    this.report();
+  }
+
+  /** Point records in the tiles the view wants, drawn or counted into cells. */
+  get pointsInView(): number {
+    let total = 0;
+    for (const [key, tile] of this.drawn) if (this.wanted.has(key)) total += tile.points;
+    return total;
   }
 
   /**
@@ -259,10 +288,12 @@ export class RecordLayer {
       for (const billboard of tile.billboards) batch.points.remove(billboard);
     }
     this.drawn.clear();
+    this.dropRetiring();
     batch.lines.deletePrefix(this.ownerPrefix);
     batch.fills.deletePrefix(this.ownerPrefix);
     batch.cellFills.delete(this.id);
     batch.cellLines.delete(this.id);
+    this.context.clusters.deleteLayer(this.id);
     clearTimeout(this.cellTimer);
   }
 
@@ -273,9 +304,14 @@ export class RecordLayer {
     return total;
   }
 
-  /** Hexagon cells drawn now. */
+  /** The backend's hexagon cells drawn now (the client's are counted by {@link ClientCellLayer}). */
   get cellCount(): number {
     return this.cellsDrawn.cells;
+  }
+
+  /** Records the backend's drawn cells count. */
+  get aggregatedCount(): number {
+    return this.cellsDrawn.records;
   }
 
   /** True while the layer waits for its TileJSON or for tiles of the view. */
@@ -321,6 +357,41 @@ export class RecordLayer {
   private aggregating(view: RecordView | undefined): boolean {
     const below = this.tiles?.aggBelowZoom;
     return below !== undefined && view !== undefined && Math.floor(view.zoom) < below;
+  }
+
+  /**
+   * True when the layer's points are to be the client's cells: the map clusters, the backend does
+   * not aggregate this layer, and the view is below {@link CLIENT_CLUSTER_BELOW_ZOOM}.
+   */
+  private wantsClusters(view: RecordView | undefined): boolean {
+    return (
+      this.clusterAllowed &&
+      this.tiles !== undefined &&
+      this.tiles.aggBelowZoom === undefined &&
+      view !== undefined &&
+      Math.floor(view.zoom) < CLIENT_CLUSTER_BELOW_ZOOM
+    );
+  }
+
+  /**
+   * Draws the loaded tiles again when the layer changes between points and cells. Into cells, the
+   * points stay until the cells show; back to points, the points are drawn at once and the cells
+   * stay until the cell primitives are rebuilt without them, so neither way blinks.
+   */
+  private applyMode(): void {
+    const next = this.wantsClusters(this.view);
+    if (next === this.clustered) return;
+    this.clustered = next;
+    for (const [key, tile] of [...this.drawn]) {
+      if (!key.startsWith(HEX_KEY)) this.drawTile(key, tile.records, tile.zoom, true);
+    }
+    if (this.retiring.length > 0) this.context.clusters.whenShown(() => this.dropRetiring());
+  }
+
+  /** Removes the points kept until the cells that replace them showed. */
+  private dropRetiring(): void {
+    for (const billboard of this.retiring) this.context.batch.points.remove(billboard);
+    this.retiring = [];
   }
 
   /**
@@ -394,6 +465,7 @@ export class RecordLayer {
       } else {
         this.retries = 0;
         this.stale.delete(key);
+        if (this.tiles && this.view) this.applyMode();
         if (this.wanted.has(key)) this.drawTile(key, result.features, this.view?.zoom ?? tile.z);
       }
     } catch (cause) {
@@ -436,16 +508,20 @@ export class RecordLayer {
 
   /**
    * Draws a decoded tile's records into the shared batch; an aggregate tile joins the layer's
-   * cells instead.
+   * cells instead. While the layer clusters (037), its point records are counted into the
+   * client's cells ({@link pointCells}, on the tile zoom's grid) rather than drawn; lines and
+   * polygons are drawn either way. With `retire`, the points drawn before stay until the cells
+   * show.
    */
-  private drawTile(key: string, features: RecordFeature[], zoom: number): void {
-    if (this.drawn.has(key)) this.removeTile(key, true);
+  private drawTile(key: string, features: RecordFeature[], zoom: number, retire = false): void {
+    if (this.drawn.has(key)) this.removeTile(key, true, retire);
     if (key.startsWith(HEX_KEY)) {
       this.cells.set(key, cellsOfTile(features));
       this.drawn.set(key, {
         billboards: [],
         ground: false,
         features: 0,
+        points: 0,
         records: features,
         pickables: [],
         zoom,
@@ -458,7 +534,9 @@ export class RecordLayer {
     const pickables: Pickable[] = [];
     const lines: GeometryInstance[] = [];
     const fills: GeometryInstance[] = [];
+    const clustered: [number, number][] = [];
     let count = 0;
+    let points = 0;
     for (const feature of shownRecords(features, this.hiddenSources)) {
       const { properties, geometry } = feature;
       const symbol = resolveSymbol(model, feature.layer, properties, geometry.type, zoom);
@@ -473,6 +551,13 @@ export class RecordLayer {
         kind: stringProperty(properties.kind),
       };
       const title = stringProperty(properties.title);
+      if (symbol.type === 'point' && geometry.type === 'point') {
+        points++;
+        if (this.clustered) {
+          clustered.push(...geometry.points);
+          continue;
+        }
+      }
       count++;
       if (symbol.type === 'point' && geometry.type === 'point') {
         const image = images.imageFor(symbol.point);
@@ -537,10 +622,12 @@ export class RecordLayer {
     const owner = this.ownerPrefix + key;
     batch.lines.set(owner, lines);
     batch.fills.set(owner, fills);
+    this.context.clusters.set(this.id, key, pointCells(clustered, parseTileKey(key).z));
     this.drawn.set(key, {
       billboards,
       ground: lines.length + fills.length > 0,
       features: count,
+      points,
       records: features,
       pickables,
       zoom,
@@ -550,13 +637,16 @@ export class RecordLayer {
   /**
    * Removes one drawn tile. Other tiles of its zoom that were refused one of its records (see
    * {@link RecordClaims}) are drawn again to take them, unless `keepWaiting`, when the tile is
-   * about to be drawn again itself.
+   * about to be drawn again itself. With `retire`, its points stay until the cells replacing them
+   * show.
    */
-  private removeTile(key: string, keepWaiting = false): void {
+  private removeTile(key: string, keepWaiting = false, retire = false): void {
     const tile = this.drawn.get(key);
     if (!tile) return;
     const { batch } = this.context;
-    for (const billboard of tile.billboards) batch.points.remove(billboard);
+    if (retire) this.retiring.push(...tile.billboards);
+    else for (const billboard of tile.billboards) batch.points.remove(billboard);
+    this.context.clusters.delete(this.id, key);
     if (tile.ground) {
       batch.lines.delete(this.ownerPrefix + key);
       batch.fills.delete(this.ownerPrefix + key);
@@ -590,8 +680,6 @@ export class RecordLayer {
     if (this.destroyed) return;
     const merged = this.cells.merged();
     const style = aggregationFor(this.context.model, this.id) ?? DEFAULT_AGGREGATION;
-    const opacity = style.opacity ?? 0.6;
-    const outline = Color.fromCssColorString(style.outlineColor ?? '#FFFFFF').withAlpha(opacity);
     const fills: GeometryInstance[] = [];
     const lines: GeometryInstance[] = [];
     const pickables: typeof this.cellPickables = [];
@@ -599,13 +687,10 @@ export class RecordLayer {
     for (const cell of merged) {
       records += cell.count;
       const id: RecordPickId = { layer: this.id, kind: this.id, count: cell.count };
-      const color = Color.fromCssColorString(rampColor(style.ramp, cell.count)).withAlpha(opacity);
-      fills.push(cellFill(cell, color, id));
-      lines.push(cellOutline(cell, outline, id));
-      pickables.push({
-        pickable: { id, shape: { type: 'cell', ring: cell.ring } },
-        box: ringBox(cell.ring),
-      });
+      const drawing = drawCell(cell, style, id);
+      fills.push(drawing.fill);
+      lines.push(drawing.outline);
+      pickables.push({ pickable: drawing.pickable, box: drawing.box });
     }
     this.context.batch.cellFills.set(this.id, fills);
     this.context.batch.cellLines.set(this.id, lines);
@@ -626,15 +711,22 @@ export class RecordLayer {
     const features = this.featureCount;
     const tiles = this.drawn.size;
     let state: RecordLayerStatus['state'];
+    const backendCells = this.aggregating(this.view);
     if (this.failure) state = 'error';
     else if (this.loading) state = 'loading';
-    else if (this.aggregating(this.view)) state = 'aggregated';
+    else if (backendCells || this.clustered) state = 'aggregated';
     else state = 'ready';
     const status: RecordLayerStatus = { state, features, tiles };
-    if (this.cellsDrawn.cells > 0) {
-      status.cells = this.cellsDrawn.cells;
-      status.aggregated = this.cellsDrawn.records;
+    if (state === 'aggregated') {
+      status.belowZoom = backendCells ? this.tiles?.aggBelowZoom : CLIENT_CLUSTER_BELOW_ZOOM;
     }
+    const share = this.clustered ? this.context.clusters.layerShare(this.id) : this.cellsDrawn;
+    if (share.cells > 0) {
+      status.cells = share.cells;
+      status.aggregated = share.records;
+    }
+    const points = this.pointsInView;
+    if (points > 0) status.points = points;
     if (this.failure) status.message = this.failure;
     // Told only of a change: each status re-renders the rail and the map's overlays.
     const signature = JSON.stringify(status);
@@ -669,38 +761,6 @@ function addLine(
 
 /** How long a burst of aggregate tiles may take to land before the cells are redrawn, in ms. */
 const CELL_REDRAW_MS = 60;
-
-/** One cell's fill, on the ellipsoid. */
-function cellFill(cell: HexCell, color: Color, id: RecordPickId): GeometryInstance {
-  return new GeometryInstance({
-    geometry: new PolygonGeometry({
-      polygonHierarchy: new PolygonHierarchy(positions(cell.ring)),
-      arcType: ArcType.RHUMB,
-      vertexFormat: PerInstanceColorAppearance.FLAT_VERTEX_FORMAT,
-    }),
-    attributes: { color: ColorGeometryInstanceAttribute.fromColor(color) },
-    id,
-  });
-}
-
-/** One cell's outline, on the ellipsoid, one pixel wide. */
-function cellOutline(cell: HexCell, color: Color, id: RecordPickId): GeometryInstance {
-  return new GeometryInstance({
-    geometry: new PolylineGeometry({
-      positions: positions(cell.ring),
-      width: 1,
-      arcType: ArcType.RHUMB,
-      vertexFormat: PolylineColorAppearance.VERTEX_FORMAT,
-    }),
-    attributes: { color: ColorGeometryInstanceAttribute.fromColor(color) },
-    id,
-  });
-}
-
-/** Degrees to Cartesian positions on the ellipsoid. */
-function positions(coordinates: [number, number][]): Cartesian3[] {
-  return Cartesian3.fromDegreesArray(coordinates.flat());
-}
 
 /** True when two sets hold the same members. */
 function sameSet(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {

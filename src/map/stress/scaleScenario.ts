@@ -189,8 +189,9 @@ export async function runScaleScenario(
  * - a step whose layers never settled;
  * - a step whose frames missed the budget: the 95th percentile over {@link SLOW_FRAME_MS}
  *   (30 fps);
- * - with layers on, more records drawn at the closest step than at the widest: raw records load
- *   only in view, so a city cannot hold more than the world.
+ * - with layers on, more records drawn at the closest step than the widest holds: raw records
+ *   load only in view, so a city cannot hold more than the world. The world's records are those
+ *   it draws one by one and those its cells count (037's clusters draw few one by one).
  */
 export function scaleProblems(report: Omit<ScaleReport, 'problems'>): string[] {
   const problems: string[] = [];
@@ -208,9 +209,10 @@ export function scaleProblems(report: Omit<ScaleReport, 'problems'>): string[] {
   const widest = report.steps[0];
   const closest = report.steps.at(-1);
   if (report.layers > 0 && widest && closest && widest !== closest) {
-    if (widest.totals.features > 0 && closest.totals.features > widest.totals.features) {
+    const held = widest.totals.features + (widest.totals.aggregated ?? 0);
+    if (held > 0 && closest.totals.features > held) {
       problems.push(
-        `${closest.label} drew ${closest.totals.features} records, more than ${widest.label}'s ${widest.totals.features}.`,
+        `${closest.label} drew ${closest.totals.features} records, more than ${widest.label}'s ${held}.`,
       );
     }
   }

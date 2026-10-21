@@ -4,6 +4,7 @@ import {
   Cartesian3,
   HeadingPitchRange,
   Math as CesiumMath,
+  Rectangle,
   SceneMode,
   SceneTransforms,
   type Viewer,
@@ -87,4 +88,21 @@ function inView(viewer: Viewer, target: Cartesian3): boolean {
     Math.abs(at.x - width / 2) <= width * IN_VIEW_FRACTION &&
     Math.abs(at.y - height / 2) <= height * IN_VIEW_FRACTION
   );
+}
+
+/**
+ * Zooms into an aggregate cell (the backend's or the client's, 037), as clustering does on a
+ * click: the camera flies to fit the cell, so what it counts shows in finer cells or, past the
+ * aggregation zoom, as records. `bounds` is `[west, south, east, north]` in degrees.
+ */
+export function expandCell(
+  viewer: Pick<Viewer, 'camera' | 'isDestroyed'>,
+  bounds: readonly [number, number, number, number],
+): void {
+  if (viewer.isDestroyed()) return;
+  const [west, south, east, north] = bounds;
+  viewer.camera.flyTo({
+    destination: Rectangle.fromDegrees(west, south, east, north),
+    duration: motionSeconds(1),
+  });
 }

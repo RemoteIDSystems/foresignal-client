@@ -21,6 +21,8 @@ export interface RecordPickId {
   kind?: string;
   /** For a hexagon cell: the records it counts. */
   count?: number;
+  /** For a client cell counting several layers (037): how many layers it counts. */
+  layers?: number;
   /**
    * The object's canonical ref, for an item selected from a panel (activity, related objects,
    * search) rather than picked on the map; a record's is derived from its source and id.
@@ -63,6 +65,8 @@ export interface RecordHit {
   /** A point symbol's size in pixels, for the selection box. */
   width?: number;
   height?: number;
+  /** An aggregate cell's extent, `[west, south, east, north]` in degrees, to zoom into it. */
+  bounds?: [number, number, number, number];
   /** Screen pixels from the pointer to the shape (0 inside a polygon or cell). */
   distance: number;
 }
@@ -113,7 +117,9 @@ export function hitTest(pickable: Pickable, query: PickQuery): RecordHit | undef
     case 'polygon':
       return shape.polygons.some((rings) => insideRings(rings, toPixels)) ? hit(0) : undefined;
     case 'cell':
-      return insideRings([shape.ring], toPixels) ? hit(0) : undefined;
+      return insideRings([shape.ring], toPixels)
+        ? { ...hit(0), bounds: ringBox(shape.ring) }
+        : undefined;
   }
 }
 
@@ -204,9 +210,10 @@ export function describeHit(hit: RecordHit): { title: string; detail: string } {
   const kind = prettifyId(hit.id.kind ?? hit.id.layer);
   if (hit.type === 'cell') {
     const count = hit.id.count ?? 0;
+    const layers = hit.id.layers ?? 1;
     return {
       title: `${count.toLocaleString('en-US')} ${count === 1 ? 'record' : 'records'}`,
-      detail: `${kind} · aggregated`,
+      detail: `${layers > 1 ? `${layers} layers, most ${kind}` : kind} · aggregated`,
     };
   }
   return {

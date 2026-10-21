@@ -28,10 +28,13 @@ const totals = (features: number, cells = 0, extra: Partial<DrawnTotals> = {}): 
   loading: 0,
   features,
   cells,
+  aggregated: 0,
   tiles: 12,
   instances: features,
   builds: 3,
   building: false,
+  pointsShown: features,
+  cellsShown: cells,
   ...extra,
 });
 
@@ -80,6 +83,22 @@ describe('the scale scenario', () => {
         mode: '2D',
         layers: 40,
         steps: [step('World'), step('City', { totals: totals(200) })],
+        maxChangeStreams: 1,
+      }),
+    ).toEqual([]);
+  });
+
+  it('counts the records the world’s cells hold when it holds the city to it', () => {
+    // Clustered (037): the world draws few records one by one, and counts the rest in cells.
+    expect(
+      scaleProblems({
+        at: '',
+        mode: '2D',
+        layers: 190,
+        steps: [
+          step('World', { totals: totals(120, 400, { aggregated: 37_000 }) }),
+          step('City', { totals: totals(1_286) }),
+        ],
         maxChangeStreams: 1,
       }),
     ).toEqual([]);

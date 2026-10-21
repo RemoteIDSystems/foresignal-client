@@ -179,6 +179,22 @@ describe('LayersRail', () => {
     ).toBeVisible();
   });
 
+  it('names the client’s cluster zoom for a kind the backend does not aggregate', async () => {
+    const { container } = render(
+      <Harness
+        initial={['conflict-event']}
+        statuses={{
+          'conflict-event': { state: 'aggregated', features: 0, tiles: 4, belowZoom: 7 },
+        }}
+      />,
+    );
+    await userEvent.type(screen.getByLabelText('Filter layers'), 'conflict');
+    const kind = container.querySelector('li[data-layer="conflict-event"]') as HTMLElement;
+    expect(
+      within(kind).getByLabelText('Hexagon counts below zoom 7; zoom in to see records'),
+    ).toBeVisible();
+  });
+
   it('shows the records in view once the viewport summary is in, else the records now', () => {
     const { container, rerender } = render(<Harness initial={[]} />);
     const conflicts = () => container.querySelector('li[data-category="conflicts"]') as HTMLElement;

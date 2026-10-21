@@ -40,7 +40,7 @@ import { viewportStore, type CommittedViewport, type ViewportStore } from '../st
 import type { RecordLayerStatus } from './records/recordLayers';
 import { RecordMarker } from './records/RecordMarker';
 import { TrailBridge } from './records/TrailBridge';
-import { focusOn, locateTo } from './focus';
+import { expandCell, focusOn, locateTo } from './focus';
 import { motionSeconds } from '../lib/motion';
 import { AreaOutlines } from './AreaOutlines';
 import type { Geometry } from './areaOutline';
@@ -390,7 +390,8 @@ const NO_PRODUCTS: readonly Product[] = [];
  * aggregation zoom, and `data-product-layers` the product layers drawn. Records are picked on the
  * CPU from the drawn tiles (010): hovering one shows its callout and a pointer cursor, clicking one
  * selects it, marked as the Global mock marks the selected entity, and clicking nothing or pressing
- * Escape clears it; `data-hovered` and `data-selected` name them. With the live stream (011), the
+ * Escape clears it; `data-hovered` and `data-selected` name them; clicking an aggregate cell zooms
+ * into it instead (037). With the live stream (011), the
  * tiles a change touches are fetched again and new product frames are swapped in as announced. The
  * scene mode is the store's `sceneMode` (012), unless the screen keeps its own (`sceneMode`): the
  * toggle writes it and any change to it morphs the map; a new map opens in that mode, over the viewport last committed to the store. The store's
@@ -487,10 +488,18 @@ export function MapViewer({
   useEffect(() => {
     selectionListener.current = onSelect;
   }, [onSelect]);
-  const select = useCallback((hit: RecordHit | undefined) => {
-    setOwnSelection(hit);
-    selectionListener.current?.(hit);
-  }, []);
+  // A click on an aggregate cell zooms into it (037) rather than selecting it.
+  const select = useCallback(
+    (hit: RecordHit | undefined) => {
+      if (hit?.type === 'cell' && hit.bounds) {
+        if (viewer) expandCell(viewer, hit.bounds);
+        return;
+      }
+      setOwnSelection(hit);
+      selectionListener.current?.(hit);
+    },
+    [viewer],
+  );
   const selection = controlledSelection ?? ownSelection;
   // A record whose layer is turned off is no longer on the map to be marked.
   const shownSelection =

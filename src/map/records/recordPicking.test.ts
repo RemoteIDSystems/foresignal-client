@@ -66,7 +66,10 @@ describe('hitTest', () => {
     };
     expect(hitTest(ring, query)).toMatchObject({ type: 'polygon', distance: 0, longitude: 10 });
     expect(hitTest(holed, query)).toBeUndefined();
-    expect(hitTest({ id, shape: { type: 'cell', ring: square(1) } }, query)?.type).toBe('cell');
+    expect(hitTest({ id, shape: { type: 'cell', ring: square(1) } }, query)).toMatchObject({
+      type: 'cell',
+      bounds: [9, -1, 11, 1],
+    });
   });
 
   it('measures across the antimeridian the short way round', () => {
@@ -133,5 +136,14 @@ describe('describeHit', () => {
         distance: 0,
       }),
     ).toEqual({ title: '1,234 records', detail: 'Aircraft · aggregated' });
+    expect(
+      describeHit({
+        id: { layer: 'vessel', kind: 'vessel', count: 12, layers: 3 },
+        type: 'cell',
+        longitude: 0,
+        latitude: 0,
+        distance: 0,
+      }),
+    ).toEqual({ title: '12 records', detail: '3 layers, most Vessel · aggregated' });
   });
 });

@@ -1,6 +1,8 @@
 import { SceneMode, type Viewer } from 'cesium';
 import type { ForesignalClient } from '../../api/client';
 import type { OverlayStyle } from '../style/loadOverlayStyle';
+import { ClientCellLayer } from './clientCellLayer';
+import { shouldCluster } from './clientClusters';
 import type { RecordFeature } from './decodeTile';
 import { FrameLayer } from './frameLayer';
 import { LayerSources } from './layerSources';
@@ -60,7 +62,10 @@ export interface DrawnTotals {
   /** Layers still loading their TileJSON or the view's tiles. */
   loading: number;
   features: number;
+  /** Cells drawn: the backend's and the client's (037). */
   cells: number;
+  /** Records the drawn cells count. */
+  aggregated: number;
   tiles: number;
   /** Instances in the merged ground and cell primitives. */
   instances: number;
@@ -68,6 +73,13 @@ export interface DrawnTotals {
   builds: number;
   /** True while a merged primitive waits for, or is in, a build. */
   building: boolean;
+  /**
+   * Points on the map now, including those kept until the cells replacing them show; with
+   * {@link cellsShown}, what the map shows at this frame (037's switch must never show neither).
+   */
+  pointsShown: number;
+  /** Cell instances in the cell primitive on the map now (not one still building). */
+  cellsShown: number;
 }
 
 /**
@@ -77,7 +89,11 @@ export interface DrawnTotals {
  * restyles every layer when the overlay style changes, tells each one the current view whenever the
  * camera settles (and after a 2D/3D switch), and gathers the layers' status changes so the owner is
  * told once per {@link STATUS_FLUSH_MS}, not once per tile per layer. {@link pick} answers which
- * records are under the pointer.
+ * records are under the pointer. When the layers' tiles hold more points in view than
+ * {@link CLUSTER_POINT_BUDGET}, every layer the backend does not aggregate draws its points as the
+ * client's cells below {@link CLIENT_CLUSTER_BELOW_ZOOM} (037), merged across the layers in one
+ * {@link ClientCellLayer}, so the whole catalog at world zoom draws hundreds of cells, not tens of
+ * thousands of points.
  */
 export class RecordLayerSet {
   private readonly layers = new Map<string, RecordLayer>();
@@ -103,6 +119,10 @@ export class RecordLayerSet {
   /** The history step shown instead of the tiles, if any (013). */
   private frame?: readonly RecordFeature[];
   private frameLayer?: FrameLayer;
+  /** The client's cells, shared by the layers that cluster (037). */
+  private readonly clusters: ClientCellLayer;
+  /** Whether the layers cluster their points now. */
+  private clustering = false;
 
   /**
    * @param viewer The Cesium viewer to draw into.
@@ -116,6 +136,7 @@ export class RecordLayerSet {
   ) {
     this.sources = sourcesFor(api);
     this.batch = new RecordBatch(viewer.scene);
+    this.clusters = new ClientCellLayer(this.batch);
     const { camera, scene } = viewer;
     camera.percentageChanged = CAMERA_CHANGE_FRACTION;
     const schedule = () => this.schedule();
@@ -134,6 +155,7 @@ export class RecordLayerSet {
   setStyle(overlay: OverlayStyle | undefined): void {
     if (overlay === this.overlay) return;
     this.overlay = overlay;
+    this.clusters.setModel(overlay?.model);
     this.images = overlay
       ? new SymbolImages(overlay.sprite, window.devicePixelRatio || 1)
       : undefined;
@@ -296,6 +318,7 @@ export class RecordLayerSet {
   pick(query: PickQuery): RecordHit[] {
     const hits: RecordHit[] = [];
     for (const layer of this.layers.values()) hits.push(...layer.pick(query));
+    hits.push(...this.clusters.pick(query));
     if (this.frame && this.frameLayer) hits.push(...this.frameLayer.pick(query));
     return hits.sort(compareHits);
   }
@@ -316,15 +339,19 @@ export class RecordLayerSet {
       layers: this.layers.size,
       loading: 0,
       features: 0,
-      cells: 0,
+      cells: this.clusters.cellCount,
+      aggregated: this.clusters.recordCount,
       tiles: 0,
       instances: 0,
       builds: 0,
       building: false,
+      pointsShown: this.batch.points.length,
+      cellsShown: this.batch.cellFills.drawnCount,
     };
     for (const layer of this.layers.values()) {
       totals.features += layer.featureCount;
       totals.cells += layer.cellCount;
+      totals.aggregated += layer.aggregatedCount;
       totals.tiles += layer.tileCount;
       if (layer.loading) totals.loading++;
     }
@@ -345,6 +372,7 @@ export class RecordLayerSet {
     for (const remove of this.removers) remove();
     for (const id of [...this.layers.keys()]) this.remove(id);
     this.frameLayer?.clear();
+    this.clusters.destroy();
     if (!this.viewer.isDestroyed()) this.batch.destroy();
   }
 
@@ -358,11 +386,13 @@ export class RecordLayerSet {
         model: this.overlay.model,
         images: this.images,
         asOf: this.asOf,
+        clusters: this.clusters,
       },
       (status) => this.queueStatus(id, status),
     );
     this.layers.set(id, layer);
     layer.setHiddenSources(this.hiddenSources);
+    layer.setClusterAllowed(this.clustering);
     layer.update(this.currentView());
   }
 
@@ -370,17 +400,41 @@ export class RecordLayerSet {
     this.layers.get(id)?.destroy();
     this.layers.delete(id);
     this.pendingStatus.delete(id);
+    this.scheduleStatus();
   }
 
   /** Gathers a layer's status; the owner is told of every change together, shortly. */
   private queueStatus(id: string, status: RecordLayerStatus): void {
     this.pendingStatus.set(id, status);
+    this.scheduleStatus();
+  }
+
+  /**
+   * Tells the owner of the gathered statuses shortly, and then decides again whether the layers
+   * cluster: the points in view have changed with them.
+   */
+  private scheduleStatus(): void {
     this.statusTimer ??= setTimeout(() => {
       this.statusTimer = undefined;
       const changes = [...this.pendingStatus];
       this.pendingStatus.clear();
       for (const [layer, latest] of changes) this.onStatus(layer, latest);
+      this.decideClustering();
     }, STATUS_FLUSH_MS);
+  }
+
+  /**
+   * Clusters the layers' points while the view's tiles hold more than the budget across the
+   * layers, and stops once they hold fewer than the release ({@link shouldCluster}).
+   */
+  private decideClustering(): void {
+    if (this.viewer.isDestroyed()) return;
+    let points = 0;
+    for (const layer of this.layers.values()) points += layer.pointsInView;
+    const next = shouldCluster(points, this.clustering);
+    if (next === this.clustering) return;
+    this.clustering = next;
+    for (const layer of this.layers.values()) layer.setClusterAllowed(next);
   }
 
   /** Reads the view once the camera rests, and hands it to every layer. */

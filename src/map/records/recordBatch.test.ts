@@ -50,9 +50,11 @@ describe('MergedPrimitive', () => {
     expect([...scene][0]!.instances).toHaveLength(5);
     expect(merged.builds).toBe(1);
     expect(merged.pending).toBe(true);
+    expect(merged.drawnCount).toBe(0);
     ready();
     expect(merged.pending).toBe(false);
     expect(merged.instanceCount).toBe(5);
+    expect(merged.drawnCount).toBe(5);
   });
 
   it('keeps the drawn primitive until its replacement is ready, and waits for a build in flight', () => {
@@ -79,6 +81,33 @@ describe('MergedPrimitive', () => {
     expect(merged.builds).toBe(3);
     ready();
     expect([...scene][0]!.instances).toHaveLength(3);
+  });
+
+  it('tells a waiter once what was set is drawn, and at once when nothing is pending', () => {
+    const { merged, frame, ready } = harness();
+    const now = vi.fn();
+    merged.whenBuilt(now);
+    expect(now).toHaveBeenCalledTimes(1);
+    merged.set('a', instances(2));
+    const later = vi.fn();
+    merged.whenBuilt(later);
+    vi.advanceTimersByTime(MERGE_MS);
+    frame();
+    expect(later).not.toHaveBeenCalled();
+    // A change while the build is in flight waits for the build after it.
+    merged.set('b', instances(1));
+    ready();
+    expect(later).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(MERGE_MS);
+    ready();
+    expect(later).toHaveBeenCalledTimes(1);
+    // Emptied, the waiter is told once the primitive is gone.
+    merged.delete('a');
+    merged.delete('b');
+    const emptied = vi.fn();
+    merged.whenBuilt(emptied);
+    vi.advanceTimersByTime(MERGE_MS);
+    expect(emptied).toHaveBeenCalledTimes(1);
   });
 
   it('removes a layer’s owners together and clears the scene when nothing is left', () => {

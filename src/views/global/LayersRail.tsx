@@ -382,7 +382,8 @@ function StatusMark({ status, entry }: { status?: RecordLayerStatus; entry: Kind
     );
   }
   if (status.state === 'aggregated') {
-    const label = `Hexagon counts below zoom ${entry.aggBelowZoom}; zoom in to see records`;
+    const below = status.belowZoom ?? entry.aggBelowZoom;
+    const label = `Hexagon counts below zoom ${below}; zoom in to see records`;
     return (
       <Hexagon size={13} color="#9fb4c8" aria-label={label}>
         <title>{label}</title>

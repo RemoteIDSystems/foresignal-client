@@ -40,11 +40,17 @@ export type FrameHook = (callback: () => void) => () => void;
 export class MergedPrimitive<P extends Buildable> {
   private readonly parts = new Map<string, GeometryInstance[]>();
   private current?: P;
+  /** Instances in the primitive drawn now. */
+  private currentCount = 0;
   private building?: P;
+  /** Instances in the primitive being built. */
+  private buildingCount = 0;
   private dirty = false;
   private timer?: ReturnType<typeof setTimeout>;
   private stopWaiting?: () => void;
   private destroyed = false;
+  /** Told once what is set now is drawn ({@link whenBuilt}). */
+  private waiting: (() => void)[] = [];
   /** Builds started, for tests and the stress harness. */
   builds = 0;
 
@@ -92,14 +98,33 @@ export class MergedPrimitive<P extends Buildable> {
     return total;
   }
 
+  /** Instances in the primitive on the map now (not one still building). */
+  get drawnCount(): number {
+    return this.current ? this.currentCount : 0;
+  }
+
   /** True while changes wait for a build or a build is in flight. */
   get pending(): boolean {
     return this.dirty || this.building !== undefined;
   }
 
+  /**
+   * Calls `callback` once every instance set so far is drawn: at once when nothing is pending,
+   * else when the build that holds them is ready (or nothing is left to draw). So something drawn
+   * elsewhere can stay until its replacement here shows, and the change does not blink.
+   */
+  whenBuilt(callback: () => void): void {
+    if (!this.pending) {
+      callback();
+      return;
+    }
+    this.waiting.push(callback);
+  }
+
   /** Removes the primitives and stops building. */
   destroy(): void {
     this.destroyed = true;
+    this.waiting = [];
     clearTimeout(this.timer);
     this.stopWaiting?.();
     if (this.building) this.host.remove(this.building);
@@ -124,23 +149,37 @@ export class MergedPrimitive<P extends Buildable> {
     if (instances.length === 0) {
       if (this.current) this.host.remove(this.current);
       this.current = undefined;
+      this.currentCount = 0;
+      this.flushWaiting();
       return;
     }
     this.builds++;
     const next = this.host.add(this.build(instances)) as P;
     this.building = next;
+    this.buildingCount = instances.length;
     this.stopWaiting = this.onFrame(() => {
       if (!next.ready) return;
       this.stopWaiting?.();
       this.stopWaiting = undefined;
       if (this.current) this.host.remove(this.current);
       this.current = next;
+      this.currentCount = this.buildingCount;
       this.building = undefined;
       if (this.dirty) {
         this.dirty = false;
         this.schedule();
+      } else {
+        this.flushWaiting();
       }
     });
+  }
+
+  /** Tells those waiting that what was set is drawn. */
+  private flushWaiting(): void {
+    if (this.pending) return;
+    const waiting = this.waiting;
+    this.waiting = [];
+    for (const callback of waiting) callback();
   }
 }
 
