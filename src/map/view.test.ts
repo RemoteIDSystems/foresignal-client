@@ -9,9 +9,14 @@ import {
   SceneMode,
   type Viewer as CesiumViewer,
 } from 'cesium';
+import { BASEMAP_METERS_PER_PIXEL } from './imagery';
 import {
   HOME_VIEW,
   homeDestination,
+  MAX_BASEMAP_UPSCALE,
+  sharpestDistance,
+  sharpestDistanceOf,
+  zoomInAmount,
   styleScene,
   switchSceneMode,
   VERTICAL_EXAGGERATION,
@@ -168,5 +173,43 @@ describe('visibleRectangle', () => {
       -100, 10, -60, 50,
     ]);
     expect(visibleRectangle(fakeViewer(SceneMode.SCENE3D, () => undefined))).toBeUndefined();
+  });
+});
+
+describe('the sharp-basemap limit', () => {
+  it('keeps the basemap at most twice its own resolution: 2D by span, 3D by height', () => {
+    // 16,384 pixels around the equator at level 5: about 2.45 km each.
+    expect(BASEMAP_METERS_PER_PIXEL).toBeCloseTo(40_075_016.686 / 16_384, 6);
+    const span = (1_438 * BASEMAP_METERS_PER_PIXEL) / MAX_BASEMAP_UPSCALE;
+    expect(sharpestDistance(SceneMode.SCENE2D, 1_438, undefined)).toBeCloseTo(span, 6);
+    expect(span / 1000).toBeCloseTo(1_758.7, 1);
+    // A 60° field of view spans 2·tan(30°) ≈ 1.155 times the height.
+    const fov = CesiumMath.toRadians(60);
+    expect(sharpestDistance(SceneMode.SCENE3D, 1_438, fov)).toBeCloseTo(
+      span / (2 * Math.tan(fov / 2)),
+      6,
+    );
+  });
+
+  it('reads the limit from the canvas in CSS pixels, its longer side, and the mode', () => {
+    const viewer = (mode: SceneMode) =>
+      ({
+        scene: { mode, canvas: { clientWidth: 900, clientHeight: 1_200 } },
+        camera: { frustum: { fov: CesiumMath.toRadians(60) } },
+      }) as unknown as CesiumViewer;
+    expect(sharpestDistanceOf(viewer(SceneMode.SCENE2D))).toBeCloseTo(
+      sharpestDistance(SceneMode.SCENE2D, 1_200, undefined),
+      6,
+    );
+    expect(sharpestDistanceOf(viewer(SceneMode.SCENE3D))).toBeCloseTo(
+      sharpestDistance(SceneMode.SCENE3D, 1_200, CesiumMath.toRadians(60)),
+      6,
+    );
+  });
+
+  it('stops a zoom-in at the minimum and never turns it into a zoom-out', () => {
+    expect(zoomInAmount(400, 1_000, 100)).toBe(400);
+    expect(zoomInAmount(400, 300, 100)).toBe(200);
+    expect(zoomInAmount(400, 80, 100)).toBe(0);
   });
 });

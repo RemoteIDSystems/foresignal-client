@@ -6,6 +6,7 @@ import {
   SceneMode,
   type Viewer as CesiumViewer,
 } from 'cesium';
+import { BASEMAP_METERS_PER_PIXEL } from './imagery';
 import { boundsAround, type GeoRect } from './records/tileMath';
 import { applySceneMode, type MorphableScene, type SceneModeKey } from './sceneMode';
 
@@ -43,6 +44,47 @@ export function styleScene(viewer: CesiumViewer): void {
   viewer.scene.globe.enableLighting = true;
   viewer.scene.backgroundColor = Color.fromCssColorString('#02060c');
   viewer.scene.globe.baseColor = Color.fromCssColorString('#0b1a2a');
+}
+
+/**
+ * How far the basemap may be stretched on screen before it reads as blurred: each of its pixels
+ * drawn at most this many screen pixels across.
+ */
+export const MAX_BASEMAP_UPSCALE = 2;
+
+/**
+ * The closest the camera may come and still draw the basemap sharp (no more than
+ * {@link MAX_BASEMAP_UPSCALE} on screen), as Cesium measures closeness in each mode: on the 2D map
+ * the width of ground the view spans, in 3D the camera's height, which spans that width across a
+ * field of view of `fov` radians. `canvasPixels` is the canvas's longer side in CSS pixels, the
+ * side both the 2D span and the 3D field of view apply to; CSS pixels, not drawn ones, so a
+ * high-density screen is held to the same view as any other.
+ */
+export function sharpestDistance(
+  mode: SceneMode,
+  canvasPixels: number,
+  fov: number | undefined,
+): number {
+  const span = (canvasPixels * BASEMAP_METERS_PER_PIXEL) / MAX_BASEMAP_UPSCALE;
+  if (mode === SceneMode.SCENE2D || fov === undefined) return span;
+  return span / (2 * Math.tan(fov / 2));
+}
+
+/** {@link sharpestDistance} for a viewer as it is now: its mode, canvas and field of view. */
+export function sharpestDistanceOf(viewer: CesiumViewer): number {
+  const { scene, camera } = viewer;
+  const canvasPixels = Math.max(scene.canvas.clientWidth, scene.canvas.clientHeight);
+  const fov = (camera.frustum as { fov?: number }).fov;
+  return sharpestDistance(scene.mode, canvasPixels, fov);
+}
+
+/**
+ * How far a zoom-in by `amount` may go without passing `minimum`: Cesium's zoom moves the 2D
+ * map's span, or the 3D camera's height, by the amount, and the controller's minimum holds only
+ * the mouse wheel and gestures, not a call to `zoomIn`.
+ */
+export function zoomInAmount(amount: number, distance: number, minimum: number): number {
+  return Math.max(0, Math.min(amount, distance - minimum));
 }
 
 /** A place to look at: a ground point and a camera height above it. */

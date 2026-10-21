@@ -58,10 +58,12 @@ import { SCENE_MODES, type SceneModeKey } from './sceneMode';
 import { appStore, useStoreKey, type AppState, type Store, type TimeCursor } from '../state/store';
 import {
   homeDestination,
+  sharpestDistanceOf,
   styleScene,
   supportsWebGL,
   switchSceneMode,
   visibleRectangle,
+  zoomInAmount,
 } from './view';
 import styles from './Viewer.module.css';
 
@@ -304,6 +306,12 @@ export interface MapViewerProps {
   insetOverlay?: ReactNode;
   /** Whether the legend starts open (the analysis map's, as in the Conflict mock); closed otherwise. */
   legendInitiallyOpen?: boolean;
+  /**
+   * Keeps the camera no closer than where the basemap is still sharp ({@link sharpestDistanceOf}):
+   * the wheel, gestures, the zoom buttons and a requested place all stop there. For a map that
+   * draws no detail of its own below that (the analysis Map tab).
+   */
+  sharpBasemap?: boolean;
   /** Backend client for the overlay style, legend and attribution; without it the map has none. */
   api?: ForesignalClient;
   /**
@@ -388,12 +396,14 @@ const NO_PRODUCTS: readonly Product[] = [];
  * toggle writes it and any change to it morphs the map; a new map opens in that mode, over the viewport last committed to the store. The store's
  * `time` pins the records at an instant (013: `data-time` names it, or `live`), its `playback`
  * draws a history step in place of the tiles (`data-playback`), and the selected record shows its
- * trail up to the cursor (`data-trail`, the positions drawn).
+ * trail up to the cursor (`data-trail`, the positions drawn). With `sharpBasemap` the camera
+ * stops where the basemap would start to blur.
  */
 export function MapViewer({
   children,
   insetOverlay,
   legendInitiallyOpen = false,
+  sharpBasemap = false,
   api,
   overlayStyle: sharedStyle,
   recordLayers = NO_LAYERS,
@@ -581,9 +591,28 @@ export function MapViewer({
   const locate = useStoreKey('locate', store);
   useEffect(() => {
     if (!viewer || !locate) return;
-    locateTo(viewer, locate);
+    locateTo(
+      viewer,
+      sharpBasemap && locate.height !== undefined
+        ? { ...locate, height: Math.max(locate.height, sharpestDistanceOf(viewer)) }
+        : locate,
+    );
     store.set('locate', undefined);
-  }, [viewer, locate, store]);
+  }, [viewer, locate, store, sharpBasemap]);
+  // The closest the wheel and gestures may come, kept to the canvas's size and the scene's mode.
+  useEffect(() => {
+    if (!viewer || !sharpBasemap) return;
+    const controller = viewer.scene.screenSpaceCameraController;
+    const initial = controller.minimumZoomDistance;
+    const remove = viewer.scene.preRender.addEventListener(() => {
+      if (viewer.scene.mode === SceneMode.MORPHING) return;
+      controller.minimumZoomDistance = sharpestDistanceOf(viewer);
+    });
+    return () => {
+      remove();
+      if (!viewer.isDestroyed()) controller.minimumZoomDistance = initial;
+    };
+  }, [viewer, sharpBasemap]);
   // The store's mode, whoever set it, is the scene's: a change morphs the map, keeping its place.
   useEffect(() => {
     if (viewer) switchSceneMode(viewer, mode, cameraRef.current, motionSeconds(MORPH_SECONDS));
@@ -601,8 +630,15 @@ export function MapViewer({
   const onZoom = useCallback(
     (direction: 1 | -1) => {
       if (!viewer) return;
-      const amount = viewer.camera.positionCartographic.height * 0.4;
-      if (direction === 1) viewer.camera.zoomIn(amount);
+      const { camera, scene } = viewer;
+      const amount = camera.positionCartographic.height * 0.4;
+      // Cesium's own minimum holds the wheel and gestures only, so the button keeps to it here.
+      const distance =
+        scene.mode === SceneMode.SCENE2D
+          ? camera.getMagnitude()
+          : camera.positionCartographic.height;
+      const minimum = scene.screenSpaceCameraController.minimumZoomDistance;
+      if (direction === 1) camera.zoomIn(zoomInAmount(amount, distance, minimum));
       else viewer.camera.zoomOut(amount);
     },
     [viewer],

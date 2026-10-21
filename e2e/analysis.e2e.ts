@@ -104,6 +104,30 @@ test('a situation opens its full analysis from the Intelligence list, and its ta
     'aria-pressed',
     'true',
   );
+  // The camera stops where the basemap is still sharp: the wheel and the zoom button both hold
+  // the 2D map's span at the limit, not at the situation's small box.
+  await page.waitForFunction(() => window.__foresignalEngine !== undefined);
+  const canvas = map.locator('.cesium-widget canvas');
+  const box = (await canvas.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  for (let i = 0; i < 20; i++) await page.mouse.wheel(0, -600);
+  for (let i = 0; i < 5; i++) await map.getByRole('button', { name: 'Zoom in' }).click();
+  const span = () =>
+    page.evaluate(() => {
+      const { scene, camera } = window.__foresignalEngine!.viewer;
+      const frustum = camera.frustum as unknown as { left: number; right: number };
+      return {
+        span: frustum.right - frustum.left,
+        limit: scene.screenSpaceCameraController.minimumZoomDistance,
+      };
+    });
+  await expect.poll(async () => (await span()).limit).toBeGreaterThan(1_000_000);
+  await expect
+    .poll(async () => {
+      const { span: across, limit } = await span();
+      return across >= limit - 1_000;
+    })
+    .toBe(true);
   await page.screenshot({ path: 'review/019-situation.png' });
   expect(problems).toEqual([]);
 });

@@ -4,6 +4,12 @@ import { Credit, GeographicTilingScheme, ImageryLayer, UrlTemplateImageryProvide
 export const BASEMAP_MAX_LEVEL = 5;
 
 /**
+ * Ground per basemap pixel at its highest level, in meters along the equator: the world's
+ * circumference over its width in pixels (two 256-pixel tiles across at level 0, doubling per level).
+ */
+export const BASEMAP_METERS_PER_PIXEL = 40_075_016.686 / (512 * 2 ** BASEMAP_MAX_LEVEL);
+
+/**
  * Brightness for the night layer. With day/night shading on, Cesium lights the night side at 0.3
  * (`diffuseIntensity` floor in `@cesium/engine` `GlobeFS.glsl`), which would show the Black Marble
  * lights at 30% of the source. Scaling by 1 / 0.3 shows them as NASA published them.

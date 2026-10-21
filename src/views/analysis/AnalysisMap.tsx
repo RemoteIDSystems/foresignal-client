@@ -17,7 +17,8 @@ import styles from './Analysis.module.css';
  * The Map tab (019): a map of its own, not the Global dashboard's, flown to the situation's or
  * investigation's area, which is outlined; the record layers of its members' kinds are drawn, and
  * the toolbar's chips (one per category among them, as the mock's Conflicts / Military /
- * Infrastructure / … row) turn each category on and off. The legend lists what is drawn.
+ * Infrastructure / … row) turn each category on and off. The legend lists what is drawn. The
+ * camera stops where the basemap would blur, however small the area.
  */
 export function AnalysisMap({
   api,
@@ -97,6 +98,7 @@ export function AnalysisMap({
       >
         <MapViewer
           legendInitiallyOpen
+          sharpBasemap
           api={api}
           overlayStyle={overlayStyle}
           recordLayers={recordLayers}
