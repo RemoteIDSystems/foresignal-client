@@ -154,10 +154,11 @@ design language, review-gated.)*
 | 035 | Scale-And-Performance | Full-catalog (~300–500 layer) stress; batched-render + aggregation verification; frame-budget check; raster restraint |
 | 036 | Accessibility-Shortcuts-Onboarding | Keyboard-shortcuts overlay, onboarding, a11y, theming polish, error-boundary coverage |
 
-### Post-build enhancement — prompt 037
+### Post-build enhancements — prompts 037–038
 | # | Prompt | What it delivers |
 |---|---|---|
 | 037 | Client-Clustering | Client-side clustering for the 189 kinds the backend doesn't aggregate, so world-zoom-all-on draws cells at 60fps (closes the 035 world-zoom frame-budget gap) |
+| 038 | Basemap-Styles | Map / Satellite basemap selector; NASA Marble overview hands off to CARTO (OSM) or Esri World Imagery as you zoom in — matching Shadowbroker's sources |
 
 ---
 
