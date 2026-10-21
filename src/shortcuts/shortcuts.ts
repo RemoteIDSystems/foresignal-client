@@ -34,6 +34,24 @@ export function isTyping(target: EventTarget | null): boolean {
   );
 }
 
+/** Whether an element is drawn: not hidden, nor inside anything hidden or `display: none`. */
+function shown(element: Element): boolean {
+  if (typeof element.checkVisibility === 'function') return element.checkVisibility();
+  for (let node: Element | null = element; node; node = node.parentElement) {
+    if (node.hasAttribute('hidden') || getComputedStyle(node).display === 'none') return false;
+  }
+  return true;
+}
+
+/**
+ * Whether a modal dialog is open. Only a shown one counts: the map keeps its own attribution
+ * dialog (`aria-modal`) in the page, hidden, at all times.
+ */
+function dialogShown(): boolean {
+  if (typeof document === 'undefined') return false;
+  return [...document.querySelectorAll('[aria-modal="true"]')].some(shown);
+}
+
 /**
  * The keyboard shortcuts registered now, by the screens and controls that carry them out. Every
  * view registers its own while it is shown (the Global map its layers, scene and panels; the time
@@ -73,9 +91,7 @@ export class ShortcutRegistry {
   handle(event: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'altKey' | 'metaKey' | 'target'>): boolean {
     if (event.ctrlKey || event.altKey || event.metaKey) return false;
     if (isTyping(event.target)) return false;
-    if (typeof document !== 'undefined' && document.querySelector('[aria-modal="true"]')) {
-      return false;
-    }
+    if (dialogShown()) return false;
     for (let index = this.snapshot.length - 1; index >= 0; index--) {
       const shortcut = this.snapshot[index]!;
       if (shortcut.key === event.key && shortcut.run) {

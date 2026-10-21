@@ -48,6 +48,20 @@ describe('ShortcutRegistry', () => {
     expect(run).not.toHaveBeenCalled();
   });
 
+  it('does not count a modal dialog kept hidden in the page (the map keeps one)', () => {
+    const registry = new ShortcutRegistry();
+    const run = vi.fn();
+    registry.register([{ id: 'a', key: '?', description: 'Help', group: 'General', run }]);
+    const overlay = document.createElement('div');
+    overlay.style.display = 'none';
+    const lightbox = document.createElement('div');
+    lightbox.setAttribute('aria-modal', 'true');
+    overlay.append(lightbox);
+    document.body.append(overlay);
+    expect(registry.handle(press('?'))).toBe(true);
+    expect(run).toHaveBeenCalledOnce();
+  });
+
   it('lets the newest registration of a key win, and the older one return once it goes', () => {
     const registry = new ShortcutRegistry();
     const older = vi.fn();
