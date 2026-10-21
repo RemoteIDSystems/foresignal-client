@@ -1,12 +1,12 @@
 # 035 — Completion Report: Scale And Performance
 
-| Field                 | Value                                                                                                                      |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Status                | Complete; tests written, not run (standing rule: no test execution until code-complete). **The numbers are not measured.** |
-| Implementation commit | `5ef168ec451539a217318c0bf8e38b804b3c2116`                                                                                 |
-| Run mode              | Unattended (owner's batch 023–036, no pausing)                                                                             |
-| Screenshots           | None taken (compile-only run).                                                                                             |
-| Mock comparison       | Not applicable: the harness is a development-only panel (`?stress` in a development build).                                |
+| Field                 | Value                                                                                                                   |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Status                | Complete. The scale spec ran on 2026-10-21 in software WebGL and passed; its numbers are below. Not yet run on the GPU. |
+| Implementation commit | `5ef168ec451539a217318c0bf8e38b804b3c2116`                                                                              |
+| Run mode              | Unattended (owner's batch 023–036, no pausing)                                                                          |
+| Screenshots           | None taken (compile-only run).                                                                                          |
+| Mock comparison       | Not applicable: the harness is a development-only panel (`?stress` in a development build).                             |
 
 ## Results
 
@@ -57,27 +57,43 @@
 
 ## The numbers
 
-**Not measured.** The standing rule defers every browser run, so this report records no frame
-time, memory, request concurrency, connection count or ceiling. Those come from the owner's run:
+Measured on 2026-10-21 by `npx playwright test e2e/scale.e2e.ts`, which passed in 2.0 min. The run
+used **software WebGL (SwiftShader)** against the local backend, with 190 kind layers on. The source
+is `test-results/035-scale-software.json`. Heap is `usedJSHeapSize` in decimal MB.
 
-- `npm run e2e -- scale` (software WebGL), or `E2E_GPU=1 npm run e2e -- scale` (the machine's
-  GPU, for frame timing);
-- the run writes `test-results/035-scale-<software|gpu>.json`, with the report and the most change
-  streams the browser saw open at once.
+| Measure                                  | World         | Region        | City          |
+| ---------------------------------------- | ------------- | ------------- | ------------- |
+| Layers on                                | 190           | 190           | 190           |
+| Records drawn                            | 37,482        | 1,286         | 1,286         |
+| Cells drawn                              | 396           | 144           | 144           |
+| Tiles                                    | 760           | 760           | 760           |
+| Merged instances                         | 792           | 288           | 288           |
+| Settled after (s)                        | 82.9          | 17.0          | 0.8           |
+| Peak tile requests (in flight / waiting) | 12 / 519      | 12 / 731      | 0 / 0         |
+| Frames in the 3 s pan                    | 1             | 3             | 2             |
+| Frame p50 / p95 (ms)                     | 2,375 / 2,375 | 1,556 / 1,558 | 1,097 / 1,611 |
+| Heap (MB)                                | 148           | 148           | 148           |
+| Change-stream connections                | 1             | 1             | 1             |
 
-| Measure                                  | World        | Region       | City         |
-| ---------------------------------------- | ------------ | ------------ | ------------ |
-| Layers on                                | not measured | not measured | not measured |
-| Records drawn                            | not measured | not measured | not measured |
-| Cells drawn                              | not measured | not measured | not measured |
-| Tiles                                    | not measured | not measured | not measured |
-| Peak tile requests (in flight / waiting) | not measured | not measured | not measured |
-| Frame p50 / p95 (ms)                     | not measured | not measured | not measured |
-| Heap (MB)                                | not measured | not measured | not measured |
-| Change-stream connections                | not measured | not measured | not measured |
+Other figures:
 
-**The ceiling, and whether it is the backend's, is therefore not confirmed here** (owner
-question 1).
+- **Change streams.** The browser saw at most one `/v1/events/stream` open at once, and the client's
+  tally agrees. The alerts stream is the only other one open.
+- **Layer toggle.** One layer (`navaid`) turned off took 0.1 ms and back on 0 ms. The map then
+  redrew in 389.5 ms.
+- **Problems the report lists.** Region p95 1,558.1 ms and city p95 1,610.7 ms are over the 33.3 ms
+  budget. The world zoom drew one frame in the pan, and `scaleProblems` judges only more than one
+  (`scaleScenario.ts:202`). The spec checks frame timing only
+  with `E2E_GPU=1`, so these do not fail it.
+
+**What the numbers do and do not show.**
+
+- Records load only in view: the city holds 1,286 against the world's 37,482.
+- Tile requests peaked at 12 in flight, with up to 731 waiting. The world zoom took 82.9 s to
+  settle. This run does not show how much of that was the queue.
+- **Frame time here is SwiftShader's.** It draws every translucent pixel on the CPU, so it says
+  nothing about a GPU. **The ceiling, and whether it is the backend's or the client's, is still not
+  confirmed.** That needs the GPU run (`E2E_GPU=1 npm run e2e -- scale`), which has not been done.
 
 ## What was built
 
@@ -115,17 +131,17 @@ question 1).
 
 ### Checks
 
-| Check                                                       | Result                                     |
-| ----------------------------------------------------------- | ------------------------------------------ |
-| `npm run typecheck`                                         | Passed                                     |
-| `npm run lint`                                              | Passed                                     |
-| `npx prettier --check src e2e`                              | Passed (and `scripts`)                     |
-| `npm run build`                                             | Passed. `index` 875.55 kB (263.29 kB gzip) |
-| `npm run verify:dist`                                       | "✓ dist is ready to deploy."               |
-| `npm test`, `npm run e2e`                                   | **Not run** (standing rule)                |
-| Guard: `test_us_english.py`                                 | 14 tests OK (167.9 s)                      |
-| Guard: `check_us_english.py` over the project               | 804 hits, unchanged                        |
-| Guard: `check_us_english.py` over the new and changed files | 0 hits                                     |
+| Check                                                       | Result                                                                                |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `npm run typecheck`                                         | Passed                                                                                |
+| `npm run lint`                                              | Passed                                                                                |
+| `npx prettier --check src e2e`                              | Passed (and `scripts`)                                                                |
+| `npm run build`                                             | Passed. `index` 875.55 kB (263.29 kB gzip)                                            |
+| `npm run verify:dist`                                       | "✓ dist is ready to deploy."                                                          |
+| `npm test`, `npm run e2e`                                   | **Not run** at the time (standing rule). The scale spec was run on 2026-10-21: passed |
+| Guard: `test_us_english.py`                                 | 14 tests OK (167.9 s)                                                                 |
+| Guard: `check_us_english.py` over the project               | 804 hits, unchanged                                                                   |
+| Guard: `check_us_english.py` over the new and changed files | 0 hits                                                                                |
 
 ## Compared to the mock
 
@@ -148,9 +164,10 @@ which shows in the rail's existing error state with its message.
 
 ## Deviations from the prompt text
 
-- **"Measure … record the numbers"**: the harness and spec are written; the numbers are **not
-  measured** (standing rule).
-- **"Confirm the limit is the backend, not the client"**: not confirmed, for the same reason.
+- **"Measure … record the numbers"**: measured on 2026-10-21 in software WebGL (above). There is no
+  GPU run yet.
+- **"Confirm the limit is the backend, not the client"**: not confirmed. Software WebGL's frame
+  time bounds the run, so the GPU run is still needed.
 
 ## Backend observations
 
@@ -159,8 +176,9 @@ which shows in the rail's existing error state with its message.
 
 ## Owner questions
 
-1. **The ceiling.** Once the scale spec runs, should its JSON become this report's table, in a
-   follow-up? **Default in place: numbers not measured.**
+1. **The ceiling.** The software-WebGL numbers are in the table. Should the GPU run
+   (`E2E_GPU=1`) be run on the workstation to settle where the ceiling is? **Default in place:
+   software numbers only.**
 2. **Overlay bound.** Is 4 drawn product layers the right bound, and should the rail stop a fifth
    from being turned on, rather than showing it as not drawn? **Default in place: 4, the rest
    marked.**
