@@ -119,6 +119,7 @@ describe('App routing', () => {
       Satellites: 'Satellite Operations',
       'RF / Sensors': 'RF / Sensors',
       Intelligence: 'Intelligence',
+      Alerts: 'Alerts',
       Operations: 'Operations',
     };
     for (const [tab, heading] of Object.entries(expected)) {

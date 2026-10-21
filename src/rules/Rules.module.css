@@ -1,0 +1,209 @@
+/* Alert rules (030): the rule form, its dry run, the rule list and the delivery targets. */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  color: var(--fs-color-text-muted);
+  font-size: var(--fs-font-size-xs);
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-md);
+}
+
+.fieldset legend {
+  padding: 0 4px;
+  color: var(--fs-color-text-secondary);
+  font-size: var(--fs-font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.condition {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(90px, 1fr) minmax(0, 2fr) auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.day {
+  padding: 3px 8px;
+  border: 1px solid var(--fs-color-border-strong);
+  border-radius: var(--fs-radius-sm);
+  background: transparent;
+  color: var(--fs-color-text-secondary);
+  font: inherit;
+  font-size: var(--fs-font-size-xs);
+  cursor: pointer;
+}
+
+.day[aria-pressed='true'] {
+  border-color: var(--fs-color-accent);
+  background: var(--fs-color-accent-soft);
+  color: var(--fs-color-text);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fs-color-text);
+  font-size: var(--fs-font-size-sm);
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.problems {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--fs-color-warning);
+  font-size: var(--fs-font-size-sm);
+}
+
+.dryRun {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--fs-color-border-strong);
+  border-left: 3px solid var(--fs-color-accent);
+  border-radius: var(--fs-radius-md);
+  background: var(--fs-color-raised);
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 0;
+}
+
+.summary div {
+  display: flex;
+  flex-direction: column;
+}
+
+.summary dt {
+  color: var(--fs-color-text-muted);
+  font-size: var(--fs-font-size-xs);
+}
+
+.summary dd {
+  margin: 0;
+  font-size: var(--fs-font-size-lg);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.warning {
+  color: var(--fs-color-warning);
+  font-size: var(--fs-font-size-sm);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rule {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-md);
+  background: var(--fs-color-panel);
+}
+
+.ruleHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.ruleName {
+  margin-right: auto;
+  font-weight: 600;
+}
+
+.ruleLine {
+  color: var(--fs-color-text-muted);
+  font-size: var(--fs-font-size-xs);
+}
+
+.detail {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--fs-color-border);
+}
+
+.detail section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.detail h3 {
+  margin: 0;
+  color: var(--fs-color-text-secondary);
+  font-size: var(--fs-font-size-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.toggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (max-width: 700px) {
+  .condition {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}

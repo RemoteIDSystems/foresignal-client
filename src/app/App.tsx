@@ -3,6 +3,7 @@ import { BrowserRouter, MemoryRouter, Navigate, Route, Routes } from 'react-rout
 import { ThemeProvider } from './theme';
 import { ToastHost } from '../ui/ToastHost';
 import {
+  AlertsView,
   GlobalDashboard,
   ImageryView,
   MapView,
@@ -60,6 +61,7 @@ export function App({ session, initialPath }: AppProps) {
         />
         <Route path="/rf-sensors" element={<RfSensorsView />} />
         <Route path="/intelligence" element={<IntelligenceHome api={session.api} />} />
+        <Route path="/alerts" element={<AlertsView session={session} />} />
         <Route
           path="/intelligence/situations/:id"
           element={

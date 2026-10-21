@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
-import { Download, Ellipsis, Link2, StickyNote } from 'lucide-react';
+import { Bell, Download, Ellipsis, Link2, StickyNote } from 'lucide-react';
 import type { ForesignalClient } from '../../api/client';
 import type { ChangeStream } from '../../api/stream/ChangeStream';
 import { Badge } from '../../ui/Badge';
@@ -172,6 +172,18 @@ export function AnalysisView({ api, stream, store = appStore, kind }: AnalysisVi
         <Button icon={<Link2 size={14} />} onClick={share}>
           Share
         </Button>
+        {analysis.kind === 'situation' && (
+          <Button
+            icon={<Bell size={14} />}
+            onClick={() =>
+              void navigate(
+                `/alerts?new=situation&ref=${encodeURIComponent(analysis.situation.id)}`,
+              )
+            }
+          >
+            Create alert
+          </Button>
+        )}
         {analysis.kind === 'investigation' && (
           <IconButton
             variant="bordered"

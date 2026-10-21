@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
+import { Bell } from 'lucide-react';
 import type { ForesignalClient } from '../../api/client';
 import { RASTER_FRAME_KIND, type ChangeStream } from '../../api/stream/ChangeStream';
 import { DashboardLayout, type DockPanel } from '../../app/DashboardLayout';
@@ -388,6 +389,10 @@ export function GlobalDashboard({
             />
             <div className={styles.placeholderChip}>Placeholder panel data</div>
             <LocateBar />
+            <Link to="/alerts?new=view" className={styles.alertHere}>
+              <Bell size={13} aria-hidden="true" />
+              Alert on this view
+            </Link>
             <GlanceStrip state={glance} />
             {askOpen && <AskPanel onClose={() => setAskOpen(false)} />}
             {stress && StressHarness && (

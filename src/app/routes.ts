@@ -1,4 +1,5 @@
 import {
+  Bell,
   Crosshair,
   Globe,
   Image,
@@ -29,6 +30,7 @@ export const NAV_TABS: readonly NavTab[] = [
   { path: '/satellites', label: 'Satellites', icon: Satellite },
   { path: '/rf-sensors', label: 'RF / Sensors', icon: RadioTower },
   { path: '/intelligence', label: 'Intelligence', icon: Lightbulb },
+  { path: '/alerts', label: 'Alerts', icon: Bell },
   { path: '/operations', label: 'Operations', icon: Workflow },
 ];
 

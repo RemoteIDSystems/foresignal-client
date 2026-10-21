@@ -20,6 +20,7 @@ import specVersionRaw from '../../openapi/VERSION?raw';
 import { WorkspaceSync } from '../workspace/WorkspaceSync';
 import { AlertFeed } from '../alerts/AlertFeed';
 import { InboxFeed } from '../alerts/InboxFeed';
+import { WebPush } from '../push/webPush';
 
 /** `info.version` of the vendored spec, from `openapi/VERSION`. */
 export const SPEC_VERSION = specVersionRaw.trim();
@@ -44,6 +45,8 @@ export interface Session {
   alerts: AlertFeed;
   /** This device's notification inbox and badge (029); started by the app shell. */
   inbox: InboxFeed;
+  /** This browser's Web Push subscription (030). */
+  push: WebPush;
   /** Reports this browser's device metadata for the current token; resolves `false` with none. */
   reportDevice(): Promise<boolean>;
 }
@@ -60,7 +63,7 @@ export interface SessionOptions {
 
 /**
  * Builds the session: token store, API client, ticket source, live stream, app store (with the
- * stream's deltas applied to it), workspace binding, alerts and inbox (029), and capabilities.
+ * stream's deltas applied to it), workspace binding, alerts and inbox (029), Web Push (030), and capabilities.
  *
  * Capabilities load immediately and again on every token change; when a token is present its
  * device metadata is reported with `updateCurrentTokenDevice` (`PUT /v1/tokens/current/device`).
@@ -97,6 +100,7 @@ export function createSession(options: SessionOptions = {}): Session {
     getDeviceId,
     tickets,
   });
+  const push = new WebPush(api, tokens.get);
 
   const reportDevice = async () => {
     if (!tokens.get()) return false;
@@ -129,6 +133,7 @@ export function createSession(options: SessionOptions = {}): Session {
     workspaces,
     alerts,
     inbox,
+    push,
     reportDevice,
   };
 }

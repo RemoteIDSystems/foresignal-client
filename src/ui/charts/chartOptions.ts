@@ -182,3 +182,48 @@ export function reliabilityOption(
     ],
   };
 }
+
+/** One group's learned mean per slot, for {@link slotMeansOption}. */
+export interface SlotSeries {
+  name: string;
+  /** Slot number and mean, as the backend gives them. */
+  points: readonly [number, number][];
+}
+
+/**
+ * An anomaly rule's learned baseline (030): the mean per slot (hour of week or of day) of each
+ * group, one line per group, on a numeric slot axis.
+ */
+export function slotMeansOption(
+  tokens: ThemeTokens,
+  series: readonly SlotSeries[],
+  slotName: string,
+): ChartOption {
+  const axisLine = { lineStyle: { color: tokens.color.borderStrong } };
+  const splitLine = { lineStyle: { color: tokens.color.border } };
+  return {
+    ...baseOption(tokens),
+    grid: { left: 36, right: 12, top: 12, bottom: series.length > 1 ? 56 : 36 },
+    legend:
+      series.length > 1
+        ? { bottom: 0, textStyle: { color: tokens.color.textSecondary } }
+        : undefined,
+    xAxis: {
+      type: 'value',
+      name: slotName,
+      nameLocation: 'middle',
+      nameGap: 22,
+      min: 0,
+      axisLine,
+      splitLine: { show: false },
+    },
+    yAxis: { type: 'value', axisLine, splitLine },
+    series: series.map((line) => ({
+      type: 'line' as const,
+      name: line.name,
+      data: line.points.map((point) => [...point]),
+      showSymbol: false,
+      lineStyle: { width: 1.5 },
+    })),
+  };
+}

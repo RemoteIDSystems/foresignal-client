@@ -5,6 +5,7 @@ import { AlertToasts } from '../alerts/AlertToasts';
 import { startPresence } from '../alerts/presence';
 import { useCanActOnAlerts } from '../alerts/useAlerts';
 import { useOpenObject } from '../intel/useOpenObject';
+import { useDeepLinks } from '../push/useDeepLinks';
 import { WorkspacesDialog } from '../workspace/WorkspacesDialog';
 import { WorkspaceSyncContext } from '../workspace/workspaceSyncContext';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -19,7 +20,8 @@ import styles from './AppShell.module.css';
  * binding (025): a deep link in the URL fragment (`#fs=…`) is restored once, then the fragment is
  * cleared, and the Workspaces dialog is available on every screen. It runs the alerts (029): the
  * open alerts and their stream, the top alerts strip and the alert toasts, this device's inbox,
- * and the presence heartbeat.
+ * and the presence heartbeat. It opens what a link or an activated push notification names
+ * (`?open=<ref>`, 030).
  */
 export function AppShell({ session }: { session: Session }) {
   const location = useLocation();
@@ -28,6 +30,7 @@ export function AppShell({ session }: { session: Session }) {
   const canAct = useCanActOnAlerts(api, token);
   const openObject = useOpenObject(api, session.store);
   const onOpen = (ref: string) => void openObject(ref);
+  useDeepLinks(onOpen);
   useEffect(() => {
     alerts.start();
     inbox.start();
