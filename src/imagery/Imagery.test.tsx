@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { json, standInApi } from '../intel/testing/standIn';
 import { ImageryComparison } from './ImageryComparison';
@@ -61,13 +61,16 @@ describe('Recent Imagery', () => {
     expect(tiles[0]).toHaveAccessibleName('GOES-East visible (ABI band 2), 2026-10-20 11:50Z');
     expect(tiles[2]).toHaveTextContent('ESA');
     expect(tiles[2]).toHaveTextContent('10 m · Optical');
-    // A backend frame is fetched through the client and drawn from an object URL.
-    expect(
-      await within(tiles[0]!).findByRole('img', { name: 'GOES-East visible (ABI band 2)' }),
-    ).toHaveAttribute('src', 'blob:picture');
+    // A backend frame is fetched through the client and drawn from an object URL (a placeholder of
+    // the same name shows while it loads).
+    await waitFor(() =>
+      expect(
+        within(tiles[0]!).getByRole('img', { name: 'GOES-East visible (ABI band 2)' }),
+      ).toHaveAttribute('src', 'blob:picture'),
+    );
     // An external product's thumbnail is its tile, straight from the provider.
     expect(within(tiles[1]!).getByRole('img').querySelector('img')?.getAttribute('src')).toMatch(
-      /^https:\/\/gibs\.earthdata\.nasa\.gov\/.+\/2026-10-20T11:20:00Z\/5\/\d+\/\d+\.png$/,
+      /^https:\/\/gibs\.earthdata\.nasa\.gov\/.+\/2026-10-20T11:20:00Z\/[^/]+\/5\/\d+\/\d+\.png$/,
     );
     await userEvent.click(tiles[2]!);
     expect(onOpen).toHaveBeenCalledWith(ITEMS[2]);
@@ -107,9 +110,11 @@ describe('the full-frame viewer', () => {
     const onOpenObject = vi.fn();
     render(<ImageryViewer api={api} item={item} onClose={() => {}} onOpenObject={onOpenObject} />);
     const dialog = screen.getByRole('dialog', { name: 'NOAA 19 AVHRR thermal infrared' });
-    expect(await within(dialog).findByRole('img', { name: item.title })).toHaveAttribute(
-      'src',
-      'blob:picture',
+    await waitFor(() =>
+      expect(within(dialog).getByRole('img', { name: item.title })).toHaveAttribute(
+        'src',
+        'blob:picture',
+      ),
     );
     const facts = await within(dialog).findByTestId('media-facts');
     expect(facts).toHaveTextContent('2048 × 1536 px');
@@ -160,7 +165,10 @@ describe('the Imagery Comparison', () => {
     // Each side is a 3 × 3 mosaic of the provider's tiles for its day.
     const before = within(screen.getByTestId('swipe-before')).getByRole('img');
     expect(before.querySelectorAll('img')).toHaveLength(9);
-    expect(before.querySelector('img')?.getAttribute('src')).toContain('/2026-10-12/7/');
+    // GIBS tile URLs carry the tile matrix set between the day and the zoom.
+    expect(before.querySelector('img')?.getAttribute('src')).toMatch(
+      /\/2026-10-12\/GoogleMapsCompatible_Level\d+\/7\//,
+    );
     expect(screen.getByTestId('swipe-before')).toHaveStyle({ clipPath: 'inset(0 50% 0 0)' });
 
     fireEvent.change(screen.getByRole('slider', { name: 'Swipe position' }), {

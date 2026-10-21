@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import { OPEN_MESSAGE, VERIFY_MESSAGE } from './webPush';
 
-const root = fileURLToPath(new URL('../../', import.meta.url));
-const source = readFileSync(`${root}public/sw.js`, 'utf8');
+// Read from the project root, Vitest's working directory: under jsdom, `import.meta.url` is not a
+// file URL.
+const source = readFileSync(resolve(process.cwd(), 'public/sw.js'), 'utf8');
 
 type Handler = (event: Record<string, unknown>) => void;
 

@@ -71,8 +71,9 @@ describe('the situation full-analysis view', () => {
     expect(header).toHaveTextContent('2026-10-18 15:01Z');
     expect(screen.getByRole('tab', { name: 'Entities (2)' })).toBeInTheDocument();
     expect(await screen.findByRole('tab', { name: 'Related (0)' })).toBeInTheDocument();
+    // A tab carries its count once known ("Evidence (2)"), as the mock's do.
     for (const name of ['Overview', 'Full Analysis', 'Timeline', 'Map', 'Evidence', 'Hypotheses']) {
-      expect(screen.getByRole('tab', { name })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: new RegExp(`^${name}( \\(|$)`) })).toBeInTheDocument();
     }
     const changed = screen.getByTestId('what-changed');
     expect(changed).toHaveTextContent('Status emerging → active');

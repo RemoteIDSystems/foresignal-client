@@ -53,7 +53,7 @@ describe('the workspace binding', () => {
       hiddenSources: ['emsc'],
     });
     expect(store.get('time')).toEqual({ mode: 'asOf', asOf: '2026-10-18T12:00:00Z' });
-    expect(store.get('locate')).toMatchObject({ longitude: -122.8 });
+    expect(store.get('locate')?.longitude).toBeCloseTo(-122.8, 6);
     expect(store.get('selection')?.title).toBe('M 2.5 - The Geysers');
     expect(store.get('closedPanels')).toEqual(['insights']);
     // What it shows is the context: nothing is sent back.

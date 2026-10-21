@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
 import { createForesignalClient } from '../../api/client';
 import type { RecordHit } from '../../map/records/recordPicking';
 import type { Dossier } from '../../objects/objectApi';
@@ -65,11 +66,14 @@ function renderPanel(selection: RecordHit | undefined, withEntityPanel = false) 
       selected.push(ref);
     },
   } as unknown as RecordLayersValue;
+  // The Selected Entity panel links to other screens, so it needs a router.
   render(
-    <RecordLayersContext.Provider value={value}>
-      <RelatedEntitiesPanel />
-      {withEntityPanel && <SelectedEntityPanel onClose={() => {}} />}
-    </RecordLayersContext.Provider>,
+    <MemoryRouter>
+      <RecordLayersContext.Provider value={value}>
+        <RelatedEntitiesPanel />
+        {withEntityPanel && <SelectedEntityPanel onClose={() => {}} />}
+      </RecordLayersContext.Provider>
+    </MemoryRouter>,
   );
   return selected;
 }
