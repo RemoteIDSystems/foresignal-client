@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { Modal } from './Modal';
@@ -65,6 +65,27 @@ describe('Modal', () => {
     expect(screen.getByRole('dialog', { name: 'Confirm' })).toHaveFocus();
     await user.keyboard('{Escape}');
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('keeps Tab and Shift+Tab inside the dialog, wrapping at either end', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <button type="button">Outside</button>
+        <Modal open title="Confirm" onClose={() => {}}>
+          <button type="button">One</button>
+          <button type="button">Two</button>
+        </Modal>
+      </>,
+    );
+    const dialog = screen.getByRole('dialog', { name: 'Confirm' });
+    const inside = within(dialog).getAllByRole('button');
+    inside.at(-1)!.focus();
+    await user.tab();
+    expect(inside[0]).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(inside.at(-1)).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Outside' })).not.toHaveFocus();
   });
 
   it('renders nothing when closed', () => {

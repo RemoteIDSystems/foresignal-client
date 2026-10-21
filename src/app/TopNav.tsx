@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { NavLink, useNavigate } from 'react-router';
-import { BookOpen, ChevronDown, Settings, User } from 'lucide-react';
+import { BookOpen, ChevronDown, Keyboard, Settings, User } from 'lucide-react';
 import { NotificationBell } from '../alerts/NotificationBell';
 import { useOpenObject } from '../intel/useOpenObject';
 import { useStoreKey } from '../state/store';
@@ -13,7 +13,8 @@ import styles from './TopNav.module.css';
 
 /**
  * The top navigation bar shared by every screen: wordmark, the primary tabs, search (017), the
- * open workspace (025), the notifications bell and inbox (029), settings and the access menu.
+ * open workspace (025), the notifications bell and inbox (029), the keyboard shortcuts (036),
+ * settings and the access menu.
  */
 export function TopNav({ session }: { session: Session }) {
   const navigate = useNavigate();
@@ -65,6 +66,11 @@ export function TopNav({ session }: { session: Session }) {
           feed={session.inbox}
           hasToken={!!token}
           onOpen={(ref) => void openObject(ref)}
+        />
+        <IconButton
+          label="Keyboard shortcuts"
+          icon={<Keyboard size={17} strokeWidth={1.75} />}
+          onClick={() => session.store.set('shortcutsOpen', true)}
         />
         <IconButton
           label="Settings"

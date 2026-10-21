@@ -1,4 +1,12 @@
-import { createElement, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import {
+  createElement,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { Bell, FileText, MapPin, Search } from 'lucide-react';
 import { prettifyId } from '../lib/labels';
@@ -7,6 +15,7 @@ import { hitForRef } from '../objects/selectObject';
 import { askProblem } from '../search/askView';
 import { analysisPath } from '../intel/analysisView';
 import { locateRequest } from '../search/locate';
+import { useShortcuts, type Shortcut } from '../shortcuts/shortcuts';
 import {
   groupResults,
   plainSnippet,
@@ -46,7 +55,7 @@ type SearchState =
  * dropped down grouped by type with each result's icon, title and summary. Picking one selects its
  * object (its dossier opens; 014) and moves the map to it, on the Global dashboard. Search runs in
  * hybrid mode while semantic search is ready (`getSearchStatus`) and in text mode otherwise, and the
- * drop-down says which and why.
+ * drop-down says which and why. `/` focuses it from anywhere (036).
  */
 export function SearchBox({ session }: { session: Session }) {
   const { api, store } = session;
@@ -59,6 +68,21 @@ export function SearchBox({ session }: { session: Session }) {
   const [status, setStatus] = useState<SearchStatus>();
   const [active, setActive] = useState(0);
   const box = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLInputElement>(null);
+  // `/` focuses the search from anywhere (036).
+  const focusSearch = useMemo<Shortcut[]>(
+    () => [
+      {
+        id: 'search',
+        key: '/',
+        description: 'Search places, objects and events',
+        group: 'General',
+        run: () => input.current?.focus(),
+      },
+    ],
+    [],
+  );
+  useShortcuts(focusSearch);
 
   // Semantic readiness, read when the box is first opened (it is open, so it needs no token).
   useEffect(() => {
@@ -172,6 +196,7 @@ export function SearchBox({ session }: { session: Session }) {
       <label className={styles.search}>
         <Search size={14} aria-hidden="true" />
         <input
+          ref={input}
           type="search"
           placeholder="Search entities, locations, events…"
           aria-label="Search"

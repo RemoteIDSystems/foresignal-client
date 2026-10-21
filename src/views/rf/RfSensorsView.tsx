@@ -33,6 +33,7 @@ import { usePolarplot } from '../../rf/usePolarplot';
 import { listSensors, type Sensor, type SensorDiscovery } from '../../satellites/satelliteApi';
 import { areaOf, type Bbox } from '../../satellites/area';
 import { locateRequest } from '../../search/locate';
+import { useArrowNavigation } from '../../shortcuts/arrowNavigation';
 import { appStore, useStoreKey, type AppState, type Store } from '../../state/store';
 import { Badge } from '../../ui/Badge';
 import { Button, IconButton } from '../../ui/Button';
@@ -264,6 +265,8 @@ function SensorCatalog({
 }) {
   const [filter, setFilter] = useState<SensorFilter>('all');
   const [text, setText] = useState('');
+  // Up and down walk the sensor list (036).
+  const onArrow = useArrowNavigation('button');
   const shown = filterSensors(sensors, filter, text);
   return (
     <>
@@ -300,7 +303,12 @@ function SensorCatalog({
           {sensors.length === 0 ? 'No sensors observe the view.' : 'No sensor matches.'}
         </p>
       ) : (
-        <ul className={styles.list} aria-label="Sensors" data-testid="sensor-catalog">
+        <ul
+          className={styles.list}
+          aria-label="Sensors"
+          data-testid="sensor-catalog"
+          onKeyDown={onArrow}
+        >
           {shown.map((sensor) => (
             <li key={sensor.ref}>
               <button

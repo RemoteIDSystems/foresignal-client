@@ -33,6 +33,14 @@ import { analysisPath } from '../../intel/analysisView';
 import { parseObjectRef } from '../../lib/objectRef';
 import { hitForRef } from '../../objects/selectObject';
 import { useCommittedViewport, viewportOf } from '../../state/viewport';
+import { locateRequest } from '../../search/locate';
+import {
+  categoryToggle,
+  globalShortcuts,
+  otherScene,
+  toggleClosed,
+} from '../../shortcuts/globalShortcuts';
+import { useShortcuts } from '../../shortcuts/shortcuts';
 import type { LiveAreaSource } from '../../map/records/liveChanges';
 import { viewLayerId } from '../../map/records/viewLayers';
 import { appStore, useStoreKey, type AppState, type Store } from '../../state/store';
@@ -351,6 +359,28 @@ export function GlobalDashboard({
     () => (catalog ? enabledKinds(catalog, enabled, hiddenSources) : undefined),
     [catalog, enabled, hiddenSources],
   );
+  // The keyboard shortcuts (036): the rail's categories by number, the map mode, the selection
+  // and the two side panels.
+  const shortcutList = useMemo(() => {
+    const flyTo =
+      selection && Number.isFinite(selection.longitude) && Number.isFinite(selection.latitude)
+        ? () => store.set('locate', locateRequest(selection.longitude, selection.latitude))
+        : undefined;
+    return globalShortcuts({
+      categories: railCatalog.status === 'ready' ? railCatalog.catalog.categories : [],
+      toggleCategory: (group) => {
+        const { kinds, productKeys, on } = categoryToggle(group, enabled, entries, enabledProducts);
+        store.batch(() => {
+          setKinds(kinds, on);
+          if (productKeys.length > 0) setProductKeys(productKeys, on);
+        });
+      },
+      toggleScene: () => store.set('sceneMode', otherScene(store.get('sceneMode'))),
+      togglePanel: (id) => store.set('closedPanels', toggleClosed(store.get('closedPanels'), id)),
+      flyToSelection: flyTo,
+    });
+  }, [selection, railCatalog, enabled, entries, enabledProducts, setKinds, setProductKeys, store]);
+  useShortcuts(shortcutList);
   const value = useMemo<RecordLayersValue>(
     () => ({
       catalog: railCatalog,

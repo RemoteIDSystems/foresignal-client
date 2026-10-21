@@ -25,6 +25,16 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${PORT}`,
     viewport: { width: 1672, height: 941 },
+    // The first-run welcome (036) is dismissed in every check but the one about it.
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: `http://localhost:${PORT}`,
+          localStorage: [{ name: 'foresignal.onboarded', value: '1' }],
+        },
+      ],
+    },
     launchOptions: { args: GPU ? HARDWARE_WEBGL : SOFTWARE_WEBGL },
   },
   webServer: {

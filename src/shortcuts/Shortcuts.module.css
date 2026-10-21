@@ -1,0 +1,101 @@
+/* The keyboard shortcuts overlay and the first-run welcome (036), in the dashboard's panel and
+   modal language. */
+
+.groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.groupTitle {
+  margin: 0;
+  color: var(--fs-color-text-muted);
+  font-size: var(--fs-font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  font-size: var(--fs-font-size-sm);
+}
+
+.row dd {
+  margin: 0;
+  color: var(--fs-color-text-secondary);
+}
+
+.key {
+  display: inline-block;
+  min-width: 22px;
+  padding: 1px 6px;
+  border: 1px solid var(--fs-color-border-strong);
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-panel-alt);
+  color: var(--fs-color-text);
+  font-family: inherit;
+  font-size: var(--fs-font-size-xs);
+  text-align: center;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.welcome {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 16px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--fs-color-border-strong);
+  border-radius: var(--fs-radius-md);
+  background: var(--fs-color-panel);
+  font-size: var(--fs-font-size-sm);
+}
+
+.welcomeHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.welcomeTitle {
+  margin: 0;
+  font-size: var(--fs-font-size-md);
+  font-weight: 600;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 6px 16px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--fs-color-text-secondary);
+}
+
+.welcomeActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

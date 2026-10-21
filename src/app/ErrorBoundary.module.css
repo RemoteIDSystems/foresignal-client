@@ -19,3 +19,9 @@
   color: var(--fs-color-text-secondary);
   font-size: var(--fs-font-size-sm);
 }
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}

@@ -41,6 +41,7 @@ import type { RecordLayerStatus } from './records/recordLayers';
 import { RecordMarker } from './records/RecordMarker';
 import { TrailBridge } from './records/TrailBridge';
 import { focusOn, locateTo } from './focus';
+import { motionSeconds } from '../lib/motion';
 import { AreaOutlines } from './AreaOutlines';
 import type { Geometry } from './areaOutline';
 import { threeDViewOf } from '../objects/threeD';
@@ -567,7 +568,7 @@ export function MapViewer({
   }, [viewer, locate, store]);
   // The store's mode, whoever set it, is the scene's: a change morphs the map, keeping its place.
   useEffect(() => {
-    if (viewer) switchSceneMode(viewer, mode, cameraRef.current, MORPH_SECONDS);
+    if (viewer) switchSceneMode(viewer, mode, cameraRef.current, motionSeconds(MORPH_SECONDS));
   }, [viewer, mode]);
 
   const onResetNorth = useCallback(() => {
@@ -592,7 +593,7 @@ export function MapViewer({
   const onHome = useCallback(() => {
     viewer?.camera.flyTo({
       destination: homeDestination(),
-      duration: 1,
+      duration: motionSeconds(1),
     });
   }, [viewer]);
 

@@ -8,6 +8,7 @@ import {
   SceneTransforms,
   type Viewer,
 } from 'cesium';
+import { motionSeconds } from '../lib/motion';
 
 /** How far from a 3D item the camera settles, in meters, looking down at 50°. */
 const THREE_D_RANGE_M = 2_500_000;
@@ -38,7 +39,7 @@ export function focusOn(
     if (threeD) {
       camera.flyToBoundingSphere(new BoundingSphere(target, 10_000), {
         offset: new HeadingPitchRange(0, CesiumMath.toRadians(-50), THREE_D_RANGE_M),
-        duration: 1.5,
+        duration: motionSeconds(1.5),
       });
       return;
     }
@@ -46,7 +47,7 @@ export function focusOn(
     const height = Math.min(camera.positionCartographic.height, MAX_2D_HEIGHT_M);
     camera.flyTo({
       destination: Cartesian3.fromDegrees(at.longitude, at.latitude, height),
-      duration: 1,
+      duration: motionSeconds(1),
     });
   };
   if (threeD && scene.mode !== SceneMode.SCENE3D) {
@@ -73,7 +74,7 @@ export function locateTo(
   const height = at.height ?? Math.min(viewer.camera.positionCartographic.height, MAX_2D_HEIGHT_M);
   viewer.camera.flyTo({
     destination: Cartesian3.fromDegrees(at.longitude, at.latitude, height),
-    duration: 1,
+    duration: motionSeconds(1),
   });
 }
 

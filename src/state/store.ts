@@ -78,6 +78,10 @@ export interface AppState {
   workspacesOpen: boolean;
   /** The saved-state dialog's open tab (031); undefined while it is closed. */
   savedOpen: SavedTab | undefined;
+  /** Whether the keyboard shortcuts overlay is open (036). */
+  shortcutsOpen: boolean;
+  /** Whether the first-run welcome is shown (036). */
+  welcomeOpen: boolean;
   /** The dashboard panels the user closed, by id, sorted; kept in a workspace's layout (025). */
   closedPanels: readonly string[];
   [key: `layer:${string}`]: LayerLive | undefined;
@@ -120,6 +124,8 @@ export const INITIAL_STATE: AppState = {
   workspace: undefined,
   workspacesOpen: false,
   savedOpen: undefined,
+  shortcutsOpen: false,
+  welcomeOpen: false,
   closedPanels: [],
 };
 

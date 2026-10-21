@@ -21,3 +21,25 @@
   flex: 1;
   min-height: 0;
 }
+
+.main:focus {
+  outline: none;
+}
+
+/* Skip link (036): off screen until focused, then over the top bar's left edge. */
+.skip {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 200;
+  padding: 6px 10px;
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-accent);
+  color: var(--fs-color-page);
+  font-weight: 600;
+  transform: translateY(-200%);
+}
+
+.skip:focus {
+  transform: none;
+}

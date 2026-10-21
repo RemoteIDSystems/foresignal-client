@@ -1,12 +1,16 @@
-import { useEffect, useSyncExternalStore } from 'react';
-import { Outlet, useLocation } from 'react-router';
+import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router';
 import { AlertStrip } from '../alerts/AlertStrip';
 import { AlertToasts } from '../alerts/AlertToasts';
 import { startPresence } from '../alerts/presence';
 import { useCanActOnAlerts } from '../alerts/useAlerts';
 import { useOpenObject } from '../intel/useOpenObject';
+import { onboarded } from '../onboarding/onboarding';
+import { WelcomeCard } from '../onboarding/WelcomeCard';
 import { useDeepLinks } from '../push/useDeepLinks';
 import { SavedStateDialog } from '../saved/SavedStateDialog';
+import { ShortcutsDialog } from '../shortcuts/ShortcutsDialog';
+import { useShortcutListener, useShortcuts, type Shortcut } from '../shortcuts/shortcuts';
 import { WorkspacesDialog } from '../workspace/WorkspacesDialog';
 import { WorkspaceSyncContext } from '../workspace/workspaceSyncContext';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -22,7 +26,9 @@ import styles from './AppShell.module.css';
  * cleared, and the Workspaces dialog is available on every screen. It runs the alerts (029): the
  * open alerts and their stream, the top alerts strip and the alert toasts, this device's inbox,
  * and the presence heartbeat. It opens what a link or an activated push notification names
- * (`?open=<ref>`, 030), and holds the saved-state dialog (031).
+ * (`?open=<ref>`, 030), and holds the saved-state dialog (031). It also carries the keyboard
+ * shortcuts (036: the window listener, `?` for the overlay, the overlay itself), the first-run
+ * welcome, shown until this browser dismisses it, and a skip link to the view.
  */
 export function AppShell({ session }: { session: Session }) {
   const location = useLocation();
@@ -32,6 +38,25 @@ export function AppShell({ session }: { session: Session }) {
   const openObject = useOpenObject(api, session.store);
   const onOpen = (ref: string) => void openObject(ref);
   useDeepLinks(onOpen);
+  const navigate = useNavigate();
+  const { store } = session;
+  useShortcutListener();
+  const general = useMemo<Shortcut[]>(
+    () => [
+      {
+        id: 'shortcuts',
+        key: '?',
+        description: 'Show the keyboard shortcuts',
+        group: 'General',
+        run: () => store.set('shortcutsOpen', true),
+      },
+    ],
+    [store],
+  );
+  useShortcuts(general);
+  useEffect(() => {
+    if (!onboarded()) store.set('welcomeOpen', true);
+  }, [store]);
   useEffect(() => {
     alerts.start();
     inbox.start();
@@ -58,18 +83,27 @@ export function AppShell({ session }: { session: Session }) {
   return (
     <WorkspaceSyncContext.Provider value={workspaces}>
       <div className={styles.shell}>
+        <a className={styles.skip} href="#main">
+          Skip to the main content
+        </a>
         <TopNav session={session} />
         <div className={styles.banner}>
           <VersionBanner store={session.capabilities} />
           <AlertStrip api={api} feed={alerts} canAct={canAct} onOpen={onOpen} />
+          <WelcomeCard store={store} />
         </div>
-        <main className={styles.main}>
-          <ErrorBoundary key={location.pathname} label="This view">
+        <main id="main" tabIndex={-1} className={styles.main}>
+          <ErrorBoundary
+            key={location.pathname}
+            label="This view"
+            {...(location.pathname !== '/global' && { onHome: () => void navigate('/global') })}
+          >
             <Outlet />
           </ErrorBoundary>
         </main>
         <WorkspacesDialog sync={workspaces} store={session.store} />
         <SavedStateDialog api={api} store={session.store} token={token} onOpen={onOpen} />
+        <ShortcutsDialog store={store} />
         <AlertToasts api={api} feed={alerts} canAct={canAct} onOpen={onOpen} />
       </div>
     </WorkspaceSyncContext.Provider>

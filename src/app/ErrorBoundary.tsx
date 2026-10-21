@@ -9,6 +9,8 @@ export interface ErrorBoundaryProps {
   label: string;
   /** The protected subtree. */
   children: ReactNode;
+  /** A second way out (036): leaves for the Global dashboard, when this is not it. */
+  onHome?: () => void;
 }
 
 interface State {
@@ -17,7 +19,7 @@ interface State {
 
 /**
  * Catches render errors in one view or panel so the rest of the app keeps working, and offers a
- * retry that re-renders the subtree.
+ * retry that re-renders the subtree and, for a whole view, a way back to the Global dashboard.
  */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
   /** No error until a descendant throws. */
@@ -44,7 +46,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
           <div className={styles.title}>{this.props.label} hit an error</div>
           <div className={styles.detail}>{error.message}</div>
         </div>
-        <Button onClick={() => this.setState({ error: null })}>Retry</Button>
+        <div className={styles.actions}>
+          <Button onClick={() => this.setState({ error: null })}>Retry</Button>
+          {this.props.onHome && (
+            <Button variant="ghost" onClick={this.props.onHome}>
+              Go to Global
+            </Button>
+          )}
+        </div>
       </div>
     );
   }

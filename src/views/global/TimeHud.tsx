@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type KeyboardEvent,
@@ -20,6 +21,7 @@ import {
   wholeSecondIso,
 } from '../../time/scrub';
 import { loadHistoryFrames, loadTimeline, type Timeline } from '../../time/timeApi';
+import { useShortcuts, type Shortcut } from '../../shortcuts/shortcuts';
 import { LiveBadge } from './LiveBadge';
 import styles from './GlobalDashboard.module.css';
 
@@ -151,6 +153,37 @@ export function TimeHud({
     },
     [clock, earliest, goLive, store],
   );
+
+  // `[` and `]` step the map's time from anywhere, as the track's arrow keys do; `n` returns to
+  // live (036).
+  const timeShortcuts = useMemo<Shortcut[]>(
+    () => [
+      {
+        id: 'time-back',
+        key: '[',
+        description: 'Step the time back 10 minutes',
+        group: 'Time',
+        run: () => commit((pinned ?? clock()) - KEY_STEP_MS),
+      },
+      {
+        id: 'time-forward',
+        key: ']',
+        description: 'Step the time forward 10 minutes',
+        group: 'Time',
+        run: () => commit((pinned ?? clock()) + KEY_STEP_MS),
+      },
+      {
+        id: 'time-live',
+        key: 'n',
+        label: 'N',
+        description: 'Return to live (Now)',
+        group: 'Time',
+        run: goLive,
+      },
+    ],
+    [commit, goLive, pinned, clock],
+  );
+  useShortcuts(timeShortcuts);
 
   const instantAt = (clientX: number): number => {
     const box = trackRef.current?.getBoundingClientRect();

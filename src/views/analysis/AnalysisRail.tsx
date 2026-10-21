@@ -1,3 +1,4 @@
+import { useArrowNavigation } from '../../shortcuts/arrowNavigation';
 import { appStore, type AppState, type Store } from '../../state/store';
 import { useWorkspaceSync } from '../../workspace/workspaceSyncContext';
 import { ANALYSIS_ENTRIES, TOOL_ENTRIES, type RailEntry } from './frame';
@@ -28,6 +29,8 @@ export function AnalysisRail({
   store?: Store<AppState>;
 }) {
   const workspaces = useWorkspaceSync();
+  // Up and down walk the rail's entries (036).
+  const onArrow = useArrowNavigation('button');
   const item = (entry: RailEntry) => {
     const Icon = entry.icon;
     const current = entry.home ? atHome : !atHome && entry.tab !== undefined && entry.tab === tab;
@@ -64,7 +67,7 @@ export function AnalysisRail({
     );
   };
   return (
-    <nav className={styles.rail} aria-label="Analysis">
+    <nav className={styles.rail} aria-label="Analysis" onKeyDown={onArrow}>
       <h2 className={styles.railHeading}>Analysis</h2>
       {ANALYSIS_ENTRIES.map(item)}
       <h2 className={styles.railHeading}>Tools</h2>

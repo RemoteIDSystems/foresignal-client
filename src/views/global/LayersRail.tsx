@@ -47,6 +47,7 @@ import { Button } from '../../ui/Button';
 import { Tabs } from '../../ui/Tabs';
 import { useRecordLayers, type RecordLayersValue } from './recordLayersContext';
 import { SavedRailSection } from '../../saved/SavedRailSection';
+import { useArrowNavigation } from '../../shortcuts/arrowNavigation';
 import styles from './GlobalDashboard.module.css';
 
 type RailTab = 'layers' | 'entities' | 'filters';
@@ -134,6 +135,8 @@ function LayersTab({
   const [open, setOpen] = useState<ReadonlySet<CategoryId>>(() => new Set());
   const needle = filter.trim().toLowerCase();
   const products = layers.products.entries;
+  // Up and down walk the rail's checkboxes (036).
+  const onArrow = useArrowNavigation('input[type="checkbox"]');
   const shown = useMemo(
     () =>
       categories
@@ -185,7 +188,7 @@ function LayersTab({
           )}
         </div>
       </div>
-      <ul className={styles.layerList}>
+      <ul className={styles.layerList} onKeyDown={onArrow}>
         {shown.map((group) => (
           <CategoryRow
             key={group.id}

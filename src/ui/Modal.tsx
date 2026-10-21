@@ -18,9 +18,32 @@ export interface ModalProps {
   size?: 'default' | 'full';
 }
 
+/** What can take focus inside a dialog. */
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/** Keeps Tab and Shift+Tab inside the dialog, wrapping at either end (036). */
+function keepFocusIn(dialog: HTMLElement, event: KeyboardEvent) {
+  const focusable = [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE)];
+  const first = focusable[0];
+  const last = focusable.at(-1);
+  if (!first || !last) {
+    event.preventDefault();
+    return;
+  }
+  const active = document.activeElement;
+  if (event.shiftKey && (active === first || active === dialog)) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && (active === last || !dialog.contains(active))) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
 /**
- * A modal dialog rendered into `document.body`. Focus moves into the dialog on open and returns
- * to the previously focused element on close.
+ * A modal dialog rendered into `document.body`. Focus moves into the dialog on open, stays inside
+ * it while it is open (Tab wraps), and returns to the previously focused element on close.
  */
 export function Modal({ open, title, onClose, children, size = 'default' }: ModalProps) {
   const titleId = useId();
@@ -32,6 +55,7 @@ export function Modal({ open, title, onClose, children, size = 'default' }: Moda
     dialogRef.current?.focus();
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
+      else if (event.key === 'Tab' && dialogRef.current) keepFocusIn(dialogRef.current, event);
     };
     document.addEventListener('keydown', onKey);
     return () => {

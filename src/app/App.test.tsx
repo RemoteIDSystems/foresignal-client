@@ -2,11 +2,16 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { contract, systemInfo } from '../api/testing/fixtures';
 import { http, MOCK_BASE_URL, server } from '../api/testing/mock-server';
+import { ONBOARDED_KEY } from '../onboarding/onboarding';
 import { App } from './App';
 import { createSession } from './session';
 
 beforeAll(() => server.listen({ onUnhandledFrame: 'error' }));
-beforeEach(() => localStorage.clear());
+// The first-run welcome (036) is dismissed: these tests are about the screens beneath it.
+beforeEach(() => {
+  localStorage.clear();
+  localStorage.setItem(ONBOARDED_KEY, '1');
+});
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 

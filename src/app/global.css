@@ -49,3 +49,16 @@ select {
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* Less motion when the system asks for it (036): transitions and animations finish at once; the
+   map's camera flights and 2D/3D morph do the same (`lib/motion`). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
