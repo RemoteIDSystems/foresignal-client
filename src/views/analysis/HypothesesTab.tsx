@@ -605,7 +605,9 @@ function MatrixTable({
             </tbody>
             <tfoot>
               <tr data-testid="ach-scores">
-                <th colSpan={3}>Inconsistency (weighted)</th>
+                <th scope="row" colSpan={3}>
+                  Inconsistency (weighted)
+                </th>
                 {matrix.hypotheses.map((h) => (
                   <td key={h.id} data-least={h.id === least || undefined}>
                     {(matrix.scores[h.id] ?? h.inconsistencyScore).toFixed(1)}

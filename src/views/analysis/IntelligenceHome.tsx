@@ -86,6 +86,7 @@ export function IntelligenceHome({ api }: { api?: ForesignalClient }) {
     <div className={styles.frame} data-testid="intelligence-home">
       <AnalysisRail onHome={() => {}} atHome />
       <div className={styles.home}>
+        <h1 className={styles.visuallyHidden}>Intelligence</h1>
         <Panel title="Situations">
           <div className={styles.homeBody}>
             <div className={styles.toolbar}>
