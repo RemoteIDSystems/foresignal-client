@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
+import type { TokenStore } from '../../api/auth';
 import type { ForesignalClient } from '../../api/client';
 import type { RelationGraphProps } from '../../graph/RelationGraph';
 import {
@@ -53,11 +54,19 @@ const answers = (): Record<string, Answer> => ({
 });
 
 /** Renders the workbench routes at a path, with stand-ins for the screens it opens. */
-function renderAt(path: string, api: ForesignalClient, store: Store<AppState>) {
+function renderAt(
+  path: string,
+  api: ForesignalClient,
+  store: Store<AppState>,
+  tokens?: TokenStore,
+) {
   render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
-        <Route path="/analyst" element={<WorkbenchView api={api} store={store} />} />
+        <Route
+          path="/analyst"
+          element={<WorkbenchView api={api} store={store} tokens={tokens} />}
+        />
         <Route
           path="/analyst/investigations/:id"
           element={<WorkbenchView kind="investigation" api={api} store={store} />}
@@ -313,5 +322,15 @@ describe('the Analyst Workbench', () => {
     expect(
       await screen.findByText('Listing investigations needs an access token. Add one in Settings.'),
     ).toBeInTheDocument();
+  });
+
+  it('does not ask for the investigations without a token, and says one is needed', async () => {
+    const { api, asked } = standInApi({});
+    const tokens = { get: () => null, set() {}, clear() {}, subscribe: () => () => {} };
+    renderAt('/analyst', api, createStore(INITIAL_STATE), tokens);
+    expect(
+      await screen.findByText('Listing investigations needs an access token. Add one in Settings.'),
+    ).toBeInTheDocument();
+    expect(asked.filter((call) => call.includes('/v1/investigations'))).toEqual([]);
   });
 });

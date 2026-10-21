@@ -1,7 +1,9 @@
 import { useCallback, useState } from 'react';
 import { ObjectNotes } from '../../annotations/ObjectNotes';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
+import type { TokenStore } from '../../api/auth';
 import type { ForesignalClient } from '../../api/client';
+import { useToken } from '../../api/useToken';
 import type { ViewGraph } from '../../graph/graphView';
 import { BookOpen, Download, Share2, StickyNote } from 'lucide-react';
 import { analysisPath, utcText } from '../../intel/analysisView';
@@ -36,6 +38,8 @@ export interface WorkbenchViewProps {
   store: Store<AppState>;
   /** What the route opens: an investigation or a situation by its `:id`; otherwise `?ref=`. */
   kind?: 'investigation' | 'situation';
+  /** The bearer token: with none set, the investigations listing (token only) is not asked for. */
+  tokens?: TokenStore;
 }
 
 /** The subject and its graph seeds, once read, with an investigation's header facts. */
@@ -53,7 +57,7 @@ interface Opened {
  * selected object and the investigations to open. Selecting a node selects it app-wide (014) and
  * shows it in the side panel.
  */
-export function WorkbenchView({ api, store, kind }: WorkbenchViewProps) {
+export function WorkbenchView({ api, store, kind, tokens }: WorkbenchViewProps) {
   const { id } = useParams();
   const [params] = useSearchParams();
   const refs = params.getAll('ref');
@@ -204,7 +208,7 @@ export function WorkbenchView({ api, store, kind }: WorkbenchViewProps) {
           </div>
         </header>
         {subject.kind === 'none' ? (
-          <WorkbenchStart api={api} store={store} />
+          <WorkbenchStart api={api} store={store} tokens={tokens} />
         ) : opened.status === 'error' ? (
           <p className={`${analysis.muted} ${styles.pad}`} role="alert">
             {opened.message}
@@ -248,15 +252,22 @@ export function WorkbenchView({ api, store, kind }: WorkbenchViewProps) {
 function WorkbenchStart({
   api,
   store,
+  tokens,
 }: {
   api: ForesignalClient | undefined;
   store: Store<AppState>;
+  tokens?: TokenStore;
 }) {
   const selection = useStoreKey('selection', store);
   const selectedRef = selectionRef(selection);
-  const investigations = useRead(api, 'investigations', (client, _key, signal) =>
-    listInvestigations(client, signal),
+  // The listing always needs a token, so with none it is not asked for.
+  const token = useToken(tokens);
+  const read = useRead(
+    api,
+    token === null ? undefined : `investigations#${token ?? ''}`,
+    (client, _key, signal) => listInvestigations(client, signal),
   );
+  const investigations = token === null ? NO_TOKEN : read;
   return (
     <div className={styles.start}>
       <section className={analysis.card} aria-label="Open the workbench">
@@ -311,6 +322,9 @@ function investigationFacts(investigation: Investigation): { label: string; valu
     { label: 'Last Updated', value: utcText(investigation.updatedAt) },
   ];
 }
+
+/** The investigations listing with no token set: not asked for, since it would be refused. */
+const NO_TOKEN = { status: 'error', message: 'This needs a token.' } as const;
 
 /** What a failed investigations read says. */
 function investigationsProblem(message: string): string {

@@ -32,4 +32,21 @@ describe('IntelligenceHome', () => {
     expect(await screen.findByText('Situation opened')).toBeInTheDocument();
     expect(SITUATION_ID).toHaveLength(26);
   });
+
+  it('does not ask for the investigations without a token, and says one is needed', async () => {
+    const { api, asked } = standInApi({
+      'GET /v1/situations': () => json({ items: [situationSummary], nextCursor: null }),
+    });
+    const tokens = { get: () => null, set() {}, clear() {}, subscribe: () => () => {} };
+    render(
+      <MemoryRouter initialEntries={['/intelligence']}>
+        <IntelligenceHome api={api} tokens={tokens} />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole('list', { name: 'Situations' })).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Investigations need an access token, even with open reads. Add one in Settings.',
+    );
+    expect(asked.filter((call) => call.includes('/v1/investigations'))).toEqual([]);
+  });
 });

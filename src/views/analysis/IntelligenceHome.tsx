@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
+import type { TokenStore } from '../../api/auth';
 import type { ForesignalClient } from '../../api/client';
 import { FsError } from '../../api/errors';
+import { useToken } from '../../api/useToken';
 import { Badge } from '../../ui/Badge';
 import { Panel } from '../../ui/Panel';
 import { analysisPath, severityTone, statusTone, utcText } from '../../intel/analysisView';
@@ -22,14 +24,21 @@ function failure(error: unknown, what: string): string {
   return error instanceof Error ? error.message : `${what} did not load.`;
 }
 
+/** The investigations with no token set: not asked for, since the backend would refuse them. */
+const NO_TOKEN = {
+  status: 'error',
+  message: 'Investigations need an access token, even with open reads. Add one in Settings.',
+} as const;
+
 const STATUSES: readonly SituationSummary['status'][] = ['emerging', 'active', 'dormant', 'closed'];
 
 /**
  * The Intelligence tab's first screen (019): situations by latest activity (`listSituations`),
  * searchable and filtered by status, and the investigations the caller can see
- * (`listInvestigations`, which always needs a token). Each opens its full-analysis view.
+ * (`listInvestigations`, which always needs a token, so with none set it is not asked for). Each
+ * opens its full-analysis view.
  */
-export function IntelligenceHome({ api }: { api?: ForesignalClient }) {
+export function IntelligenceHome({ api, tokens }: { api?: ForesignalClient; tokens?: TokenStore }) {
   const navigate = useNavigate();
   const [q, setQ] = useState('');
   const [query, setQuery] = useState('');
@@ -37,7 +46,7 @@ export function IntelligenceHome({ api }: { api?: ForesignalClient }) {
     new Set(['emerging', 'active']),
   );
   const [situations, setSituations] = useState<Loaded<SituationSummary>>({ status: 'loading' });
-  const [investigations, setInvestigations] = useState<Loaded<Investigation>>({
+  const [listed, setInvestigations] = useState<Loaded<Investigation>>({
     status: 'loading',
   });
 
@@ -58,8 +67,10 @@ export function IntelligenceHome({ api }: { api?: ForesignalClient }) {
     return () => controller.abort();
   }, [api, query, statuses]);
 
+  const token = useToken(tokens);
+  const investigations: Loaded<Investigation> = token === null ? NO_TOKEN : listed;
   useEffect(() => {
-    if (!api) return;
+    if (!api || token === null) return;
     const controller = new AbortController();
     listInvestigations(api, controller.signal).then(
       (items) => !controller.signal.aborted && setInvestigations({ status: 'ready', items }),
@@ -68,7 +79,7 @@ export function IntelligenceHome({ api }: { api?: ForesignalClient }) {
         setInvestigations({ status: 'error', message: failure(error, 'Investigations') }),
     );
     return () => controller.abort();
-  }, [api]);
+  }, [api, token]);
 
   const toggle = (status: SituationSummary['status']) =>
     setStatuses((current) => {

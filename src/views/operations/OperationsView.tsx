@@ -51,6 +51,9 @@ import { Button } from '../../ui/Button';
 import analysis from '../analysis/Analysis.module.css';
 import styles from './Operations.module.css';
 
+/** A panel whose read the backend allows only with a token, when none is set. */
+const NO_TOKEN = { status: 'error', message: 'This needs an access token (Settings).' } as const;
+
 /** Props for {@link OperationsView}. */
 export interface OperationsViewProps {
   session: Session;
@@ -76,13 +79,18 @@ export function OperationsView({ session }: OperationsViewProps) {
   const tick = useTick(OPS_REFRESH_MS);
   const open = useOpenObject(api, store);
   const feed = useAlertFeed(alerts);
-  // Every read is keyed by the token too, so signing in reads again.
+  // Every read is keyed by the token too, so signing in reads again. A read the backend allows
+  // only with a token is not asked for without one, and says so instead.
   const keyed = (name: string) => `${name}#${token ?? ''}`;
-  const exportsPart = useRead(
-    api,
-    keyed('exports'),
-    (client, _key, signal) => listExports(client, OPS_ROWS, signal),
-    tick,
+  const tokenOnly = (name: string) => (token ? keyed(name) : undefined);
+  const withToken = <T,>(part: Part<T>): Part<T> => (token ? part : NO_TOKEN);
+  const exportsPart = withToken(
+    useRead(
+      api,
+      tokenOnly('exports'),
+      (client, _key, signal) => listExports(client, OPS_ROWS, signal),
+      tick,
+    ),
   );
   const runs = useRead(
     api,
@@ -96,23 +104,24 @@ export function OperationsView({ session }: OperationsViewProps) {
     (client, _key, signal) => listSourceHealth(client, signal),
     tick,
   );
-  const channels = useRead(
-    api,
-    keyed('channels'),
-    (client, _key, signal) => listChannels(client, signal),
-    tick,
+  const channels = withToken(
+    useRead(
+      api,
+      tokenOnly('channels'),
+      (client, _key, signal) => listChannels(client, signal),
+      tick,
+    ),
   );
-  const sinks = useRead(
-    api,
-    keyed('sinks'),
-    (client, _key, signal) => listSinkRows(client, signal),
-    tick,
+  const sinks = withToken(
+    useRead(api, tokenOnly('sinks'), (client, _key, signal) => listSinkRows(client, signal), tick),
   );
-  const devices = useRead(
-    api,
-    keyed('devices'),
-    (client, _key, signal) => listPushDevices(client, signal),
-    tick,
+  const devices = withToken(
+    useRead(
+      api,
+      tokenOnly('devices'),
+      (client, _key, signal) => listPushDevices(client, signal),
+      tick,
+    ),
   );
   const [windowStart] = useState(() => new Date().toISOString());
   const sensors = useRead(api, keyed(`sensors@${windowStart}`), (client, key, signal) => {
@@ -132,11 +141,13 @@ export function OperationsView({ session }: OperationsViewProps) {
     (client, _key, signal) => listBriefings(client, signal),
     tick,
   );
-  const policies = useRead(
-    api,
-    keyed('policies'),
-    (client, _key, signal) => listEscalationPolicies(client, signal),
-    tick,
+  const policies = withToken(
+    useRead(
+      api,
+      tokenOnly('policies'),
+      (client, _key, signal) => listEscalationPolicies(client, signal),
+      tick,
+    ),
   );
   const cycles = useRead(
     api,
@@ -144,11 +155,13 @@ export function OperationsView({ session }: OperationsViewProps) {
     (client, _key, signal) => listAnalysisCycles(client, signal),
     tick,
   );
-  const chronicles = useRead(
-    api,
-    keyed('chronicles'),
-    (client, _key, signal) => listChronicles(client, signal),
-    tick,
+  const chronicles = withToken(
+    useRead(
+      api,
+      tokenOnly('chronicles'),
+      (client, _key, signal) => listChronicles(client, signal),
+      tick,
+    ),
   );
   const [now] = useState(() => Date.now());
 

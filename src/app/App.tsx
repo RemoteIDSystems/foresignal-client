@@ -48,7 +48,9 @@ export function App({ session, initialPath }: AppProps) {
         />
         <Route
           path="/analyst"
-          element={<WorkbenchView api={session.api} store={session.store} />}
+          element={
+            <WorkbenchView api={session.api} store={session.store} tokens={session.tokens} />
+          }
         />
         <Route
           path="/analyst/investigations/:id"
@@ -71,7 +73,10 @@ export function App({ session, initialPath }: AppProps) {
           path="/rf-sensors"
           element={<RfSensorsView api={session.api} store={session.store} />}
         />
-        <Route path="/intelligence" element={<IntelligenceHome api={session.api} />} />
+        <Route
+          path="/intelligence"
+          element={<IntelligenceHome api={session.api} tokens={session.tokens} />}
+        />
         <Route path="/alerts" element={<AlertsView session={session} />} />
         <Route
           path="/intelligence/situations/:id"

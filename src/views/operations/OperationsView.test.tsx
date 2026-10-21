@@ -15,7 +15,7 @@ const unauthorized = () =>
     401,
   );
 
-function renderConsole(answers: Record<string, Answer> = {}) {
+function renderConsole(answers: Record<string, Answer> = {}, token: string | null = null) {
   const stand = standInApi({
     'GET /v1/exports': unauthorized,
     'GET /v1/briefings': () =>
@@ -113,7 +113,7 @@ function renderConsole(answers: Record<string, Answer> = {}) {
     api: stand.api,
     store: createStore<AppState>(INITIAL_STATE),
     alerts: { subscribe: () => () => {}, getSnapshot: () => snapshot },
-    tokens: { get: () => null, subscribe: () => () => {} },
+    tokens: { get: () => token, subscribe: () => () => {} },
   } as unknown as Session;
   render(
     <MemoryRouter>
@@ -164,8 +164,30 @@ describe('the Operations console', () => {
     ).toHaveTextContent('built-in');
   });
 
+  it('does not ask for the token-only panels without a token, and says one is needed', async () => {
+    const { asked } = renderConsole();
+    for (const name of [
+      'Exports & Packs',
+      'Channels',
+      'Sinks',
+      'Push Devices',
+      'Escalation Policies',
+      'Chronicles',
+    ]) {
+      const panel = screen.getByRole('region', { name });
+      expect(panel).toHaveTextContent('This needs an access token (Settings).');
+      expect(panel).toHaveAttribute('data-state', 'error');
+    }
+    expect(await screen.findAllByRole('listitem', { name: 'Morning brief' })).not.toHaveLength(0);
+    expect(
+      asked.filter((call) =>
+        /\/v1\/(exports|channels|sinks|push\/devices|escalation-policies|chronicles)\b/.test(call),
+      ),
+    ).toEqual([]);
+  });
+
   it('says what the backend answered for a panel the token may not read', async () => {
-    renderConsole();
+    renderConsole({}, 'fsr_read');
     const channels = screen.getByRole('region', { name: 'Channels' });
     expect(
       await within(channels).findByText('Unauthorized: This endpoint requires a bearer token.'),
@@ -187,15 +209,20 @@ describe('the Operations console', () => {
   });
 
   it('lists a channel’s recent deliveries on request', async () => {
-    renderConsole({
-      'GET /v1/channels': () =>
-        json([{ id: 'c1', name: 'Ops Slack', type: 'slack', enabled: true, events: ['alert'] }]),
-      'GET /v1/channels/c1/deliveries': () =>
-        json({
-          items: [{ id: 9, event: 'alert', status: 'failed', attempts: 3, lastError: 'HTTP 410' }],
-          nextCursor: null,
-        }),
-    });
+    renderConsole(
+      {
+        'GET /v1/channels': () =>
+          json([{ id: 'c1', name: 'Ops Slack', type: 'slack', enabled: true, events: ['alert'] }]),
+        'GET /v1/channels/c1/deliveries': () =>
+          json({
+            items: [
+              { id: 9, event: 'alert', status: 'failed', attempts: 3, lastError: 'HTTP 410' },
+            ],
+            nextCursor: null,
+          }),
+      },
+      'fsr_read',
+    );
     const channels = screen.getByRole('region', { name: 'Channels' });
     const row = await within(channels).findByRole('listitem', { name: 'Ops Slack' });
     await userEvent.click(within(row).getByRole('button', { name: 'Recent deliveries' }));
