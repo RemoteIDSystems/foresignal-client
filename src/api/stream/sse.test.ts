@@ -1,4 +1,4 @@
-import { fetchSseTransport, SseParser, type SseEvent, type SseFailure } from './sse';
+import { fetchSseTransport, openStreams, SseParser, type SseEvent, type SseFailure } from './sse';
 
 function parse(chunks: string[]): SseEvent[] {
   const events: SseEvent[] = [];
@@ -141,5 +141,30 @@ describe('fetchSseTransport', () => {
       ),
     );
     expect(failure.cause).toBeInstanceOf(TypeError);
+  });
+});
+
+describe('the open stream tally (035)', () => {
+  it('counts each connection by path while it is open, and once closed, not again', async () => {
+    const first = streamingResponse();
+    const second = streamingResponse();
+    const answers = [first.response, second.response];
+    const transport = fetchSseTransport(() => Promise.resolve(answers.shift()!));
+    const handlers = { onOpen() {}, onActivity() {}, onEvent() {}, onClose() {} };
+    const before = openStreams()['/v1/events/stream'] ?? 0;
+    const closeFirst = transport(
+      { url: 'http://api.test/v1/events/stream?x=1', headers: {} },
+      handlers,
+    );
+    transport({ url: '/v1/alerts/stream', headers: {} }, handlers);
+    await settle();
+    expect(openStreams()['/v1/events/stream']).toBe(before + 1);
+    expect(openStreams()['/v1/alerts/stream']).toBe(1);
+    closeFirst();
+    closeFirst();
+    expect(openStreams()['/v1/events/stream'] ?? 0).toBe(before);
+    second.end();
+    await settle();
+    expect(openStreams()['/v1/alerts/stream']).toBeUndefined();
   });
 });

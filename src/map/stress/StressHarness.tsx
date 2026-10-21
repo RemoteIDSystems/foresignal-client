@@ -1,7 +1,9 @@
 import { SceneMode } from 'cesium';
 import { useEffect, useState } from 'react';
 import type { DrawnTotals } from '../records/recordLayerSet';
+import { openStreams } from '../../api/stream/sse';
 import { engineProbe, type MapEngine } from './engineProbe';
+import { heapBytes, runScaleScenario, SCALE_STEPS, type ScaleReport } from './scaleScenario';
 import {
   MEASURE_MS,
   measureFrames,
@@ -39,6 +41,9 @@ export function StressHarness({ kinds, drawn, onAll, onRestore }: StressHarnessP
   const [requests, setRequests] = useState({ waiting: 0, active: 0 });
   const [measuring, setMeasuring] = useState(false);
   const [result, setResult] = useState<StressResult>();
+  const [streams, setStreams] = useState<Record<string, number>>({});
+  const [heap, setHeap] = useState<number>();
+  const [report, setReport] = useState<ScaleReport>();
 
   useEffect(() => engineProbe.subscribe(setEngine), []);
   useEffect(() => {
@@ -46,6 +51,8 @@ export function StressHarness({ kinds, drawn, onAll, onRestore }: StressHarnessP
     const timer = setInterval(() => {
       setTotals(engine.layers.totals());
       setRequests(engine.layers.requests);
+      setStreams(openStreams());
+      setHeap(heapBytes());
     }, TOTALS_MS);
     return () => clearInterval(timer);
   }, [engine]);
@@ -68,6 +75,16 @@ export function StressHarness({ kinds, drawn, onAll, onRestore }: StressHarnessP
     }
   };
 
+  const scale = async () => {
+    if (!engine || measuring) return;
+    setMeasuring(true);
+    try {
+      setReport(await runScaleScenario(engine, drawn));
+    } finally {
+      setMeasuring(false);
+    }
+  };
+
   return (
     <section className={styles.panel} aria-label="Stress harness" data-testid="stress-harness">
       <header>Stress harness · development</header>
@@ -83,6 +100,9 @@ export function StressHarness({ kinds, drawn, onAll, onRestore }: StressHarnessP
         </button>
         <button type="button" disabled={!engine || measuring} onClick={() => void measure()}>
           {measuring ? 'Measuring…' : `Measure ${MEASURE_MS / 1000} s`}
+        </button>
+        <button type="button" disabled={!engine || measuring} onClick={() => void scale()}>
+          {measuring ? 'Measuring…' : `Scale scenario (${SCALE_STEPS.length} zooms)`}
         </button>
       </div>
       {totals && (
@@ -107,6 +127,18 @@ export function StressHarness({ kinds, drawn, onAll, onRestore }: StressHarnessP
           <dd>
             {requests.active} active, {requests.waiting} waiting
           </dd>
+          <dt>Streams</dt>
+          <dd data-testid="stress-streams">
+            {Object.entries(streams)
+              .map(([path, count]) => `${path.replace('/v1/', '')} ${count}`)
+              .join(', ') || 'none'}
+          </dd>
+          {heap !== undefined && (
+            <>
+              <dt>Heap</dt>
+              <dd>{(heap / 1_048_576).toFixed(0)} MB</dd>
+            </>
+          )}
         </dl>
       )}
       {result && (
@@ -120,6 +152,44 @@ export function StressHarness({ kinds, drawn, onAll, onRestore }: StressHarnessP
           </p>
           <pre hidden data-testid="stress-result">
             {JSON.stringify(result)}
+          </pre>
+        </>
+      )}
+      {report && (
+        <>
+          <table className={styles.report} data-testid="scale-table">
+            <thead>
+              <tr>
+                <th>Zoom</th>
+                <th>Records</th>
+                <th>Cells</th>
+                <th>Tiles</th>
+                <th>Peak req.</th>
+                <th>p95 ms</th>
+              </tr>
+            </thead>
+            <tbody>
+              {report.steps.map((step) => (
+                <tr key={step.label}>
+                  <td>
+                    {step.label}
+                    {step.settled ? '' : ' (unsettled)'}
+                  </td>
+                  <td>{step.totals.features.toLocaleString('en-US')}</td>
+                  <td>{step.totals.cells.toLocaleString('en-US')}</td>
+                  <td>{step.totals.tiles}</td>
+                  <td>{step.peakRequests.active}</td>
+                  <td>{step.frames.p95.toFixed(1)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className={styles.result}>
+            {report.maxChangeStreams} change stream{report.maxChangeStreams === 1 ? '' : 's'} ·{' '}
+            {report.problems.length === 0 ? 'no problems' : report.problems.join(' ')}
+          </p>
+          <pre hidden data-testid="scale-report">
+            {JSON.stringify(report)}
           </pre>
         </>
       )}

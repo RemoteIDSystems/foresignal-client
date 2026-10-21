@@ -96,3 +96,24 @@ export function categoryDefaultKeys(
     )
     .flatMap(rowKeys);
 }
+
+/**
+ * Most product layers drawn at once (035): each is a full-screen raster or particle pass, so more
+ * would cost frame time without being readable over each other.
+ */
+export const MAX_PRODUCT_LAYERS = 4;
+
+/** What a product layer left out by {@link boundProductLayers} says, in the rail. */
+export const OVER_LIMIT_MESSAGE = `Not drawn: at most ${MAX_PRODUCT_LAYERS} overlays are drawn at once.`;
+
+/**
+ * The product layers to draw from those turned on (bottom first): the top
+ * {@link MAX_PRODUCT_LAYERS}, which are the ones seen; the rest are `dropped`.
+ */
+export function boundProductLayers(
+  keys: readonly string[],
+  max = MAX_PRODUCT_LAYERS,
+): { drawn: string[]; dropped: string[] } {
+  const cut = Math.max(0, keys.length - max);
+  return { drawn: keys.slice(cut), dropped: keys.slice(0, cut) };
+}

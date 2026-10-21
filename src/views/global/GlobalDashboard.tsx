@@ -12,7 +12,13 @@ import {
   withViewCounts,
 } from '../../map/records/catalog';
 import type { RecordLayerStatus } from '../../map/records/recordLayers';
-import { allKeys, defaultProductLayers, productEntries } from '../../map/products/productCatalog';
+import {
+  allKeys,
+  boundProductLayers,
+  defaultProductLayers,
+  OVER_LIMIT_MESSAGE,
+  productEntries,
+} from '../../map/products/productCatalog';
 import type { Product } from '../../map/products/productApi';
 import type { ProductLayerStatus } from '../../map/products/productLayers';
 import { useProducts } from '../../map/products/useProducts';
@@ -208,11 +214,14 @@ export function GlobalDashboard({
     setProductStatuses((current) => ({ ...current, [key]: status }));
   }, []);
   // Drawn bottom first in the rail's order, so the order does not depend on the order of clicks.
-  const productLayers = useMemo(
+  // At most MAX_PRODUCT_LAYERS are drawn (035): the top ones; the rest say why they are not.
+  const { drawn: productLayers, dropped: droppedProducts } = useMemo(
     () =>
-      entries
-        .filter((entry) => entry.available)
-        .flatMap((entry) => allKeys(entry).filter((key) => enabledProducts.has(key))),
+      boundProductLayers(
+        entries
+          .filter((entry) => entry.available)
+          .flatMap((entry) => allKeys(entry).filter((key) => enabledProducts.has(key))),
+      ),
     [entries, enabledProducts],
   );
   const products = useMemo<ProductLayersValue>(
@@ -220,9 +229,14 @@ export function GlobalDashboard({
       entries,
       enabled: enabledProducts,
       setKeys: setProductKeys,
-      statuses: productStatuses,
+      statuses: {
+        ...productStatuses,
+        ...Object.fromEntries(
+          droppedProducts.map((key) => [key, { state: 'error', message: OVER_LIMIT_MESSAGE }]),
+        ),
+      },
     }),
-    [entries, enabledProducts, setProductKeys, productStatuses],
+    [entries, enabledProducts, setProductKeys, productStatuses, droppedProducts],
   );
 
   const clear = useCallback(

@@ -119,9 +119,11 @@ export function fetchSseTransport(
   return ({ url, headers }, handlers) => {
     const controller = new AbortController();
     let closed = false;
+    const release = tally(url);
     const finish = (failure: SseFailure) => {
       if (closed || controller.signal.aborted) return;
       closed = true;
+      release();
       handlers.onClose(failure);
     };
     void (async () => {
@@ -171,9 +173,35 @@ export function fetchSseTransport(
     })();
     return () => {
       closed = true;
+      release();
       controller.abort();
     };
   };
+}
+
+/** The open (or opening) connections of {@link fetchSseTransport}, by URL path (035). */
+const openByPath = new Map<string, number>();
+
+/** Counts a connection to `url` as open; the returned function counts it closed, once. */
+function tally(url: string): () => void {
+  const path = new URL(url, 'http://local').pathname;
+  openByPath.set(path, (openByPath.get(path) ?? 0) + 1);
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    const left = (openByPath.get(path) ?? 1) - 1;
+    if (left > 0) openByPath.set(path, left);
+    else openByPath.delete(path);
+  };
+}
+
+/**
+ * The server-sent event connections open now, by URL path (`/v1/events/stream`, …), for the
+ * stress harness (035): the change stream must stay one connection however many layers are on.
+ */
+export function openStreams(): Record<string, number> {
+  return Object.fromEntries(openByPath);
 }
 
 /** Whole seconds as milliseconds; undefined stays undefined. */

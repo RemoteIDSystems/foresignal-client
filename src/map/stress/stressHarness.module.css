@@ -47,3 +47,21 @@
   margin: 6px 0 0;
   font-variant-numeric: tabular-nums;
 }
+
+.report {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.report th,
+.report td {
+  padding: 2px 4px;
+  text-align: right;
+}
+
+.report th:first-child,
+.report td:first-child {
+  text-align: left;
+}
