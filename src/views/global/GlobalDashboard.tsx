@@ -123,8 +123,8 @@ const PANELS: readonly DockPanel[] = [
  * (010). The page holds the live stream open (011), narrowed to the drawn kinds (and product frames)
  * in the committed view, so the map stays current; the time HUD's badge shows its state. The time
  * HUD (013) pins the map at an instant in the last day, or plays its history. The enabled
- * layers, hidden sources, selection and viewport are the store's (012), so they outlast the page. The other
- * panels are skeletons with placeholder data until their prompts. A saved view opened from the
+ * layers, hidden sources, selection and viewport are the store's (012), so they outlast the page. The
+ * panels are filled from the backend. A saved view opened from the
  * rail (031) is drawn in place of the kinds' layers, from its own tiles and its own stream; turning
  * a kind on or off closes it.
  */
@@ -460,7 +460,6 @@ export function GlobalDashboard({
               kinds={recordLayers}
               bbox={viewport?.bbox}
             />
-            <div className={styles.placeholderChip}>Placeholder panel data</div>
             <LocateBar />
             <Link to="/alerts?new=view" className={styles.alertHere}>
               <Bell size={13} aria-hidden="true" />
