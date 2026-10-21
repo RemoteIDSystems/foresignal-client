@@ -1,3 +1,4 @@
+import { useWorkspaceSync } from '../../workspace/workspaceSyncContext';
 import { ANALYSIS_ENTRIES, TOOL_ENTRIES, type RailEntry } from './frame';
 import styles from './Analysis.module.css';
 
@@ -5,7 +6,8 @@ import styles from './Analysis.module.css';
  * The full-analysis left rail (019), as the Conflict mock draws it: ANALYSIS (Situations, Analytic
  * Findings, Hypotheses, Forecasts, Indicators, Base Rates, Comparisons, Reports) and TOOLS. An entry
  * opens its tab of the open analysis, or the list; Analysis Builder opens the analysis in the
- * Analyst Workbench (024). One whose screen is built later is shown disabled, naming the prompt.
+ * Analyst Workbench (024) and Workspaces the Workspaces dialog (025). One whose screen is built
+ * later is shown disabled, naming the prompt.
  */
 export function AnalysisRail({
   tab,
@@ -21,12 +23,15 @@ export function AnalysisRail({
   onWorkbench?: () => void;
   atHome?: boolean;
 }) {
+  const workspaces = useWorkspaceSync();
   const item = (entry: RailEntry) => {
     const Icon = entry.icon;
     const current = entry.home ? atHome : !atHome && entry.tab !== undefined && entry.tab === tab;
     const disabled = entry.workbench
       ? !onWorkbench
-      : !entry.home && (entry.tab === undefined || !onTab);
+      : entry.workspaces
+        ? !workspaces
+        : !entry.home && (entry.tab === undefined || !onTab);
     return (
       <button
         key={entry.label}
@@ -41,13 +46,12 @@ export function AnalysisRail({
               ? `${entry.label}: open a situation or investigation first`
               : undefined
         }
-        onClick={() =>
-          entry.home
-            ? onHome()
-            : entry.workbench
-              ? onWorkbench?.()
-              : entry.tab && onTab?.(entry.tab)
-        }
+        onClick={() => {
+          if (entry.home) onHome();
+          else if (entry.workbench) onWorkbench?.();
+          else if (entry.workspaces) workspaces?.openDialog();
+          else if (entry.tab) onTab?.(entry.tab);
+        }}
       >
         <Icon size={15} aria-hidden="true" />
         {entry.label}

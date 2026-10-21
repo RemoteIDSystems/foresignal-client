@@ -25,26 +25,61 @@ import { Badge } from '../../ui/Badge';
 import { Button, IconButton } from '../../ui/Button';
 import { Tabs } from '../../ui/Tabs';
 import { useToast } from '../../ui/toast-context';
+import { useWorkspaceSync } from '../../workspace/workspaceSyncContext';
+import { workbenchPath } from '../workbench/workbench';
 import { useRecordLayers } from './recordLayersContext';
 import { useSelectedDossier } from './useSelectedDossier';
 import styles from './GlobalDashboard.module.css';
 
 type EntityTab = 'overview' | 'imagery' | 'forecast' | 'impacts' | 'related';
 
+/** The envelope action that adds an object to a workspace (the OpenAPI's example id). */
+const ADD_TO_WORKSPACE_ACTION = 'add-to-workspace';
+
 /**
  * Actions this client carries out itself, by action id: opening an investigation from the object
- * (019), which then opens its workspace. The rest are shown, from the envelope, but not yet wired:
- * adding to a workspace comes with 025 and annotating with 026.
+ * (019), which then opens its workspace, and adding the object to the open workspace's selected
+ * refs (025; with none open, the Workspaces dialog opens). The rest are shown, from the envelope,
+ * but not yet wired: annotating comes with 026.
  */
 function useActionHandlers(
   envelope: ObjectEnvelope,
 ): Readonly<Record<string, (action: ObjectAction) => void>> {
   const api = useRecordLayers()?.api;
+  const workspaces = useWorkspaceSync();
   const navigate = useNavigate();
   const toast = useToast();
   return useMemo((): Readonly<Record<string, (action: ObjectAction) => void>> => {
     if (!api) return {};
+    const addToWorkspace = () => {
+      if (!workspaces) return;
+      const active = workspaces.active;
+      if (!active) {
+        workspaces.openDialog();
+        toast.show({ title: 'Open a workspace first', detail: 'Then add the object again.' });
+        return;
+      }
+      void workspaces.addRef(envelope.ref).then(
+        (saved) =>
+          toast.show(
+            saved
+              ? { title: `Added to ${active.name}`, tone: 'success' }
+              : {
+                  title: 'The object was not added',
+                  detail: workspaces.active?.error,
+                  tone: 'danger',
+                },
+          ),
+        (error: unknown) =>
+          toast.show({
+            title: 'The object was not added',
+            detail: error instanceof Error ? error.message : undefined,
+            tone: 'danger',
+          }),
+      );
+    };
     return {
+      ...(workspaces && { [ADD_TO_WORKSPACE_ACTION]: addToWorkspace }),
       [OPEN_INVESTIGATION_ACTION]: () =>
         void openInvestigation(api, envelope).then(
           (investigation) => navigate(analysisPath(`investigation:${investigation.id}`) ?? '/'),
@@ -56,7 +91,7 @@ function useActionHandlers(
             }),
         ),
     };
-  }, [api, envelope, navigate, toast]);
+  }, [api, envelope, navigate, toast, workspaces]);
 }
 
 /**
@@ -71,6 +106,7 @@ function useActionHandlers(
  */
 export function SelectedEntityPanel({ onClose }: { onClose: () => void }) {
   const layers = useRecordLayers();
+  const navigate = useNavigate();
   const api = layers?.api;
   const selection = layers?.selection;
   const { ref, asOf, state } = useSelectedDossier();
@@ -93,9 +129,10 @@ export function SelectedEntityPanel({ onClose }: { onClose: () => void }) {
         <IconButton label="Close Selected Entity" icon={<X size={15} />} onClick={onClose} />
         <IconButton
           label="Open in new view"
-          title="Opens in its own view with workspaces (025)"
+          title="Opens the object in the Analyst Workbench"
           icon={<ExternalLink size={14} />}
-          disabled
+          disabled={!ref}
+          onClick={() => ref && void navigate(workbenchPath(ref))}
         />
       </header>
       {!selection ? (

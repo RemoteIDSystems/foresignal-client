@@ -1,5 +1,5 @@
 import type { ForesignalClient } from '../api/client';
-import { parseObjectRef } from '../lib/objectRef';
+import { parseObjectRef, recordRef } from '../lib/objectRef';
 import type { RecordHit } from '../map/records/recordPicking';
 import { envelopePoint } from './dossierView';
 import { dossiersFor } from './objectApi';
@@ -39,4 +39,16 @@ export async function hitForRef(
     latitude: point?.[1] ?? Number.NaN,
     distance: 0,
   };
+}
+
+/**
+ * A selection's object ref: the one it carries (a panel's selection), else a record's, from the
+ * source and id the map picked it by. Undefined for nothing selected, or a hexagon cell.
+ */
+export function selectionRef(selection: RecordHit | undefined): string | undefined {
+  const id = selection?.id;
+  if (id?.ref) return id.ref;
+  return id?.source !== undefined && id.externalId !== undefined
+    ? recordRef(id.source, id.externalId)
+    : undefined;
 }

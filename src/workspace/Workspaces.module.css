@@ -1,0 +1,100 @@
+/* The Workspaces dialog (025). */
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: min(520px, 90vw);
+  font-size: var(--fs-font-size-sm);
+}
+
+.current {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.link,
+.input {
+  width: 100%;
+  margin-top: 8px;
+  padding: 5px 8px;
+  border: 1px solid var(--fs-color-border-strong);
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-raised);
+  color: var(--fs-color-text);
+  font: inherit;
+}
+
+.input {
+  flex: 1;
+  margin-top: 0;
+}
+
+.muted {
+  color: var(--fs-color-text-muted);
+}
+
+.error {
+  color: var(--fs-color-danger);
+}
+
+.linked {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-md);
+  background: var(--fs-color-panel-alt);
+}
+
+.heading {
+  margin: 0 0 6px;
+  color: var(--fs-color-text-secondary);
+  font-size: var(--fs-font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  max-height: 260px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--fs-color-border);
+}
+
+.rowText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.create {
+  display: flex;
+  gap: 8px;
+}

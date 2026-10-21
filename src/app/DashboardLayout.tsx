@@ -26,23 +26,37 @@ export interface DashboardLayoutProps {
   map: ReactNode;
   /** Panels for the left, right and bottom slots, in order. */
   panels: readonly DockPanel[];
+  /** The closed panels' ids, when the caller keeps them (a workspace's layout, 025). */
+  closed?: readonly string[];
+  /** Called with the closed panels' ids, sorted, when one is closed or restored. */
+  onClosedChange?: (closed: string[]) => void;
 }
 
 /**
  * The dashboard composition: a central map region with left, right and bottom dock slots.
  * Each panel can be closed; a slot with no open panels collapses so the map takes the space,
- * and closed panels are listed on a restore bar. Every panel has its own error boundary.
+ * and closed panels are listed on a restore bar. The closed set is the layout's own unless the
+ * caller keeps it (`closed`, `onClosedChange`). Every panel has its own error boundary.
  */
-export function DashboardLayout({ map, panels }: DashboardLayoutProps) {
-  const [closed, setClosed] = useState<ReadonlySet<string>>(new Set());
+export function DashboardLayout({
+  map,
+  panels,
+  closed: kept,
+  onClosedChange,
+}: DashboardLayoutProps) {
+  const [own, setOwn] = useState<ReadonlySet<string>>(new Set());
+  const closed: ReadonlySet<string> = kept ? new Set(kept) : own;
+  const change = (next: Set<string>) => {
+    if (kept) onClosedChange?.([...next].sort());
+    else setOwn(next);
+  };
   const open = (slot: DockSlot) => panels.filter((p) => p.slot === slot && !closed.has(p.id));
-  const close = (id: string) => setClosed((current) => new Set(current).add(id));
-  const restore = (id: string) =>
-    setClosed((current) => {
-      const next = new Set(current);
-      next.delete(id);
-      return next;
-    });
+  const close = (id: string) => change(new Set(closed).add(id));
+  const restore = (id: string) => {
+    const next = new Set(closed);
+    next.delete(id);
+    change(next);
+  };
 
   const left = open('left');
   const right = open('right');

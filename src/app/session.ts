@@ -17,6 +17,7 @@ import {
   type CapabilitiesStore,
 } from '../state/capabilities';
 import specVersionRaw from '../../openapi/VERSION?raw';
+import { WorkspaceSync } from '../workspace/WorkspaceSync';
 
 /** `info.version` of the vendored spec, from `openapi/VERSION`. */
 export const SPEC_VERSION = specVersionRaw.trim();
@@ -35,6 +36,8 @@ export interface Session {
   stream: ChangeStream;
   /** The app's state (012): the map and panels read it; the live stream writes into it. */
   store: Store<AppState>;
+  /** Binds the app's state to a workspace's context, and restores deep links (025). */
+  workspaces: WorkspaceSync;
   /** Reports this browser's device metadata for the current token; resolves `false` with none. */
   reportDevice(): Promise<boolean>;
 }
@@ -51,7 +54,7 @@ export interface SessionOptions {
 
 /**
  * Builds the session: token store, API client, ticket source, live stream, app store (with the
- * stream's deltas applied to it) and capabilities.
+ * stream's deltas applied to it), workspace binding and capabilities.
  *
  * Capabilities load immediately and again on every token change; when a token is present its
  * device metadata is reported with `updateCurrentTokenDevice` (`PUT /v1/tokens/current/device`).
@@ -74,6 +77,7 @@ export function createSession(options: SessionOptions = {}): Session {
     tickets,
   });
   connectStreamToStore(stream, store);
+  const workspaces = new WorkspaceSync(api, store);
 
   const reportDevice = async () => {
     if (!tokens.get()) return false;
@@ -93,5 +97,5 @@ export function createSession(options: SessionOptions = {}): Session {
   tokens.subscribe(refresh);
   refresh();
 
-  return { tokens, api, tickets, capabilities, stream, store, reportDevice };
+  return { tokens, api, tickets, capabilities, stream, store, workspaces, reportDevice };
 }

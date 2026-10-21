@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { NavLink, useNavigate } from 'react-router';
-import { Bell, ChevronDown, Settings, User } from 'lucide-react';
+import { Bell, BookOpen, ChevronDown, Settings, User } from 'lucide-react';
+import { useStoreKey } from '../state/store';
 import { IconButton } from '../ui/Button';
 import { Logo } from './Logo';
 import { NAV_TABS } from './routes';
@@ -9,11 +10,13 @@ import type { Session } from './session';
 import styles from './TopNav.module.css';
 
 /**
- * The top navigation bar shared by every screen: wordmark, the primary tabs, search (017), notifications (wired in 029), settings and the access menu.
+ * The top navigation bar shared by every screen: wordmark, the primary tabs, search (017), the
+ * open workspace (025), notifications (wired in 029), settings and the access menu.
  */
 export function TopNav({ session }: { session: Session }) {
   const navigate = useNavigate();
   const token = useSyncExternalStore(session.tokens.subscribe, session.tokens.get);
+  const workspace = useStoreKey('workspace', session.store);
 
   return (
     <nav className={styles.nav} aria-label="Primary">
@@ -44,6 +47,17 @@ export function TopNav({ session }: { session: Session }) {
 
       <div className={styles.right}>
         <SearchBox session={session} />
+        <button
+          type="button"
+          className={styles.workspace}
+          onClick={() => session.store.set('workspacesOpen', true)}
+          aria-label={workspace ? `Workspace: ${workspace.name}` : 'Workspaces'}
+          title={workspace?.error ? `Not saved: ${workspace.error}` : undefined}
+        >
+          <BookOpen size={15} strokeWidth={1.75} aria-hidden="true" />
+          <span className={styles.workspaceName}>{workspace ? workspace.name : 'Workspace'}</span>
+          {workspace?.error && <span className={styles.workspaceError} aria-hidden="true" />}
+        </button>
         <IconButton label="Notifications" icon={<Bell size={17} strokeWidth={1.75} />} />
         <IconButton
           label="Settings"

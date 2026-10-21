@@ -2,13 +2,19 @@ import { useCallback, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import type { ForesignalClient } from '../../api/client';
 import type { ViewGraph } from '../../graph/graphView';
-import { analysisPath } from '../../intel/analysisView';
-import { getInvestigation, listInvestigations } from '../../intel/investigationApi';
+import { BookOpen, Download, Share2, StickyNote } from 'lucide-react';
+import { analysisPath, utcText } from '../../intel/analysisView';
+import {
+  getInvestigation,
+  listInvestigations,
+  type Investigation,
+} from '../../intel/investigationApi';
 import { getSituation } from '../../intel/situationApi';
 import { useRead } from '../../intel/useHypotheses';
 import { useOpenObject } from '../../intel/useOpenObject';
-import { recordRef } from '../../lib/objectRef';
-import { hitForRef } from '../../objects/selectObject';
+import { hitForRef, selectionRef } from '../../objects/selectObject';
+import { Button } from '../../ui/Button';
+import { useWorkspaceSync } from '../../workspace/workspaceSyncContext';
 import type { AppState, Store } from '../../state/store';
 import { useStoreKey } from '../../state/store';
 import { EvidenceGraph } from './EvidenceGraph';
@@ -30,10 +36,11 @@ export interface WorkbenchViewProps {
   kind?: 'investigation' | 'situation';
 }
 
-/** The subject and its graph seeds, once read. */
+/** The subject and its graph seeds, once read, with an investigation's header facts. */
 interface Opened {
   title: string;
   seeds: string[];
+  facts?: { label: string; value: string }[];
 }
 
 /**
@@ -57,7 +64,11 @@ export function WorkbenchView({ api, store, kind }: WorkbenchViewProps) {
       const which = JSON.parse(key) as WorkbenchSubject;
       if (which.kind === 'investigation') {
         const investigation = await getInvestigation(client, which.id, signal);
-        return { title: investigation.title, seeds: investigationSeeds(investigation) };
+        return {
+          title: investigation.title,
+          seeds: investigationSeeds(investigation),
+          facts: investigationFacts(investigation),
+        };
       }
       if (which.kind === 'situation') {
         const situation = await getSituation(client, which.id, signal);
@@ -71,6 +82,7 @@ export function WorkbenchView({ api, store, kind }: WorkbenchViewProps) {
   const [graph, setGraph] = useState<ViewGraph>();
   const navigate = useNavigate();
   const open = useOpenObject(api, store);
+  const workspaces = useWorkspaceSync();
   const onSelect = useCallback(
     (ref: string | undefined) => {
       setSelected(ref);
@@ -116,6 +128,25 @@ export function WorkbenchView({ api, store, kind }: WorkbenchViewProps) {
             </button>
           );
         })}
+        <h2 className={analysis.railHeading}>Workspace</h2>
+        <button
+          type="button"
+          className={analysis.railItem}
+          disabled={!workspaces}
+          onClick={() => workspaces?.openDialog()}
+        >
+          <BookOpen size={15} aria-hidden="true" />
+          Workspaces
+        </button>
+        <button
+          type="button"
+          className={analysis.railItem}
+          disabled
+          title="Notes and annotations: built in 026"
+        >
+          <StickyNote size={15} aria-hidden="true" />
+          Notes
+        </button>
       </nav>
       <main className={analysis.main}>
         <header className={analysis.header}>
@@ -127,11 +158,33 @@ export function WorkbenchView({ api, store, kind }: WorkbenchViewProps) {
                 : 'Investigate. Correlate. Test hypotheses. Build intelligence.'}
             </span>
           </div>
-          {fullAnalysis && (
-            <Link className={styles.headerLink} to={fullAnalysis}>
-              Full analysis →
-            </Link>
-          )}
+          {opened.status === 'ready' &&
+            opened.value.facts?.map((fact) => (
+              <div key={fact.label} className={analysis.metric}>
+                <span className={analysis.metricLabel}>{fact.label}</span>
+                <span className={analysis.metricValue}>{fact.value}</span>
+              </div>
+            ))}
+          <div className={styles.headerActions}>
+            {workspaces && (
+              <Button icon={<Share2 size={14} />} onClick={() => workspaces.openDialog()}>
+                Share
+              </Button>
+            )}
+            {fullAnalysis && subject.kind === 'investigation' && (
+              <Button
+                icon={<Download size={14} />}
+                onClick={() => void navigate(`${fullAnalysis}?tab=export`)}
+              >
+                Export
+              </Button>
+            )}
+            {fullAnalysis && (
+              <Link className={styles.headerLink} to={fullAnalysis}>
+                Full analysis →
+              </Link>
+            )}
+          </div>
         </header>
         {subject.kind === 'none' ? (
           <WorkbenchStart api={api} store={store} />
@@ -218,13 +271,18 @@ function WorkbenchStart({
   );
 }
 
-/** A selection's ref: its own, else a record's from the source and id the map picked it by. */
-function selectionRef(selection: AppState['selection']): string | undefined {
-  const id = selection?.id;
-  if (id?.ref) return id.ref;
-  return id?.source !== undefined && id.externalId !== undefined
-    ? recordRef(id.source, id.externalId)
-    : undefined;
+/**
+ * An investigation's header facts, as the mock's Workbench header lists them: Classify (its TLP),
+ * Status, Owner, Created and Last Updated, each in the backend's words.
+ */
+function investigationFacts(investigation: Investigation): { label: string; value: string }[] {
+  return [
+    { label: 'Classify', value: investigation.tlp ? `TLP:${investigation.tlp}` : '—' },
+    { label: 'Status', value: investigation.status },
+    { label: 'Owner', value: investigation.owner?.displayName ?? investigation.createdBy },
+    { label: 'Created', value: utcText(investigation.createdAt) },
+    { label: 'Last Updated', value: utcText(investigation.updatedAt) },
+  ];
 }
 
 /** What a failed investigations read says. */

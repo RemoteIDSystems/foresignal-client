@@ -129,6 +129,8 @@ export function GlobalDashboard({
   // Layers and their filters live in the store (012): the user's choice once they toggle; until
   // then the catalog's default.
   const layerState = useStoreKey('layers', store);
+  // Closed panels are the store's too, so an open workspace keeps them in its layout (025).
+  const closedPanels = useStoreKey('closedPanels', store);
   const chosen = useMemo(
     () => (layerState.kinds ? new Set(layerState.kinds) : undefined),
     [layerState.kinds],
@@ -401,6 +403,8 @@ export function GlobalDashboard({
           </MapViewer>
         }
         panels={PANELS}
+        closed={closedPanels}
+        onClosedChange={(ids) => store.set('closedPanels', ids)}
       />
     </RecordLayersContext.Provider>
   );

@@ -1,4 +1,4 @@
-import { recordRef } from '../../lib/objectRef';
+import { selectionRef } from '../../objects/selectObject';
 import { useDossier, type DossierState } from '../../objects/useDossier';
 import { appStore, useStoreKey } from '../../state/store';
 import { useRecordLayers } from './recordLayersContext';
@@ -22,11 +22,7 @@ export function useSelectedDossier(): SelectedDossier {
   const layers = useRecordLayers();
   const store = layers?.store ?? appStore;
   const selection = layers?.selection;
-  const ref =
-    selection?.id.ref ??
-    (selection?.id.source !== undefined && selection.id.externalId !== undefined
-      ? recordRef(selection.id.source, selection.id.externalId)
-      : undefined);
+  const ref = selectionRef(selection);
   const time = useStoreKey('time', store);
   const asOf = time.mode === 'asOf' ? time.asOf : undefined;
   const live = useStoreKey(`layer:${selection?.id.kind ?? ''}`, store);

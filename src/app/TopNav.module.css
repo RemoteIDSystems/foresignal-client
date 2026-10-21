@@ -253,3 +253,40 @@
   color: var(--fs-color-text-muted);
   font-size: var(--fs-font-size-xs);
 }
+
+.workspace {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 180px;
+  padding: 5px 8px;
+  border: 1px solid var(--fs-color-border-strong);
+  border-radius: var(--fs-radius-md);
+  background: transparent;
+  color: var(--fs-color-text-secondary);
+  font: inherit;
+  font-size: var(--fs-font-size-sm);
+  cursor: pointer;
+}
+
+.workspace:hover {
+  background: var(--fs-color-raised);
+  color: var(--fs-color-text);
+}
+
+.workspaceName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspaceError {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--fs-color-danger);
+}

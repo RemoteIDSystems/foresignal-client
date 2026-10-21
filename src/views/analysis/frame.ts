@@ -79,6 +79,8 @@ export interface RailEntry {
   later?: string;
   /** Opens the Analyst Workbench on the open analysis (024). */
   workbench?: boolean;
+  /** Opens the Workspaces dialog (025). */
+  workspaces?: boolean;
 }
 
 /** The ANALYSIS section, in the Conflict mock's order. */
@@ -98,7 +100,7 @@ export const TOOL_ENTRIES: readonly RailEntry[] = [
   { label: 'Ask ForeSignal', icon: Bot, later: 'the Global dashboard (017)' },
   { label: 'Analysis Builder', icon: BarChart3, workbench: true },
   { label: 'Saved Views', icon: Save, later: '031' },
-  { label: 'Workspaces', icon: BookOpen, later: '025' },
+  { label: 'Workspaces', icon: BookOpen, workspaces: true },
 ];
 
 /** The item types an analyst can add by hand, in the form's order. */

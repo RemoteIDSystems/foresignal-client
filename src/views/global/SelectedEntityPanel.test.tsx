@@ -1,10 +1,12 @@
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Route, Routes, useSearchParams } from 'react-router';
 import { createForesignalClient } from '../../api/client';
 import type { RecordHit } from '../../map/records/recordPicking';
 import type { Dossier } from '../../objects/objectApi';
 import { createStore, INITIAL_STATE, type AppState } from '../../state/store';
+import type { WorkspaceSync } from '../../workspace/WorkspaceSync';
+import { WorkspaceSyncContext } from '../../workspace/workspaceSyncContext';
 import { RecordLayersContext, type RecordLayersValue } from './recordLayersContext';
 import { SelectedEntityPanel } from './SelectedEntityPanel';
 
@@ -201,4 +203,71 @@ describe('SelectedEntityPanel', () => {
     renderPanel({ ...quake, id: { ...quake.id, externalId: 'gone' } });
     expect(await screen.findByRole('alert')).toHaveTextContent('The dossier did not load');
   });
+
+  it('adds the object to the open workspace, or opens the Workspaces dialog when none is', async () => {
+    const addRef = vi.fn(async () => true);
+    const openDialog = vi.fn();
+    const sync = { active: undefined, addRef, openDialog } as {
+      active: unknown;
+      addRef: typeof addRef;
+      openDialog: typeof openDialog;
+    };
+    const value = {
+      catalog: { status: 'loading' },
+      selection: quake,
+      api,
+      store: createStore<AppState>(INITIAL_STATE),
+    } as unknown as RecordLayersValue;
+    render(
+      <MemoryRouter>
+        <WorkspaceSyncContext.Provider value={sync as unknown as WorkspaceSync}>
+          <RecordLayersContext.Provider value={value}>
+            <SelectedEntityPanel onClose={() => {}} />
+          </RecordLayersContext.Provider>
+        </WorkspaceSyncContext.Provider>
+      </MemoryRouter>,
+    );
+    const actions = within(await screen.findByTestId('entity-actions'));
+    const add = actions.getByRole('button', { name: 'Add to Workspace' });
+    expect(add).toBeEnabled();
+    await userEvent.click(add);
+    expect(openDialog).toHaveBeenCalled();
+    expect(addRef).not.toHaveBeenCalled();
+
+    sync.active = { id: 'w1', name: 'Geysers swarm', context: {}, contextVersion: 1 };
+    await userEvent.click(add);
+    expect(addRef).toHaveBeenCalledWith(REF);
+  });
+
+  it('opens the selected object in the Analyst Workbench', async () => {
+    const value = {
+      catalog: { status: 'loading' },
+      selection: quake,
+      api,
+      store: createStore<AppState>(INITIAL_STATE),
+    } as unknown as RecordLayersValue;
+    render(
+      <MemoryRouter initialEntries={['/global']}>
+        <Routes>
+          <Route
+            path="/global"
+            element={
+              <RecordLayersContext.Provider value={value}>
+                <SelectedEntityPanel onClose={() => {}} />
+              </RecordLayersContext.Provider>
+            }
+          />
+          <Route path="/analyst" element={<WorkbenchProbe />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Open in new view' }));
+    expect(await screen.findByTestId('workbench-probe')).toHaveTextContent(REF);
+  });
 });
+
+/** Shows the ref the workbench was opened with. */
+function WorkbenchProbe() {
+  const [params] = useSearchParams();
+  return <p data-testid="workbench-probe">{params.get('ref')}</p>;
+}

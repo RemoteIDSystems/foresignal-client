@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
+import type { components } from '../api/generated/schema';
 import type { SceneModeKey } from '../map/sceneMode';
 import type { RecordHit } from '../map/records/recordPicking';
 import type { HistoryPlayback } from '../time/history';
@@ -66,7 +67,26 @@ export interface AppState {
   workspaceContextVersion: number;
   /** A place the map is asked to move to (017's search and find bar); the map clears it. */
   locate: LocateRequest | undefined;
+  /** The workspace this client's context is bound to (025), if any. */
+  workspace: ActiveWorkspace | undefined;
+  /** Whether the Workspaces dialog is open (025). */
+  workspacesOpen: boolean;
+  /** The dashboard panels the user closed, by id, sorted; kept in a workspace's layout (025). */
+  closedPanels: readonly string[];
   [key: `layer:${string}`]: LayerLive | undefined;
+}
+
+/** The workspace a client is bound to: its id, name, role, and the context version last seen. */
+export interface ActiveWorkspace {
+  id: string;
+  name: string;
+  /** The caller's role, as the backend gives it. */
+  role?: string;
+  /** The context as of `contextVersion`, as the backend last returned it. */
+  context: components['schemas']['WorkspaceContext'];
+  contextVersion: number;
+  /** Why the last change was not saved, until one is. */
+  error?: string;
 }
 
 /** A request to move the map to a place (017). */
@@ -90,6 +110,9 @@ export const INITIAL_STATE: AppState = {
   inbox: { unread: 0 },
   workspaceContextVersion: 0,
   locate: undefined,
+  workspace: undefined,
+  workspacesOpen: false,
+  closedPanels: [],
 };
 
 /**
