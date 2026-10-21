@@ -18,6 +18,8 @@ import {
 } from '../state/capabilities';
 import specVersionRaw from '../../openapi/VERSION?raw';
 import { WorkspaceSync } from '../workspace/WorkspaceSync';
+import { AlertFeed } from '../alerts/AlertFeed';
+import { InboxFeed } from '../alerts/InboxFeed';
 
 /** `info.version` of the vendored spec, from `openapi/VERSION`. */
 export const SPEC_VERSION = specVersionRaw.trim();
@@ -38,6 +40,10 @@ export interface Session {
   store: Store<AppState>;
   /** Binds the app's state to a workspace's context, and restores deep links (025). */
   workspaces: WorkspaceSync;
+  /** The open alerts and their live lifecycle (029); started by the app shell. */
+  alerts: AlertFeed;
+  /** This device's notification inbox and badge (029); started by the app shell. */
+  inbox: InboxFeed;
   /** Reports this browser's device metadata for the current token; resolves `false` with none. */
   reportDevice(): Promise<boolean>;
 }
@@ -54,7 +60,7 @@ export interface SessionOptions {
 
 /**
  * Builds the session: token store, API client, ticket source, live stream, app store (with the
- * stream's deltas applied to it), workspace binding and capabilities.
+ * stream's deltas applied to it), workspace binding, alerts and inbox (029), and capabilities.
  *
  * Capabilities load immediately and again on every token change; when a token is present its
  * device metadata is reported with `updateCurrentTokenDevice` (`PUT /v1/tokens/current/device`).
@@ -78,6 +84,19 @@ export function createSession(options: SessionOptions = {}): Session {
   });
   connectStreamToStore(stream, store);
   const workspaces = new WorkspaceSync(api, store);
+  const alerts = new AlertFeed({
+    api,
+    baseUrl: options.baseUrl ?? baseUrl,
+    getToken: tokens.get,
+    tickets,
+  });
+  const inbox = new InboxFeed({
+    api,
+    baseUrl: options.baseUrl ?? baseUrl,
+    getToken: tokens.get,
+    getDeviceId,
+    tickets,
+  });
 
   const reportDevice = async () => {
     if (!tokens.get()) return false;
@@ -89,6 +108,9 @@ export function createSession(options: SessionOptions = {}): Session {
     tickets.invalidate();
     // A new token may see other data: the stream reconnects with a ticket for it.
     stream.reconnectNow();
+    // Alerts of private sources, and the inbox, depend on the token.
+    alerts.restart();
+    inbox.restart();
     void capabilities.load(api, SPEC_VERSION);
     reportDevice().catch((error: unknown) => {
       console.warn('ForeSignal: could not report device metadata for this token.', error);
@@ -97,5 +119,16 @@ export function createSession(options: SessionOptions = {}): Session {
   tokens.subscribe(refresh);
   refresh();
 
-  return { tokens, api, tickets, capabilities, stream, store, workspaces, reportDevice };
+  return {
+    tokens,
+    api,
+    tickets,
+    capabilities,
+    stream,
+    store,
+    workspaces,
+    alerts,
+    inbox,
+    reportDevice,
+  };
 }

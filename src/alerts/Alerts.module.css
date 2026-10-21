@@ -1,0 +1,257 @@
+/* Alerts and notifications (029): the actions, toasts, top strip, bell and inbox. */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.actionError {
+  color: var(--fs-color-danger);
+  font-size: var(--fs-font-size-xs);
+}
+
+.feedback {
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--fs-color-border-strong);
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-panel);
+  color: var(--fs-color-text);
+  font: inherit;
+  font-size: var(--fs-font-size-xs);
+}
+
+.toasts {
+  position: fixed;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(380px, calc(100vw - 32px));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toast {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--fs-color-border-strong);
+  border-left: 4px solid var(--severity);
+  border-radius: var(--fs-radius-md);
+  background: var(--fs-color-raised);
+  box-shadow: var(--fs-shadow-overlay);
+}
+
+.critical {
+  --severity: var(--fs-color-danger);
+}
+
+.warning {
+  --severity: var(--fs-color-warning);
+}
+
+.info {
+  --severity: var(--fs-color-accent);
+}
+
+.toastHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.open {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--fs-color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.open:hover .title {
+  text-decoration: underline;
+}
+
+.title {
+  display: block;
+  font-weight: 600;
+}
+
+.message {
+  display: block;
+  color: var(--fs-color-text-secondary);
+  font-size: var(--fs-font-size-sm);
+}
+
+.meta {
+  display: block;
+  color: var(--fs-color-text-muted);
+  font-size: var(--fs-font-size-xs);
+}
+
+.strip {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--fs-color-border);
+  background: color-mix(in srgb, var(--severity) 14%, var(--fs-color-panel));
+}
+
+.stripRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px;
+  font-size: var(--fs-font-size-sm);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--severity);
+}
+
+.stripCount {
+  font-weight: 600;
+}
+
+.stripList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 40vh;
+  margin: 0;
+  padding: 0 16px 8px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.stripItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-left: 3px solid var(--severity);
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-panel);
+}
+
+.bellWrap {
+  position: relative;
+}
+
+.bell {
+  position: relative;
+}
+
+.count {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--fs-color-accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 17px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.countCritical {
+  background: var(--fs-color-danger);
+}
+
+.inbox {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(380px, calc(100vw - 32px));
+  max-height: min(70vh, 560px);
+  padding: 10px;
+  border: 1px solid var(--fs-color-border-strong);
+  border-radius: var(--fs-radius-md);
+  background: var(--fs-color-panel);
+  box-shadow: var(--fs-shadow-overlay);
+}
+
+.inboxHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.inboxTitle {
+  margin: 0;
+  font-size: var(--fs-font-size-md);
+}
+
+.inboxList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.inboxItem {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr);
+  gap: 8px;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-left: 3px solid var(--severity);
+  border-radius: var(--fs-radius-sm);
+  background: transparent;
+  color: var(--fs-color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.inboxItem:hover {
+  background: var(--fs-color-raised-hover);
+}
+
+.unread {
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--fs-color-accent);
+}
+
+.readDot {
+  width: 8px;
+}
+
+.muted {
+  margin: 0;
+  color: var(--fs-color-text-muted);
+  font-size: var(--fs-font-size-sm);
+}

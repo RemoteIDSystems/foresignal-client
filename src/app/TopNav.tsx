@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from 'react';
 import { NavLink, useNavigate } from 'react-router';
-import { Bell, BookOpen, ChevronDown, Settings, User } from 'lucide-react';
+import { BookOpen, ChevronDown, Settings, User } from 'lucide-react';
+import { NotificationBell } from '../alerts/NotificationBell';
+import { useOpenObject } from '../intel/useOpenObject';
 import { useStoreKey } from '../state/store';
 import { IconButton } from '../ui/Button';
 import { Logo } from './Logo';
@@ -11,12 +13,13 @@ import styles from './TopNav.module.css';
 
 /**
  * The top navigation bar shared by every screen: wordmark, the primary tabs, search (017), the
- * open workspace (025), notifications (wired in 029), settings and the access menu.
+ * open workspace (025), the notifications bell and inbox (029), settings and the access menu.
  */
 export function TopNav({ session }: { session: Session }) {
   const navigate = useNavigate();
   const token = useSyncExternalStore(session.tokens.subscribe, session.tokens.get);
   const workspace = useStoreKey('workspace', session.store);
+  const openObject = useOpenObject(session.api, session.store);
 
   return (
     <nav className={styles.nav} aria-label="Primary">
@@ -58,7 +61,11 @@ export function TopNav({ session }: { session: Session }) {
           <span className={styles.workspaceName}>{workspace ? workspace.name : 'Workspace'}</span>
           {workspace?.error && <span className={styles.workspaceError} aria-hidden="true" />}
         </button>
-        <IconButton label="Notifications" icon={<Bell size={17} strokeWidth={1.75} />} />
+        <NotificationBell
+          feed={session.inbox}
+          hasToken={!!token}
+          onOpen={(ref) => void openObject(ref)}
+        />
         <IconButton
           label="Settings"
           icon={<Settings size={17} strokeWidth={1.75} />}
