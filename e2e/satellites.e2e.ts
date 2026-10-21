@@ -95,7 +95,11 @@ test('the constellation renders, animates with the clock, and a satellite select
     )
     .toBeLessThan(60_000);
 
-  // A real click on a drawn satellite selects it.
+  // A real click on a drawn satellite selects it. On the globe all three may be behind the Earth,
+  // so the camera is put above the first, as a person would turn the globe to it.
+  expect(
+    await page.evaluate((norad) => window.__foresignalSatellites!.view(norad), NORADS[0]!),
+  ).toBe(true);
   await expect.poll(() => satelliteOnScreen(page), { timeout: 15_000 }).toBeDefined();
   const target = (await satelliteOnScreen(page))!;
   await page.mouse.click(target.x, target.y);

@@ -4,6 +4,7 @@ import {
   Cartesian2,
   Cartesian3,
   Color,
+  EllipsoidalOccluder,
   HorizontalOrigin,
   JulianDate,
   LabelCollection,
@@ -12,6 +13,7 @@ import {
   PointPrimitive,
   PointPrimitiveCollection,
   PolylineCollection,
+  SceneMode,
   SceneTransforms,
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
@@ -241,8 +243,26 @@ export function ConstellationLayer({
         screenOf: (norad) => {
           const entry = drawn.get(norad);
           if (!entry?.point.show) return undefined;
+          // On the globe, one behind the Earth is not on screen, though it projects onto it.
+          if (
+            scene.mode === SceneMode.SCENE3D &&
+            !new EllipsoidalOccluder(scene.globe.ellipsoid, scene.camera.positionWC).isPointVisible(
+              entry.point.position,
+            )
+          ) {
+            return undefined;
+          }
           const at = SceneTransforms.worldToWindowCoordinates(scene, entry.point.position);
           return at && { x: at.x, y: at.y };
+        },
+        view: (norad) => {
+          const entry = drawn.get(norad);
+          if (!entry?.point.show) return false;
+          viewer.camera.setView({
+            destination: Cartesian3.multiplyByScalar(entry.point.position, 3, new Cartesian3()),
+          });
+          scene.requestRender();
+          return true;
         },
       });
     }
