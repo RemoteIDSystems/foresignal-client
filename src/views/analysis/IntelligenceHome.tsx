@@ -87,92 +87,98 @@ export function IntelligenceHome({ api }: { api?: ForesignalClient }) {
       <AnalysisRail onHome={() => {}} atHome />
       <div className={styles.home}>
         <Panel title="Situations">
-          <div className={styles.toolbar}>
-            <input
-              className={styles.input}
-              type="search"
-              aria-label="Search situations"
-              placeholder="Search situations"
-              value={q}
-              onChange={(event) => setQ(event.target.value)}
-            />
-            {STATUSES.map((status) => (
-              <button
-                key={status}
-                type="button"
-                className={styles.chip}
-                aria-pressed={statuses.has(status)}
-                onClick={() => toggle(status)}
-              >
-                {prettifyId(status)}
-              </button>
-            ))}
-          </div>
-          {situations.status === 'loading' && <p className={styles.muted}>Loading…</p>}
-          {situations.status === 'error' && (
-            <p className={styles.error} role="alert">
-              {situations.message}
-            </p>
-          )}
-          {situations.status === 'ready' && situations.items.length === 0 && (
-            <p className={styles.muted}>No situations match.</p>
-          )}
-          {situations.status === 'ready' && situations.items.length > 0 && (
-            <ul className={styles.rows} aria-label="Situations">
-              {situations.items.map((situation) => (
-                <li key={situation.id}>
-                  <button
-                    type="button"
-                    className={styles.listRow}
-                    onClick={() => open(`situation:${situation.id}`)}
-                  >
-                    <span className={styles.titleRow}>
-                      <strong>{situation.title}</strong>
-                      <Badge tone={statusTone(situation.status)}>{situation.status}</Badge>
-                      <Badge tone={severityTone(situation.severity)}>{situation.severity}</Badge>
-                    </span>
-                    <span className={styles.listMeta}>
-                      {prettifyId(situation.theme)} · {situation.memberCount} members · last
-                      activity {utcText(situation.lastActivityAt)}
-                    </span>
-                  </button>
-                </li>
+          <div className={styles.homeBody}>
+            <div className={styles.toolbar}>
+              <input
+                className={styles.input}
+                type="search"
+                aria-label="Search situations"
+                placeholder="Search situations"
+                value={q}
+                onChange={(event) => setQ(event.target.value)}
+              />
+              {STATUSES.map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  className={styles.chip}
+                  aria-pressed={statuses.has(status)}
+                  onClick={() => toggle(status)}
+                >
+                  {prettifyId(status)}
+                </button>
               ))}
-            </ul>
-          )}
+            </div>
+            {situations.status === 'loading' && <p className={styles.muted}>Loading…</p>}
+            {situations.status === 'error' && (
+              <p className={styles.error} role="alert">
+                {situations.message}
+              </p>
+            )}
+            {situations.status === 'ready' && situations.items.length === 0 && (
+              <p className={styles.muted}>No situations match.</p>
+            )}
+            {situations.status === 'ready' && situations.items.length > 0 && (
+              <ul className={styles.rows} aria-label="Situations">
+                {situations.items.map((situation) => (
+                  <li key={situation.id}>
+                    <button
+                      type="button"
+                      className={styles.listRow}
+                      onClick={() => open(`situation:${situation.id}`)}
+                    >
+                      <span className={styles.titleRow}>
+                        <strong>{situation.title}</strong>
+                        <Badge tone={statusTone(situation.status)}>{situation.status}</Badge>
+                        <Badge tone={severityTone(situation.severity)}>{situation.severity}</Badge>
+                      </span>
+                      <span className={styles.listMeta}>
+                        {prettifyId(situation.theme)} · {situation.memberCount} members · last
+                        activity {utcText(situation.lastActivityAt)}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </Panel>
         <Panel title="Investigations">
-          {investigations.status === 'loading' && <p className={styles.muted}>Loading…</p>}
-          {investigations.status === 'error' && (
-            <p className={styles.error} role="alert">
-              {investigations.message}
-            </p>
-          )}
-          {investigations.status === 'ready' && investigations.items.length === 0 && (
-            <p className={styles.muted}>No investigations yet.</p>
-          )}
-          {investigations.status === 'ready' && investigations.items.length > 0 && (
-            <ul className={styles.rows} aria-label="Investigations">
-              {investigations.items.map((investigation) => (
-                <li key={investigation.id}>
-                  <button
-                    type="button"
-                    className={styles.listRow}
-                    onClick={() => open(`investigation:${investigation.id}`)}
-                  >
-                    <span className={styles.titleRow}>
-                      <strong>{investigation.title}</strong>
-                      <Badge tone={statusTone(investigation.status)}>{investigation.status}</Badge>
-                    </span>
-                    <span className={styles.listMeta}>
-                      {investigation.displayId} · {investigation.itemCount ?? 0} items · updated{' '}
-                      {utcText(investigation.updatedAt)}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <div className={styles.homeBody}>
+            {investigations.status === 'loading' && <p className={styles.muted}>Loading…</p>}
+            {investigations.status === 'error' && (
+              <p className={styles.error} role="alert">
+                {investigations.message}
+              </p>
+            )}
+            {investigations.status === 'ready' && investigations.items.length === 0 && (
+              <p className={styles.muted}>No investigations yet.</p>
+            )}
+            {investigations.status === 'ready' && investigations.items.length > 0 && (
+              <ul className={styles.rows} aria-label="Investigations">
+                {investigations.items.map((investigation) => (
+                  <li key={investigation.id}>
+                    <button
+                      type="button"
+                      className={styles.listRow}
+                      onClick={() => open(`investigation:${investigation.id}`)}
+                    >
+                      <span className={styles.titleRow}>
+                        <strong>{investigation.title}</strong>
+                        <Badge tone={statusTone(investigation.status)}>
+                          {investigation.status}
+                        </Badge>
+                      </span>
+                      <span className={styles.listMeta}>
+                        {investigation.displayId} · {investigation.itemCount ?? 0} items · updated{' '}
+                        {utcText(investigation.updatedAt)}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </Panel>
       </div>
     </div>

@@ -29,17 +29,21 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
   border: 1px solid var(--fs-color-border);
   border-radius: var(--fs-radius-md);
   background: var(--fs-color-panel);
 }
 
+.rail > * {
+  flex-shrink: 0;
+}
+
+/* Every category shows, as in the mock: the rail scrolls as a whole, saved state and tools below. */
 .layerList {
-  flex: 1;
+  flex: none;
   margin: 0;
   padding: 4px 8px;
-  overflow: auto;
   list-style: none;
 }
 

@@ -60,6 +60,7 @@
 .side {
   display: flex;
   flex-direction: column;
+  grid-column: 2;
   grid-row: 1;
   gap: 10px;
   min-height: 0;
@@ -219,6 +220,7 @@
   }
 
   .side {
+    grid-column: auto;
     grid-row: auto;
   }
 

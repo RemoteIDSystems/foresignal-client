@@ -19,6 +19,11 @@
   background: var(--fs-color-nav);
 }
 
+/* A long rail scrolls rather than squeezing its entries over each other. */
+.rail > * {
+  flex-shrink: 0;
+}
+
 .railHeading {
   margin: 12px 8px 4px;
   color: var(--fs-color-text-muted);
@@ -504,6 +509,11 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
+}
+
+/* The home panels' content, inset from the panel's edge as every other panel's is. */
+.homeBody {
+  padding: 10px 12px 12px;
 }
 
 .home {

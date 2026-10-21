@@ -33,6 +33,7 @@
 }
 
 .side {
+  grid-column: 2;
   grid-row: 1;
 }
 
@@ -109,6 +110,11 @@
   padding: 0 8px 4px;
 }
 
+/* The shared input grows along a row; stacked here it keeps its own height. */
+.filters > * {
+  flex: none;
+}
+
 .stations {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -153,6 +159,7 @@
   }
 
   .side {
+    grid-column: auto;
     grid-row: auto;
   }
 
