@@ -1,12 +1,12 @@
 # 035 — Completion Report: Scale And Performance
 
-| Field                 | Value                                                                                                                   |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Status                | Complete. The scale spec ran on 2026-10-21 in software WebGL and passed; its numbers are below. Not yet run on the GPU. |
-| Implementation commit | `5ef168ec451539a217318c0bf8e38b804b3c2116`                                                                              |
-| Run mode              | Unattended (owner's batch 023–036, no pausing)                                                                          |
-| Screenshots           | None taken (compile-only run).                                                                                          |
-| Mock comparison       | Not applicable: the harness is a development-only panel (`?stress` in a development build).                             |
+| Field                 | Value                                                                                                                  |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Status                | Complete. Measured on 2026-10-21 on the GPU and in software WebGL. On the GPU the world zoom is over the frame budget. |
+| Implementation commit | `5ef168ec451539a217318c0bf8e38b804b3c2116`                                                                             |
+| Run mode              | Unattended (owner's batch 023–036, no pausing)                                                                         |
+| Screenshots           | None taken (compile-only run).                                                                                         |
+| Mock comparison       | Not applicable: the harness is a development-only panel (`?stress` in a development build).                            |
 
 ## Results
 
@@ -57,17 +57,43 @@
 
 ## The numbers
 
-Measured on 2026-10-21 by `npx playwright test e2e/scale.e2e.ts`, which passed in 2.0 min. The run
-used **software WebGL (SwiftShader)** against the local backend, with 190 kind layers on. The source
-is `test-results/035-scale-software.json`. Heap is `usedJSHeapSize` in decimal MB.
+Both runs were on 2026-10-21 against the local backend, with 190 kind layers on (stand-in records,
+as 010). Heap is `usedJSHeapSize` in decimal MB.
+
+- **GPU:** `E2E_GPU=1 npx playwright test e2e/scale.e2e.ts`, 1.8 min, source
+  `test-results/035-scale-gpu.json`. The renderer, read from `WEBGL_debug_renderer_info` under the
+  same configuration, was `ANGLE (AMD, AMD Radeon 780M Graphics (radeonsi phoenix LLVM 20.1.2),
+OpenGL 4.6)`. **The spec failed** on one problem: "World: p95 frame 53.6 ms is over the 33.3 ms
+  budget."
+- **Software:** `npx playwright test e2e/scale.e2e.ts`, 2.0 min, source
+  `test-results/035-scale-software.json`. The renderer was SwiftShader. The spec passed, because it
+  holds frame timing only on the GPU.
+
+### GPU (Radeon 780M)
+
+| Measure                                  | World              | Region             | City               |
+| ---------------------------------------- | ------------------ | ------------------ | ------------------ |
+| Layers on                                | 190                | 190                | 190                |
+| Records drawn                            | 37,500             | 1,292              | 1                  |
+| Cells drawn                              | 396                | 144                | 0                  |
+| Tiles                                    | 760                | 760                | 1,140              |
+| Merged instances                         | 792                | 288                | 0                  |
+| Settled after (s)                        | 87.0               | 8.5                | 2.8                |
+| Peak tile requests (in flight / waiting) | 12 / 517           | 12 / 736           | 12 / 1,114         |
+| Frames in the 3 s pan (fps)              | 97 (32.3)          | 180 (60.0)         | 180 (60.0)         |
+| Frame p50 / p95 / p99 (ms)               | 28.9 / 53.6 / 91.6 | 16.7 / 17.7 / 21.2 | 16.7 / 18.6 / 23.8 |
+| Frames over 33.3 ms                      | 27                 | 0                  | 0                  |
+| Heap (MB)                                | 148                | 148                | 148                |
+| Change-stream connections                | 1                  | 1                  | 1                  |
+
+The layer toggle (`aerodrome-osm`) took 0.2 ms off and 0.1 ms on, and the map redrew in 0.1 ms.
+
+### Software (SwiftShader)
 
 | Measure                                  | World         | Region        | City          |
 | ---------------------------------------- | ------------- | ------------- | ------------- |
-| Layers on                                | 190           | 190           | 190           |
 | Records drawn                            | 37,482        | 1,286         | 1,286         |
 | Cells drawn                              | 396           | 144           | 144           |
-| Tiles                                    | 760           | 760           | 760           |
-| Merged instances                         | 792           | 288           | 288           |
 | Settled after (s)                        | 82.9          | 17.0          | 0.8           |
 | Peak tile requests (in flight / waiting) | 12 / 519      | 12 / 731      | 0 / 0         |
 | Frames in the 3 s pan                    | 1             | 3             | 2             |
@@ -75,25 +101,28 @@ is `test-results/035-scale-software.json`. Heap is `usedJSHeapSize` in decimal M
 | Heap (MB)                                | 148           | 148           | 148           |
 | Change-stream connections                | 1             | 1             | 1             |
 
-Other figures:
+The layer toggle (`navaid`) took 0.1 ms off and 0 ms on, and the map redrew in 389.5 ms.
+SwiftShader draws on the CPU, so its frame times say nothing about a GPU.
 
-- **Change streams.** The browser saw at most one `/v1/events/stream` open at once, and the client's
-  tally agrees. The alerts stream is the only other one open.
-- **Layer toggle.** One layer (`navaid`) turned off took 0.1 ms and back on 0 ms. The map then
-  redrew in 389.5 ms.
-- **Problems the report lists.** Region p95 1,558.1 ms and city p95 1,610.7 ms are over the 33.3 ms
-  budget. The world zoom drew one frame in the pan, and `scaleProblems` judges only more than one
-  (`scaleScenario.ts:202`). The spec checks frame timing only
-  with `E2E_GPU=1`, so these do not fail it.
+### What the numbers show
 
-**What the numbers do and do not show.**
-
-- Records load only in view: the city holds 1,286 against the world's 37,482.
-- Tile requests peaked at 12 in flight, with up to 731 waiting. The world zoom took 82.9 s to
-  settle. This run does not show how much of that was the queue.
-- **Frame time here is SwiftShader's.** It draws every translucent pixel on the CPU, so it says
-  nothing about a GPU. **The ceiling, and whether it is the backend's or the client's, is still not
-  confirmed.** That needs the GPU run (`E2E_GPU=1 npm run e2e -- scale`), which has not been done.
+- **The frame ceiling is the client's, at world zoom.** On the GPU the world view (37,500 records,
+  396 cells, 792 merged instances) pans at 32 fps with a p95 of 53.6 ms: 27 of 97 frames are over
+  budget. Region and city zooms hold 60 fps. Nothing on the backend is involved in drawing a
+  frame, so this is the client's limit.
+- **The load ceiling is the tile queue.** Every zoom peaked at 12 requests in flight, which is the
+  client's own cap (`MAX_TILE_REQUESTS`, `src/map/records/layerSources.ts:15`), with 517 to 1,114
+  waiting. The world view took 87.0 s to settle on the GPU and 82.9 s in software, nearly the
+  same, so drawing is not what holds settling back. These runs do not separate how much of that
+  time is the cap and how much is the backend's response time, including its anonymous rate limit
+  (429 with `Retry-After`).
+- **Records load only in view.** The city view held 1 record on the GPU run and 1,286 in the
+  software run. The two runs read the live backend at different times, so the counts differ.
+- **One change stream.** Both runs saw at most one `/v1/events/stream` open at once, and the
+  client's tally agrees. The alerts stream is the only other one open.
+- **Heap reads exactly 148,000,000 bytes at every step of both runs.** That is a rounded figure,
+  not a measurement of growth. The runs' launch arguments (`playwright.config.ts`) do not include
+  Chromium's `--enable-precise-memory-info`.
 
 ## What was built
 
@@ -131,17 +160,17 @@ Other figures:
 
 ### Checks
 
-| Check                                                       | Result                                                                                |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `npm run typecheck`                                         | Passed                                                                                |
-| `npm run lint`                                              | Passed                                                                                |
-| `npx prettier --check src e2e`                              | Passed (and `scripts`)                                                                |
-| `npm run build`                                             | Passed. `index` 875.55 kB (263.29 kB gzip)                                            |
-| `npm run verify:dist`                                       | "✓ dist is ready to deploy."                                                          |
-| `npm test`, `npm run e2e`                                   | **Not run** at the time (standing rule). The scale spec was run on 2026-10-21: passed |
-| Guard: `test_us_english.py`                                 | 14 tests OK (167.9 s)                                                                 |
-| Guard: `check_us_english.py` over the project               | 804 hits, unchanged                                                                   |
-| Guard: `check_us_english.py` over the new and changed files | 0 hits                                                                                |
+| Check                                                       | Result                                                                                                                                 |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run typecheck`                                         | Passed                                                                                                                                 |
+| `npm run lint`                                              | Passed                                                                                                                                 |
+| `npx prettier --check src e2e`                              | Passed (and `scripts`)                                                                                                                 |
+| `npm run build`                                             | Passed. `index` 875.55 kB (263.29 kB gzip)                                                                                             |
+| `npm run verify:dist`                                       | "✓ dist is ready to deploy."                                                                                                           |
+| `npm test`, `npm run e2e`                                   | **Not run** at the time (standing rule). On 2026-10-21 the scale spec passed in software and **failed on the GPU** (world p95 53.6 ms) |
+| Guard: `test_us_english.py`                                 | 14 tests OK (167.9 s)                                                                                                                  |
+| Guard: `check_us_english.py` over the project               | 804 hits, unchanged                                                                                                                    |
+| Guard: `check_us_english.py` over the new and changed files | 0 hits                                                                                                                                 |
 
 ## Compared to the mock
 
@@ -164,10 +193,11 @@ which shows in the rail's existing error state with its message.
 
 ## Deviations from the prompt text
 
-- **"Measure … record the numbers"**: measured on 2026-10-21 in software WebGL (above). There is no
-  GPU run yet.
-- **"Confirm the limit is the backend, not the client"**: not confirmed. Software WebGL's frame
-  time bounds the run, so the GPU run is still needed.
+- **"Confirm the limit is the backend, not the client"**: answered in part. The frame limit at
+  world zoom is the client's (above). The settle time is the tile queue: the client's cap of 12 in
+  flight and the backend's response time together, which these runs do not separate.
+- **The frame budget is not met at world zoom on the GPU** (p95 53.6 ms against 33.3 ms). Nothing
+  was changed to meet it. That is owner question 1.
 
 ## Backend observations
 
@@ -176,9 +206,10 @@ which shows in the rail's existing error state with its message.
 
 ## Owner questions
 
-1. **The ceiling.** The software-WebGL numbers are in the table. Should the GPU run
-   (`E2E_GPU=1`) be run on the workstation to settle where the ceiling is? **Default in place:
-   software numbers only.**
+1. **World zoom over budget.** On the Radeon 780M the world view pans at 32 fps, with a p95 of
+   53.6 ms. Should drawing at world zoom be made cheaper (fewer cells or merged instances drawn at
+   once), or is 32 fps acceptable at that zoom? **Default in place: unchanged; the scale spec fails
+   on the GPU.**
 2. **Overlay bound.** Is 4 drawn product layers the right bound, and should the rail stop a fifth
    from being turned on, rather than showing it as not drawn? **Default in place: 4, the rest
    marked.**
