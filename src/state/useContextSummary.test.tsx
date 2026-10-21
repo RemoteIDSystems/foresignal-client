@@ -73,4 +73,25 @@ describe('useContextSummary', () => {
     expect(result.current.error).toBeTruthy();
     warn.mockRestore();
   });
+
+  it('asks again when a rate limit says to, not a minute later', async () => {
+    const viewport = { bbox: [0, 0, 1, 1] as [number, number, number, number], zoom: 3 };
+    answer = () =>
+      new Response(JSON.stringify({ title: 'Too Many Requests', status: 429 }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/problem+json', 'Retry-After': '2' },
+      });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { result } = renderHook(() => useContextSummary(api, viewport));
+    await advance(SUMMARY_DEBOUNCE_MS);
+    expect(asked).toHaveLength(1);
+    expect(result.current.summary).toBeUndefined();
+    answer = () => summary(0);
+    await advance(1_900);
+    expect(asked).toHaveLength(1);
+    await advance(200);
+    expect(asked).toHaveLength(2);
+    expect(result.current.summary?.counts.get('earthquake')).toBe(3);
+    warn.mockRestore();
+  });
 });

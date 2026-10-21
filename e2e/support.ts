@@ -129,7 +129,16 @@ export async function showLegend(page: Page) {
 export async function standInDense(page: Page, kinds: readonly string[] = ['aircraft']) {
   const dense = kinds.join('|');
   await page.route('**/v1/kinds', async (route) => {
-    const response = await route.fetch();
+    // Straight to the backend, past the app's own retry, so a rate limit is waited out here.
+    let response = await route.fetch();
+    for (let attempt = 0; response.status() === 429 && attempt < 10; attempt++) {
+      const wait = Number(response.headers()['retry-after'] ?? '1');
+      await new Promise((resolve) =>
+        setTimeout(resolve, (Number.isFinite(wait) ? wait : 1) * 1000),
+      );
+      response = await route.fetch();
+    }
+    if (!response.ok()) return route.fulfill({ response });
     const live = (await response.json()) as { kind: string }[];
     await route.fulfill({
       response,

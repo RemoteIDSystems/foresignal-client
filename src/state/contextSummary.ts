@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { unwrap, type ForesignalClient } from '../api/client';
+import { FsError } from '../api/errors';
 import type { components } from '../api/generated/schema';
 import { splitAtAntimeridian, type CommittedViewport } from './viewport';
 
@@ -115,7 +116,8 @@ export interface ViewSummaryState {
  * viewport (or the time machine's instant) settles, then again once the backend's cached copy has
  * expired ({@link SUMMARY_CACHE_S} after it was made), and at least every
  * {@link SUMMARY_REFRESH_MS}. A request for an older viewport is canceled. A failed read keeps
- * the last summary and says why.
+ * the last summary and says why, and is tried again when the backend says to (`Retry-After`, as a
+ * rate limit answers), or after {@link SUMMARY_REFRESH_MS}.
  */
 export function useContextSummary(
   api: ForesignalClient | undefined,
@@ -146,7 +148,7 @@ export function useContextSummary(
             ...current,
             error: error instanceof Error ? error.message : 'The view summary did not load.',
           }));
-          timer = setTimeout(load, SUMMARY_REFRESH_MS);
+          timer = setTimeout(load, retryDelay(error));
         },
       );
     };
@@ -157,4 +159,12 @@ export function useContextSummary(
     };
   }, [api, viewport, asOf]);
   return state;
+}
+
+/** How long after a failed summary to ask again: the backend's `Retry-After`, up to the refresh. */
+function retryDelay(error: unknown): number {
+  const seconds = error instanceof FsError ? error.retryAfter : undefined;
+  return seconds === undefined
+    ? SUMMARY_REFRESH_MS
+    : Math.min(SUMMARY_REFRESH_MS, Math.max(1, seconds) * 1_000);
 }
