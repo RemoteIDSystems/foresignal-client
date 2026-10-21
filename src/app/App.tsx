@@ -53,7 +53,7 @@ export function App({ session, initialPath }: AppProps) {
           element={<WorkbenchView kind="situation" api={session.api} store={session.store} />}
         />
         <Route path="/map" element={<MapView />} />
-        <Route path="/imagery" element={<ImageryView />} />
+        <Route path="/imagery" element={<ImageryView api={session.api} store={session.store} />} />
         <Route
           path="/satellites"
           element={<SatellitesView api={session.api} store={session.store} />}

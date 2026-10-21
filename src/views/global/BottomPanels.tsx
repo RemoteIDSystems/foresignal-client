@@ -20,24 +20,37 @@ import {
   termTag,
   type InsightTab,
 } from './insightsView';
-import { PLACEHOLDER_IMAGERY } from './placeholderData';
 import { useRecordLayers } from './recordLayersContext';
+import { ImageryViewer } from '../../imagery/ImageryViewer';
+import {
+  imageryForTab,
+  NO_VIDEO,
+  type GlobalImageryTab,
+  type ImageryItem,
+} from '../../imagery/imageryView';
+import { Picture } from '../../imagery/Picture';
+import { ImageryTile } from '../../imagery/RecentImagery';
+import { useRecentImagery } from '../../imagery/useRecentImagery';
+import { utcText } from '../../intel/analysisView';
 import styles from './GlobalDashboard.module.css';
 
-/** Placeholder thumbnail fills, one per imagery kind. */
-const THUMB_FILLS = [
-  'linear-gradient(135deg,#2f5a4a,#1a3040 60%,#3a6a7a)',
-  'linear-gradient(135deg,#8a8f94,#5d6366 50%,#b8bcc0)',
-  'linear-gradient(135deg,#6e7276,#3c4044 50%,#9a9ea2)',
-  'linear-gradient(135deg,#a4a8ac,#6c7074 50%,#d0d4d8)',
-  'radial-gradient(circle at 60% 40%,#d8b060 0 4%,#0a0e14 30%)',
-  'linear-gradient(135deg,#3a5468,#1c2c38 60%,#c0c8ce)',
-];
+/** How many thumbnails the strip shows. */
+const STRIP_SIZE = 6;
 
-/** Recent imagery panel. Skeleton; prompt 028 fills it from media and product imagery. */
+/**
+ * Recent imagery panel (028): the newest picture over the view large, with its time and source,
+ * and a strip of the next ones; selecting one shows it, and the large one opens the full-frame
+ * viewer. The tabs narrow it to satellite products, or to the scenes acquired over the view in
+ * the last week (Area Search); the backend stores no video.
+ */
 export function RecentImageryPanel({ onClose }: { onClose: () => void }) {
-  const [tab, setTab] = useState<'recent' | 'video' | 'satellite' | 'area'>('recent');
-  const [thumb, setThumb] = useState(0);
+  const { api, store, selectRef } = useRecordLayers() ?? {};
+  const [tab, setTab] = useState<GlobalImageryTab>('recent');
+  const [chosen, setChosen] = useState<string>();
+  const [open, setOpen] = useState<ImageryItem>();
+  const { imagery } = useRecentImagery(api, store);
+  const items = imagery.status === 'ready' ? imageryForTab(imagery.value.items, tab) : [];
+  const main = items.find((item) => item.key === chosen) ?? items[0];
   return (
     <Panel
       title="Recent Imagery"
@@ -59,30 +72,56 @@ export function RecentImageryPanel({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       className={styles.hideTitle}
     >
-      <div className={styles.imageryBody}>
-        <div className={styles.imageryMain}>
-          <span className={styles.imageryChip}>
-            <Clock size={12} aria-hidden="true" /> {PLACEHOLDER_IMAGERY.capturedAt}
-          </span>
-          <span className={styles.imageryChipRight}>
-            {PLACEHOLDER_IMAGERY.sensor} <ChevronDown size={12} aria-hidden="true" />
-          </span>
-        </div>
-        <div className={styles.thumbs}>
-          {PLACEHOLDER_IMAGERY.thumbnails.map((name, i) => (
+      <div className={styles.imageryBody} data-testid="global-imagery" data-count={items.length}>
+        {main ? (
+          <>
             <button
-              key={name}
               type="button"
-              className={styles.thumb}
-              aria-pressed={i === thumb}
-              onClick={() => setThumb(i)}
+              className={styles.imageryMain}
+              aria-label={`Open ${main.title} full frame`}
+              onClick={() => setOpen(main)}
             >
-              <span style={{ background: THUMB_FILLS[i] }} />
-              {name}
+              <Picture api={api} spec={main.thumb} size="thumb" alt={main.title} />
+              <span className={styles.imageryChip}>
+                <Clock size={12} aria-hidden="true" /> {utcText(main.time)}
+              </span>
+              <span className={styles.imageryChipRight}>
+                {main.title} <ChevronDown size={12} aria-hidden="true" />
+              </span>
             </button>
-          ))}
-        </div>
+            <ul className={styles.thumbs} aria-label="Imagery">
+              {items.slice(0, STRIP_SIZE).map((item) => (
+                <li key={item.key}>
+                  <ImageryTile
+                    api={api}
+                    item={item}
+                    pressed={item.key === main.key}
+                    onOpen={(picked) => setChosen(picked.key)}
+                  />
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <p className={styles.muted}>
+            {tab === 'video'
+              ? NO_VIDEO
+              : imagery.status === 'loading'
+                ? 'Loading imagery…'
+                : imagery.status === 'error'
+                  ? imagery.message
+                  : tab === 'area'
+                    ? 'No scene was acquired over the view in the last week.'
+                    : 'No imagery over the view: no enabled imagery product has a frame.'}
+          </p>
+        )}
       </div>
+      <ImageryViewer
+        api={api}
+        item={open}
+        onClose={() => setOpen(undefined)}
+        {...(selectRef && { onOpenObject: (ref: string) => void selectRef(ref).catch(() => {}) })}
+      />
     </Panel>
   );
 }

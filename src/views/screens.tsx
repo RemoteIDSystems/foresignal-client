@@ -1,4 +1,4 @@
-import { Image, Map, RadioTower, Workflow } from 'lucide-react';
+import { Map, RadioTower, Workflow } from 'lucide-react';
 import { PlaceholderView } from './PlaceholderView';
 
 /** Full-screen map. */
@@ -9,18 +9,6 @@ export function MapView() {
       title="Map"
       description="The full 2D map and 3D globe with every layer."
       builtIn="005–010"
-    />
-  );
-}
-
-/** Imagery and change detection. */
-export function ImageryView() {
-  return (
-    <PlaceholderView
-      icon={Image}
-      title="Imagery"
-      description="Recent imagery, product frames and before/after change detection."
-      builtIn="028"
     />
   );
 }

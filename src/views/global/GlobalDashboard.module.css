@@ -691,19 +691,18 @@
 
 .imageryMain {
   position: relative;
+  display: grid;
   flex: 1;
+  align-items: center;
   min-height: 120px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--fs-color-border-strong);
   border-radius: var(--fs-radius-sm);
-  background:
-    linear-gradient(
-      115deg,
-      transparent 40%,
-      rgba(220, 220, 210, 0.35) 41%,
-      rgba(220, 220, 210, 0.35) 43%,
-      transparent 44%
-    ),
-    radial-gradient(ellipse 60% 70% at 70% 50%, #6c7066, #3c4a42 60%, transparent 61%),
-    linear-gradient(160deg, #1c4a50, #2a5a5a 40%, #4a5a4a);
+  background: var(--fs-color-raised);
+  color: var(--fs-color-text);
+  font: inherit;
+  cursor: zoom-in;
 }
 
 .imageryChip,
@@ -729,30 +728,11 @@
 
 .thumbs {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 8px;
-}
-
-.thumb {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  margin: 0;
   padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--fs-color-text-secondary);
-  font-size: var(--fs-font-size-xs);
-  cursor: pointer;
-}
-
-.thumb span {
-  height: 44px;
-  border: 1px solid var(--fs-color-border-strong);
-  border-radius: var(--fs-radius-sm);
-}
-
-.thumb[aria-pressed='true'] span {
-  border: 2px solid var(--fs-color-accent);
+  list-style: none;
 }
 
 .select {

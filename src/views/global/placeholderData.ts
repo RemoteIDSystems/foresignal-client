@@ -46,10 +46,3 @@ export const PLACEHOLDER_LAYERS: PlaceholderLayer[] = [
   { id: 'hazards', name: 'Disasters / Hazards', icon: 'hazards', enabled: false, count: 27 },
   { id: 'conflict', name: 'Conflicts / Security', icon: 'conflict', enabled: false, count: 89 },
 ];
-
-/** Recent imagery. Replaced in 028 (`getMedia` / `getMediaThumbnail`). */
-export const PLACEHOLDER_IMAGERY = {
-  capturedAt: '2025-09-18 13:41Z',
-  sensor: 'Sentinel-2 (10m)',
-  thumbnails: ['Recent', 'Optical', 'SAR', 'Infrared', 'Night', 'Archive'],
-};

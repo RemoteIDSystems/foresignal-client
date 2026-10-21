@@ -44,6 +44,11 @@ import {
   type Bbox,
 } from '../../satellites/satelliteView';
 import { useConstellation } from '../../satellites/useConstellation';
+import { ImageryComparison } from '../../imagery/ImageryComparison';
+import { ImageryViewer } from '../../imagery/ImageryViewer';
+import type { ImageryItem } from '../../imagery/imageryView';
+import { RecentImageryGrid } from '../../imagery/RecentImagery';
+import { useRecentImagery } from '../../imagery/useRecentImagery';
 import { useStoreKey, type AppState, type Store } from '../../state/store';
 import { Badge } from '../../ui/Badge';
 import { Button, IconButton } from '../../ui/Button';
@@ -80,7 +85,8 @@ const WINDOW_HOURS = 24;
  * the Selected Satellite panel, and Upcoming Passes. The satellites come from the backend's
  * CelesTrak-compatible element sets (`getCelestrakGp`) and are moved by SGP4 in the browser to the
  * Cesium clock's instant; the passes, ground stations and sensors over the view come from
- * `listSensors`. The 2D / 3D toggle is the map's own (005).
+ * `listSensors`. The 2D / 3D toggle is the map's own (005). The bottom row ends with Recent Imagery
+ * and the Imagery Comparison (028).
  */
 export default function SatellitesScreen({ api, store }: SatellitesScreenProps) {
   const navigate = useNavigate();
@@ -116,6 +122,9 @@ export default function SatellitesScreen({ api, store }: SatellitesScreenProps) 
     [],
   );
   const matches = searchSatellites(satellites, search, 8);
+  const { imagery, area: imageryArea } = useRecentImagery(api, store);
+  const [openImage, setOpenImage] = useState<ImageryItem>();
+  const openObject = useOpenObject(api, store);
 
   return (
     <div className={analysis.frame}>
@@ -293,18 +302,37 @@ export default function SatellitesScreen({ api, store }: SatellitesScreenProps) 
               </p>
             </aside>
           )}
-          <section className={styles.bottom} aria-label={bottomLabel(tab)}>
-            <BottomPanel
-              tab={tab}
-              discovery={discovery}
-              sensors={sensors}
-              clockAt={clockAt}
-              satellites={satellites}
-              onSelect={setSelected}
-            />
-          </section>
+          <div className={styles.bottomRow}>
+            <section className={styles.bottom} aria-label={bottomLabel(tab)}>
+              <BottomPanel
+                tab={tab}
+                discovery={discovery}
+                sensors={sensors}
+                clockAt={clockAt}
+                satellites={satellites}
+                onSelect={setSelected}
+              />
+            </section>
+            <section className={styles.bottom} aria-label="Recent imagery">
+              <RecentImageryGrid
+                api={api}
+                imagery={imagery}
+                onOpen={setOpenImage}
+                title="Recent Imagery"
+              />
+            </section>
+            <section className={styles.bottom} aria-label="Imagery comparison">
+              <ImageryComparison api={api} area={imageryArea} title="Imagery Comparison" />
+            </section>
+          </div>
         </div>
       </main>
+      <ImageryViewer
+        api={api}
+        item={openImage}
+        onClose={() => setOpenImage(undefined)}
+        onOpenObject={(ref) => void openObject(ref)}
+      />
     </div>
   );
 }

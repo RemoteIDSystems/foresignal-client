@@ -204,4 +204,13 @@ describe('Satellite Operations', () => {
     ).toBeInTheDocument();
     expect(constellation()).toHaveAttribute('data-satellites', '0');
   });
+
+  it('ends the bottom row with Recent Imagery and the Imagery Comparison', async () => {
+    renderScreen();
+    expect(screen.getByRole('region', { name: 'Recent imagery' })).toBeInTheDocument();
+    const comparison = screen.getByRole('region', { name: 'Imagery comparison' });
+    // This stand-in backend has no product catalog, so each says why it is empty.
+    expect(await within(comparison).findByText(/Not Found/)).toBeInTheDocument();
+    expect(within(comparison).getByRole('button', { name: /Run Change Detection/ })).toBeDisabled();
+  });
 });

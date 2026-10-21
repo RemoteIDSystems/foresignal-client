@@ -14,13 +14,15 @@ export interface ModalProps {
   onClose: () => void;
   /** Dialog content. */
   children: ReactNode;
+  /** `default` (a 560 px dialog) or `full` (the whole window less a margin, for a full frame). */
+  size?: 'default' | 'full';
 }
 
 /**
  * A modal dialog rendered into `document.body`. Focus moves into the dialog on open and returns
  * to the previously focused element on close.
  */
-export function Modal({ open, title, onClose, children }: ModalProps) {
+export function Modal({ open, title, onClose, children, size = 'default' }: ModalProps) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -47,7 +49,7 @@ export function Modal({ open, title, onClose, children }: ModalProps) {
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={styles.dialog}
+        className={size === 'full' ? `${styles.dialog} ${styles.full}` : styles.dialog}
       >
         <div className={styles.header}>
           <h2 id={titleId} className={styles.title}>
