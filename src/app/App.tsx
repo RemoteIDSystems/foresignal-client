@@ -58,7 +58,10 @@ export function App({ session, initialPath }: AppProps) {
           path="/analyst/situations/:id"
           element={<WorkbenchView kind="situation" api={session.api} store={session.store} />}
         />
-        <Route path="/map" element={<MapView />} />
+        <Route
+          path="/map"
+          element={<MapView api={session.api} stream={session.stream} store={session.store} />}
+        />
         <Route path="/imagery" element={<ImageryView api={session.api} store={session.store} />} />
         <Route
           path="/satellites"

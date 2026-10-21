@@ -1,0 +1,17 @@
+/* The full-screen map (Map in the top bar): the viewer fills the space under the bar. */
+
+.map {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+}
+
+/* Named for screen readers; the map itself is the screen. */
+.title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
