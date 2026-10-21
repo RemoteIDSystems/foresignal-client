@@ -109,16 +109,16 @@
 
 ### Checks
 
-| Check                                                       | Result                                                                                                                                             |
-| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run typecheck`                                         | Passed                                                                                                                                             |
-| `npm run lint`                                              | Passed                                                                                                                                             |
-| `npx prettier --check src e2e`                              | Passed                                                                                                                                             |
-| `npm run build`                                             | Passed. `index` 743.90 kB (226.49 kB gzip); `SatellitesScreen` 45.09 kB (19.27 kB gzip)                                                            |
-| `npm test`, `npm run e2e`                                   | **Not run** (standing rule)                                                                                                                        |
-| Guard: `test_us_english.py`                                 | 14 tests OK (170.9 s)                                                                                                                              |
-| Guard: `check_us_english.py` over the project               | 797 hits, unchanged                                                                                                                                |
-| Guard: `check_us_english.py` over the new and changed files | Two hits, both `licence` in `App.test.tsx` lines 208 and 213: the backend's attribution JSON key in an existing stand-in. A wire name, not changed |
+| Check                                                       | Result                                                                                                                             |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run typecheck`                                         | Passed                                                                                                                             |
+| `npm run lint`                                              | Passed                                                                                                                             |
+| `npx prettier --check src e2e`                              | Passed                                                                                                                             |
+| `npm run build`                                             | Passed. `index` 743.90 kB (226.49 kB gzip); `SatellitesScreen` 45.09 kB (19.27 kB gzip)                                            |
+| `npm test`, `npm run e2e`                                   | **Not run** (standing rule)                                                                                                        |
+| Guard: `test_us_english.py`                                 | 14 tests OK (170.9 s)                                                                                                              |
+| Guard: `check_us_english.py` over the project               | 797 hits, unchanged                                                                                                                |
+| Guard: `check_us_english.py` over the new and changed files | Two hits in `App.test.tsx` lines 208 and 213: the backend's attribution JSON key in an existing stand-in. A wire name, not changed |
 
 ## Compared to the mock
 
