@@ -9,7 +9,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "verify:dist": "node scripts/verify-dist.mjs",
     "preview": "vite preview",
+    "deploy:web": "node scripts/deploy-web.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",

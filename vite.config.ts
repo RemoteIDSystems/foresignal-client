@@ -1,5 +1,5 @@
 /// <reference types="vitest/config" />
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import cesium from 'vite-plugin-cesium';
 import { readFileSync } from 'node:fs';
@@ -17,6 +17,34 @@ const packageJson = JSON.parse(
  */
 const DEFAULT_BACKEND = 'http://localhost:8080';
 
+/** Where vite-plugin-cesium copies Cesium's static files, under the build's base. */
+const CESIUM_DIR = 'cesium/';
+
+/**
+ * Sets `window.CESIUM_BASE_URL` in the page, before any script runs, to the directory
+ * vite-plugin-cesium copies Cesium's `Workers`, `Assets`, `ThirdParty` and `Widgets` into (034).
+ * Cesium would otherwise derive it from its own script tag; stating it makes the built output say
+ * where the assets are, which `npm run verify:dist` checks.
+ */
+function cesiumBaseUrl(): Plugin {
+  let base = '/';
+  return {
+    name: 'foresignal-cesium-base-url',
+    configResolved(config) {
+      base = config.base;
+    },
+    transformIndexHtml() {
+      return [
+        {
+          tag: 'script',
+          children: `window.CESIUM_BASE_URL = ${JSON.stringify(`${base}${CESIUM_DIR}`)};`,
+          injectTo: 'head-prepend',
+        },
+      ];
+    },
+  };
+}
+
 /**
  * Vite configuration for the ForeSignal Client.
  *
@@ -30,7 +58,7 @@ export default defineConfig(({ mode }) => {
   const backend = env.VITE_FORESIGNAL_BACKEND || DEFAULT_BACKEND;
   const proxied = { target: backend, changeOrigin: true, ws: true };
   return {
-    plugins: [react(), cesium()],
+    plugins: [react(), cesium({ cesiumBaseUrl: CESIUM_DIR }), cesiumBaseUrl()],
     define: {
       __APP_VERSION__: JSON.stringify(packageJson.version),
       __APP_DEPENDENCIES__: JSON.stringify(packageJson.dependencies),
