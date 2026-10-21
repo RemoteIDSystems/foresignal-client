@@ -210,9 +210,18 @@ A repeat of "nothing hidden" at the end gave a GPU p50 of 27.6 ms.
   misses the refresh takes 33.3 ms, so a p95 under 25 ms means 95 frames in 100 met it). It also
   asserts the world step drawn at MSAA 1 and the city at 4. Region and city keep the 33.3 ms
   budget through `scaleProblems`.
-- **The full GPU scale run has not been repeated with the fix.** The 60 fps figure is the probe's,
-  measured with MSAA forced to 1 on the same view; the switch itself was checked by the zoom probe
-  above. `E2E_GPU=1 npx playwright test e2e/scale.e2e.ts` confirms it end to end.
+- **The GPU scale run passed with the fix** (2026-10-21, after `f9ad25e`,
+  `E2E_GPU=1 npx playwright test e2e/scale.e2e.ts`, 1.8 min, no problems):
+
+  | Measure                    | World              | Region             | City               |
+  | -------------------------- | ------------------ | ------------------ | ------------------ |
+  | MSAA                       | 1×                 | 4×                 | 4×                 |
+  | Points / cells drawn       | 0 / 1,236          | 1,296 / 150        | 1 / 0              |
+  | Frames in 3 s (fps)        | 180 (60.0)         | 180 (60.0)         | 180 (60.0)         |
+  | Frame p50 / p95 / p99 (ms) | 16.7 / 17.7 / 21.6 | 16.7 / 17.4 / 20.9 | 16.6 / 18.7 / 20.9 |
+  | Frames over 33.3 ms        | 0                  | 0                  | 0                  |
+
+  World's p95 went from 53.6 ms (before 037) and 53.3 ms (with 037 alone) to 17.7 ms.
 
 ## What was built
 
@@ -265,18 +274,19 @@ A repeat of "nothing hidden" at the end gave a GPU p50 of 27.6 ms.
 
 The world-zoom fix (`3ee7ebc`):
 
-| Check                                                       | Result                                     |
-| ----------------------------------------------------------- | ------------------------------------------ |
-| `npm run typecheck`                                         | Passed                                     |
-| `npm run lint`                                              | Passed                                     |
-| `npx prettier --check src e2e scripts`                      | Passed                                     |
-| `npm run build`                                             | Passed. `index` 896.78 kB (269.98 kB gzip) |
-| `npm run verify:dist`                                       | "✓ dist is ready to deploy."               |
-| `npm test`, `npm run e2e`                                   | **Not run** (standing rule)                |
-| Zoom probe (GPU, scratch, not a spec)                       | MSAA 1 at World, 4 at Region and City      |
-| Guard: `test_us_english.py`                                 | 14 tests OK (176.2 s)                      |
-| Guard: `check_us_english.py` over the project               | 804 hits, unchanged                        |
-| Guard: `check_us_english.py` over the new and changed files | 0 hits                                     |
+| Check                                                       | Result                                                   |
+| ----------------------------------------------------------- | -------------------------------------------------------- |
+| `npm run typecheck`                                         | Passed                                                   |
+| `npm run lint`                                              | Passed                                                   |
+| `npx prettier --check src e2e scripts`                      | Passed                                                   |
+| `npm run build`                                             | Passed. `index` 896.78 kB (269.98 kB gzip)               |
+| `npm run verify:dist`                                       | "✓ dist is ready to deploy."                             |
+| `npm test`, `npm run e2e`                                   | **Not run** (standing rule), but for the GPU scale check |
+| Zoom probe (GPU, scratch, not a spec)                       | MSAA 1 at World, 4 at Region and City                    |
+| `E2E_GPU=1 npx playwright test e2e/scale.e2e.ts`            | **Passed** (World p95 17.7 ms at 1×)                     |
+| Guard: `test_us_english.py`                                 | 14 tests OK (176.2 s)                                    |
+| Guard: `check_us_english.py` over the project               | 804 hits, unchanged                                      |
+| Guard: `check_us_english.py` over the new and changed files | 0 hits                                                   |
 
 The first build (`5ef168e`): typecheck, lint, Prettier, build (`index` 875.55 kB, 263.29 kB gzip)
 and `verify:dist` passed; the guards passed (14 tests OK, 804 hits, 0 in changed files). The scale
