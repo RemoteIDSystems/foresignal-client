@@ -33,6 +33,7 @@ import { AnalysisMap } from './AnalysisMap';
 import { AnalysisRail } from './AnalysisRail';
 import { AnalysisEvidence } from './EvidenceTab';
 import { AssessmentTab } from './AssessmentTab';
+import { workbenchPath } from '../workbench/workbench';
 import { ForecastsTab } from './ForecastsTab';
 import { HypothesesTab } from './HypothesesTab';
 import { ExportPanel, InvestigationOverview, ItemsTab } from './InvestigationTabs';
@@ -208,7 +209,12 @@ export function AnalysisView({ api, stream, store = appStore, kind }: AnalysisVi
 
   return (
     <div className={styles.frame} data-testid="analysis-view" data-kind={kind} data-id={id}>
-      <AnalysisRail tab={tab} onTab={setTab} onHome={() => void navigate('/intelligence')} />
+      <AnalysisRail
+        tab={tab}
+        onTab={setTab}
+        onHome={() => void navigate('/intelligence')}
+        onWorkbench={() => void navigate(workbenchPath(ref))}
+      />
       <div className={styles.main}>
         {header}
         {body}

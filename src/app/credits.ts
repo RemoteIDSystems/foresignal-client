@@ -56,6 +56,13 @@ export interface PackageCredit {
 export const PACKAGE_CREDITS: readonly PackageCredit[] = [
   { name: 'cesium', license: 'Apache-2.0', use: 'Map and globe engine' },
   { name: 'echarts', license: 'Apache-2.0', use: 'Charts' },
+  { name: 'sigma', license: 'MIT', use: 'Relationship graph rendering (WebGL)' },
+  { name: 'graphology', license: 'MIT', use: 'Relationship graph model' },
+  {
+    name: 'graphology-layout-forceatlas2',
+    license: 'MIT',
+    use: 'Relationship graph layout',
+  },
   { name: 'resium', license: 'MIT', use: 'React bindings for Cesium' },
   { name: 'react', license: 'MIT', use: 'User interface' },
   { name: 'react-dom', license: 'MIT', use: 'User interface' },

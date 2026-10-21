@@ -1,0 +1,127 @@
+/* The Analyst Workbench (024): the graph card, the selected-entity panel and the start page. */
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 12px;
+  min-height: 0;
+  flex: 1;
+  padding: 0 16px 16px;
+  overflow: hidden;
+}
+
+.pad {
+  padding: 0 16px;
+}
+
+.headerLink {
+  color: var(--fs-color-accent);
+  font-size: var(--fs-font-size-sm);
+  text-decoration: none;
+}
+
+.graphCard {
+  min-height: 0;
+  overflow: auto;
+}
+
+.graphBody {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 420px;
+}
+
+.graphBody > * {
+  flex: 1;
+}
+
+.matrix td {
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--fs-color-border);
+}
+
+.matrix thead th {
+  text-align: center;
+}
+
+.matrix tbody th {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: none;
+}
+
+.commonRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--fs-color-border);
+  font-size: var(--fs-font-size-sm);
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  padding: 12px;
+  overflow-y: auto;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-md);
+  background: var(--fs-color-panel);
+}
+
+.sideHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sideTitle {
+  margin: 0;
+  font-size: var(--fs-font-size-lg);
+  font-weight: 600;
+}
+
+.evidenceRow {
+  display: flex;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--fs-color-border);
+  font-size: var(--fs-font-size-sm);
+}
+
+.relationSwatch {
+  flex: none;
+  width: 4px;
+  border-radius: 2px;
+}
+
+.evidenceText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.start {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  padding: 0 16px 16px;
+  overflow-y: auto;
+}
+
+@media (max-width: 900px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+    overflow-y: auto;
+  }
+}

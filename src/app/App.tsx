@@ -3,7 +3,6 @@ import { BrowserRouter, MemoryRouter, Navigate, Route, Routes } from 'react-rout
 import { ThemeProvider } from './theme';
 import { ToastHost } from '../ui/ToastHost';
 import {
-  AnalystView,
   GlobalDashboard,
   ImageryView,
   MapView,
@@ -12,6 +11,7 @@ import {
   SatellitesView,
 } from '../views';
 import { AnalysisView, IntelligenceHome } from '../views/analysis';
+import { WorkbenchView } from '../views/workbench';
 import { AboutView } from './AboutView';
 import { AppShell } from './AppShell';
 import { DEFAULT_ROUTE } from './routes';
@@ -40,7 +40,18 @@ export function App({ session, initialPath }: AppProps) {
             <GlobalDashboard api={session.api} stream={session.stream} store={session.store} />
           }
         />
-        <Route path="/analyst" element={<AnalystView />} />
+        <Route
+          path="/analyst"
+          element={<WorkbenchView api={session.api} store={session.store} />}
+        />
+        <Route
+          path="/analyst/investigations/:id"
+          element={<WorkbenchView kind="investigation" api={session.api} store={session.store} />}
+        />
+        <Route
+          path="/analyst/situations/:id"
+          element={<WorkbenchView kind="situation" api={session.api} store={session.store} />}
+        />
         <Route path="/map" element={<MapView />} />
         <Route path="/imagery" element={<ImageryView />} />
         <Route path="/satellites" element={<SatellitesView />} />

@@ -77,6 +77,8 @@ export interface RailEntry {
   home?: boolean;
   /** The prompt that builds it, for an entry that does nothing yet. */
   later?: string;
+  /** Opens the Analyst Workbench on the open analysis (024). */
+  workbench?: boolean;
 }
 
 /** The ANALYSIS section, in the Conflict mock's order. */
@@ -94,7 +96,7 @@ export const ANALYSIS_ENTRIES: readonly RailEntry[] = [
 /** The TOOLS section, in the mock's order. */
 export const TOOL_ENTRIES: readonly RailEntry[] = [
   { label: 'Ask ForeSignal', icon: Bot, later: 'the Global dashboard (017)' },
-  { label: 'Analysis Builder', icon: BarChart3, later: '024' },
+  { label: 'Analysis Builder', icon: BarChart3, workbench: true },
   { label: 'Saved Views', icon: Save, later: '031' },
   { label: 'Workspaces', icon: BookOpen, later: '025' },
 ];

@@ -1,17 +1,5 @@
-import { Crosshair, Image, Map, RadioTower, Satellite, Workflow } from 'lucide-react';
+import { Image, Map, RadioTower, Satellite, Workflow } from 'lucide-react';
 import { PlaceholderView } from './PlaceholderView';
-
-/** Analyst Workbench (mockup `ForeSignal_Analyst_Workbench.png`). */
-export function AnalystView() {
-  return (
-    <PlaceholderView
-      icon={Crosshair}
-      title="Analyst Workbench"
-      description="Evidence and relationship graph, timeline, hypotheses and notes."
-      builtIn="024–026"
-    />
-  );
-}
 
 /** Full-screen map. */
 export function MapView() {
