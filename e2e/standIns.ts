@@ -32,9 +32,10 @@ const TOKEN_ONLY_READS: [RegExp, unknown][] = [
 
 /**
  * Runs the page with a test token against the local backend, which does not know it. The
- * token-only calls the screens make on their own are stood in (empty reads, a minted ticket, the
- * device and presence reports), and every other request goes to the backend as an open read:
- * without the token, and without the stood-in ticket. A spec's own routes, added after, win.
+ * token-only calls the screens make on their own are stood in (empty reads and inbox stream, a
+ * minted ticket, the device and presence reports), and every other request goes to the backend as
+ * an open read: without the token, and without the stood-in ticket. A spec's own routes, added
+ * after, win.
  */
 export async function standInTestToken(page: Page): Promise<void> {
   await page.addInitScript(() => localStorage.setItem('foresignal.token', 'fs_e2e_token'));
@@ -46,6 +47,9 @@ export async function standInTestToken(page: Page): Promise<void> {
       const read = TOKEN_ONLY_READS.find(([pattern]) => pattern.test(path));
       if (read) return route.fulfill({ json: read[1] });
       if (/\/v1\/me$/.test(path)) return route.fulfill({ json: me('agent') });
+      if (/\/v1\/notifications\/stream$/.test(path)) {
+        return route.fulfill({ contentType: 'text/event-stream', body: ':open\n\n' });
+      }
     }
     if (request.method() === 'POST' && /\/v1\/stream-tickets$/.test(path)) {
       const { purpose } = JSON.parse(request.postData() ?? '{}') as { purpose?: string };

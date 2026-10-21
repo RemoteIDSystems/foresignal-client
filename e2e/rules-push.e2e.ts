@@ -12,6 +12,10 @@ import { standInTestToken } from './standIns';
  * headless browser has none.
  */
 
+// The full Chromium build in its headless mode: the default headless shell denies notifications
+// whatever permission is granted, so the service worker could not show one.
+test.use({ channel: 'chromium' });
+
 /** Console errors and uncaught exceptions on the page; a check fails if any appear. */
 let problems: string[] = [];
 
@@ -106,10 +110,12 @@ async function standIns(page: Page) {
       },
     });
   });
-  await page.route(/\/v1\/objects\/alert%3A5$/, (route) => {
+  await page.route(/\/v1\/objects\/alert%3A5\/dossier(\?.*)?$/, (route) => {
     record(route);
     return route.fulfill({
       json: {
+        ref: 'alert:5',
+        generatedAt: new Date().toISOString(),
         envelope: { ref: 'alert:5', type: 'alert', title: 'Strong earthquakes near the Gulf' },
         sections: {},
       },
@@ -243,7 +249,7 @@ test('subscribe: a verification push turns it on, and an alert push opens the al
   });
   await expect(page).toHaveURL(/\/global/);
   await expect
-    .poll(() => calls.some((call) => call.line === 'GET /v1/objects/alert%3A5'))
+    .poll(() => calls.some((call) => call.line.startsWith('GET /v1/objects/alert%3A5/dossier')))
     .toBe(true);
   expect(problems).toEqual([]);
 });
