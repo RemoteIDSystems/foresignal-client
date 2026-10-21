@@ -38,6 +38,9 @@ test('one live stream stays connected, re-filters in place, and resumes after a 
   await expect(badge).toHaveText('◆ LIVE');
   await expect(badge).not.toHaveAttribute('data-filter-pending');
   const version = Number(await badge.getAttribute('data-filter-version'));
+  // The backend counts open streams per address, and holds a dropped one's place until it notices
+  // (STREAM_LIMIT, 429 with Retry-After): the first connection may have taken a retry or two.
+  const opened = streams.length;
 
   // A layer turned on or off re-filters the open stream: a PATCH, confirmed by filter-applied.
   const toggle = await kindToggle(page, 'Disasters / Hazards', 'earthquake');
@@ -50,19 +53,25 @@ test('one live stream stays connected, re-filters in place, and resumes after a 
   const body = patches.at(-1)!.postDataJSON() as { changes: { kind: string[] } };
   expect(body.changes.kind.includes('earthquake')).toBe(!wasOn);
   expect(await patches.at(-1)!.headerValue('foresignal-stream-key')).toBeTruthy();
-  expect(streams).toHaveLength(1);
+  expect(streams).toHaveLength(opened);
   if (wasOn) await toggle.setChecked(true);
 
   // A dropped connection reconnects with the last change's cursor, and is live again.
   const lastSeq = await badge.getAttribute('data-last-seq');
+  const connections = Number(await badge.getAttribute('data-connections'));
+  const before = streams.length;
   await page.evaluate(() => window.__foresignalEngine!.stream!.reconnectNow());
-  await expect(badge).toHaveAttribute('data-connections', '2');
-  await expect(badge).toHaveAttribute('data-state', 'live', { timeout: 30_000 });
-  expect(streams).toHaveLength(2);
-  expect(await streams[1]!.headerValue('last-event-id')).toBe(`c=${lastSeq}`);
-  // Still one stream: the first was closed, not left open beside the second.
+  await expect(badge).toHaveAttribute('data-connections', String(connections + 1));
+  // The dropped stream's place is held a while, so the reconnect may wait out the limit.
+  await expect(badge).toHaveAttribute('data-state', 'live', { timeout: 60_000 });
+  expect(streams.length).toBeGreaterThan(before);
+  for (const stream of streams.slice(before)) {
+    expect(await stream.headerValue('last-event-id')).toBe(`c=${lastSeq}`);
+  }
+  // Still one stream: once live, nothing opens beside it.
+  const live = streams.length;
   await page.waitForTimeout(2_000);
-  expect(streams).toHaveLength(2);
+  expect(streams).toHaveLength(live);
   expect(problems).toEqual([]);
 });
 
