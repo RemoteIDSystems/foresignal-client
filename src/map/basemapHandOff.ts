@@ -20,8 +20,10 @@ export interface HandOffOptions {
   above: ImageryLayer;
   /** Makes the layer for a detailed source. */
   createLayer: (source: DetailSource) => ImageryLayer;
-  /** Told the detailed source drawn now, or undefined while only the overview is. */
-  onShown?: (source: DetailSource | undefined) => void;
+  /**
+   * Told the detailed source drawn now and its layer, or undefined while only the overview is.
+   */
+  onShown?: (source: DetailSource | undefined, layer: ImageryLayer | undefined) => void;
   /** The view's map zoom; {@link readRecordView}'s by default. */
   zoomOf?: () => number;
   /**
@@ -178,6 +180,6 @@ export class BasemapHandOff {
     const shown = this.detail ? this.source : undefined;
     if (shown === this.shown) return;
     this.shown = shown;
-    this.options.onShown?.(shown);
+    this.options.onShown?.(shown, shown ? this.layer : undefined);
   }
 }

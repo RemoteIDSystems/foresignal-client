@@ -51,7 +51,7 @@ export const DATA_CREDITS: readonly DataCredit[] = [
     source: 'https://carto.com/attribution',
   },
   {
-    name: 'World Imagery (Esri, Maxar, Earthstar Geographics, and the GIS User Community)',
+    name: 'World Imagery (Esri, Vantor, Earthstar Geographics, and the GIS User Community)',
     use: 'Satellite basemap past the overview zoom',
     provider: 'Esri',
     source: 'https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9',

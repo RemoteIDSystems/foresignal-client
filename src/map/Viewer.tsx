@@ -28,9 +28,12 @@ import { insetTileUrls } from './imagery';
 import { Basemap } from './Basemap';
 import {
   basemapStyleStore,
-  DETAIL_ATTRIBUTIONS,
+  cartoKey,
+  DETAIL_MAX_LEVELS,
+  detailMetersPerPixel,
+  detailSourceFor,
   OVERVIEW_ATTRIBUTION,
-  type DetailSource,
+  type ShownBasemap,
 } from './basemapStyle';
 import { MapAttribution } from './style/attribution';
 import { MapLegend } from './style/legend';
@@ -310,9 +313,10 @@ export interface MapViewerProps {
   /** Whether the legend starts open (the analysis map's, as in the Conflict mock); closed otherwise. */
   legendInitiallyOpen?: boolean;
   /**
-   * Keeps the camera no closer than where the basemap is still sharp ({@link sharpestDistanceOf}):
-   * the wheel, gestures, the zoom buttons and a requested place all stop there. For a map that
-   * draws no detail of its own below that (the analysis Map tab).
+   * Keeps the camera no closer than where the detailed basemap is still sharp at its deepest level
+   * ({@link sharpestDistanceOf}; OpenStreetMap's level 19, or Esri's as its service declares): the
+   * wheel, gestures, the zoom buttons and a requested place all stop there. For a map that draws
+   * no detail of its own closer in (the analysis Map tab).
    */
   sharpBasemap?: boolean;
   /** Backend client for the overlay style, legend and attribution; without it the map has none. */
@@ -404,7 +408,7 @@ const NO_PRODUCTS: readonly Product[] = [];
  * `time` pins the records at an instant (013: `data-time` names it, or `live`), its `playback`
  * draws a history step in place of the tiles (`data-playback`), and the selected record shows its
  * trail up to the cursor (`data-trail`, the positions drawn). With `sharpBasemap` the camera
- * stops where the basemap would start to blur.
+ * stops where the detailed basemap's deepest level would start to blur.
  */
 export function MapViewer({
   children,
@@ -554,9 +558,19 @@ export function MapViewer({
       .map((product) => product.attribution as Attribution);
   }, [products, productLayers]);
   // The basemap picked (Map or Satellite, 038), shared by every map and kept in this browser, and
-  // the detailed source drawn now, for its credit; undefined while only the NASA overview shows.
+  // the detailed basemap drawn now, for its credit and deepest level; undefined while only the
+  // NASA overview shows.
   const basemapStyle = useSyncExternalStore(basemapStyleStore.subscribe, basemapStyleStore.get);
-  const [basemapDetail, setBasemapDetail] = useState<DetailSource>();
+  const [basemapShown, setBasemapShown] = useState<ShownBasemap>();
+  // Ground per pixel at the picked basemap's deepest level, for `sharpBasemap`: the shown layer's
+  // own level once known, else the source's default. Read through a ref by the per-frame limit.
+  const deepestMeters = detailMetersPerPixel(
+    basemapShown?.maximumLevel ?? DETAIL_MAX_LEVELS[detailSourceFor(basemapStyle, cartoKey())],
+  );
+  const deepestMetersRef = useRef(deepestMeters);
+  useEffect(() => {
+    deepestMetersRef.current = deepestMeters;
+  }, [deepestMeters]);
   const drawnProducts = productLayers.filter((key) => productStatus[key]?.state === 'ready');
 
   // The latest camera state, read when switching mode without re-creating the callback each frame.
@@ -613,7 +627,10 @@ export function MapViewer({
     locateTo(
       viewer,
       sharpBasemap && locate.height !== undefined
-        ? { ...locate, height: Math.max(locate.height, sharpestDistanceOf(viewer)) }
+        ? {
+            ...locate,
+            height: Math.max(locate.height, sharpestDistanceOf(viewer, deepestMetersRef.current)),
+          }
         : locate,
     );
     store.set('locate', undefined);
@@ -625,7 +642,7 @@ export function MapViewer({
     const initial = controller.minimumZoomDistance;
     const remove = viewer.scene.preRender.addEventListener(() => {
       if (viewer.scene.mode === SceneMode.MORPHING) return;
-      controller.minimumZoomDistance = sharpestDistanceOf(viewer);
+      controller.minimumZoomDistance = sharpestDistanceOf(viewer, deepestMetersRef.current);
     });
     return () => {
       remove();
@@ -727,7 +744,7 @@ export function MapViewer({
       data-testid="map-viewer"
       data-scene-mode={mode}
       data-basemap={basemapStyle}
-      data-basemap-detail={basemapDetail ?? 'overview'}
+      data-basemap-detail={basemapShown?.source ?? 'overview'}
       data-record-features={drawnRecords}
       data-record-cells={drawnCells}
       data-product-layers={drawnProducts.join(' ')}
@@ -759,7 +776,7 @@ export function MapViewer({
         creditContainer={creditContainer}
       >
         <SceneBridge onReady={setViewer} onCamera={onCamera} start={startView} />
-        <Basemap style={basemapStyle} onShown={setBasemapDetail} />
+        <Basemap style={basemapStyle} onShown={setBasemapShown} />
         <ViewportTracker store={viewport} />
         <AdaptiveMsaa />
         {api && (
@@ -824,7 +841,7 @@ export function MapViewer({
       <MapAttribution
         api={api}
         extra={productAttributions}
-        basemap={basemapDetail ? DETAIL_ATTRIBUTIONS[basemapDetail] : OVERVIEW_ATTRIBUTION}
+        basemap={basemapShown?.attribution ?? OVERVIEW_ATTRIBUTION}
       />
       {children}
     </div>

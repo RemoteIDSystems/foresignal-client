@@ -1,4 +1,5 @@
 import {
+  ArcGisMapServerImageryProvider,
   Credit,
   ImageryLayer,
   OpenStreetMapImageryProvider,
@@ -37,18 +38,40 @@ export const CARTO_STYLE = 'dark_all';
 /** CARTO's tile hosts, spread across for more requests at once. */
 export const CARTO_SUBDOMAINS = ['a', 'b', 'c', 'd'] as const;
 
-/** Esri World Imagery, in its XYZ tile form (row before column). */
-export const ESRI_WORLD_IMAGERY_TEMPLATE =
-  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+/**
+ * Esri World Imagery's map service. Cesium reads its metadata first: the tiling, the deepest level
+ * and the service's own credit (`copyrightText`), so the credit on the map stays the service's.
+ */
+export const ESRI_WORLD_IMAGERY_URL =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer';
 
 /**
- * The deepest level requested from a detailed source: OpenStreetMap's standard tiles stop at 19.
- * Esri serves deeper in places, but not everywhere, so the three stop at the same level and Cesium
- * stretches the last one closer in.
+ * The deepest level of each detailed source, as far as it is known before its tiles are asked:
+ * - OpenStreetMap's standard tiles stop at 19;
+ * - CARTO's are held to the same level, as they draw the same OpenStreetMap data;
+ * - Esri's service listed 24 levels (0–23) when read on 2026-10-21. Once the service's metadata is
+ *   read, its own deepest level ({@link describeShown}) takes the place of this one.
  */
-export const DETAIL_MAX_LEVEL = 19;
+export const DETAIL_MAX_LEVELS: Readonly<Record<DetailSource, number>> = {
+  osm: 19,
+  carto: 19,
+  esri: 23,
+};
 
-/** The credit each detailed source asks for, shown on the map while it is drawn. */
+/**
+ * Ground per pixel of a Web Mercator tile at `level`, in meters along the equator: the world's
+ * circumference over its width in 256-pixel tiles.
+ */
+export function detailMetersPerPixel(level: number): number {
+  return 40_075_016.686 / (256 * 2 ** level);
+}
+
+/**
+ * The credit each detailed source asks for, shown on the map while it is drawn. Esri's is the
+ * service's own `copyrightText` once it is read ({@link describeShown}); the text here is that
+ * credit as it read on 2026-10-21, without its "Source: " prefix, for the About page and for the
+ * moment before the service answers.
+ */
 export const DETAIL_ATTRIBUTIONS: Readonly<Record<DetailSource, Attribution>> = {
   osm: {
     text: '© OpenStreetMap contributors',
@@ -63,7 +86,7 @@ export const DETAIL_ATTRIBUTIONS: Readonly<Record<DetailSource, Attribution>> = 
     requiredDisplay: true,
   },
   esri: {
-    text: 'Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+    text: 'Esri, Vantor, Earthstar Geographics, and the GIS User Community',
     licence: 'Esri-terms',
     url: 'https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9',
     requiredDisplay: true,
@@ -150,39 +173,68 @@ export interface DetailOptions {
   pixelRatio?: number;
 }
 
-/** A Cesium imagery provider for a detailed source, Web Mercator tiles to {@link DETAIL_MAX_LEVEL}. */
+/**
+ * A Cesium imagery provider for a detailed source, Web Mercator tiles. OpenStreetMap and CARTO are
+ * made at once and stop at {@link DETAIL_MAX_LEVELS}; Esri is made from its service's metadata, so
+ * it comes as a promise and takes the service's own deepest level and credit.
+ */
 export function createDetailProvider(
   source: DetailSource,
   { key, pixelRatio = 1 }: DetailOptions = {},
-): ImageryProvider {
-  const credit = new Credit(DETAIL_ATTRIBUTIONS[source].text);
+): ImageryProvider | Promise<ImageryProvider> {
   switch (source) {
     case 'osm':
       return new OpenStreetMapImageryProvider({
         url: OSM_URL,
-        maximumLevel: DETAIL_MAX_LEVEL,
-        credit,
+        maximumLevel: DETAIL_MAX_LEVELS.osm,
+        credit: new Credit(DETAIL_ATTRIBUTIONS.osm.text),
       });
     case 'carto':
       if (!key) throw new Error('CARTO tiles need a key; without one the street map is OSM.');
       return new UrlTemplateImageryProvider({
         url: cartoTemplate(key, pixelRatio),
         subdomains: [...CARTO_SUBDOMAINS],
-        maximumLevel: DETAIL_MAX_LEVEL,
-        credit,
+        maximumLevel: DETAIL_MAX_LEVELS.carto,
+        credit: new Credit(DETAIL_ATTRIBUTIONS.carto.text),
       });
     case 'esri':
-      return new UrlTemplateImageryProvider({
-        url: ESRI_WORLD_IMAGERY_TEMPLATE,
-        maximumLevel: DETAIL_MAX_LEVEL,
-        credit,
-      });
+      return ArcGisMapServerImageryProvider.fromUrl(ESRI_WORLD_IMAGERY_URL);
   }
 }
 
-/** An imagery layer drawing a detailed source. */
+/**
+ * An imagery layer drawing a detailed source, made at once. For Esri the layer is ready only once
+ * the service's metadata is read; until then it draws nothing and the overview shows through.
+ */
 export function createDetailLayer(source: DetailSource, options?: DetailOptions): ImageryLayer {
-  return new ImageryLayer(createDetailProvider(source, options));
+  const provider = createDetailProvider(source, options);
+  return provider instanceof Promise
+    ? ImageryLayer.fromProviderAsync(provider)
+    : new ImageryLayer(provider);
+}
+
+/** The detailed basemap drawn now: its source, its credit and its deepest level. */
+export interface ShownBasemap {
+  source: DetailSource;
+  /** The credit on the map: the provider's own, when it has one, else {@link DETAIL_ATTRIBUTIONS}. */
+  attribution: Attribution;
+  /** The deepest level its tiles go: the provider's, when known, else {@link DETAIL_MAX_LEVELS}. */
+  maximumLevel: number;
+}
+
+/**
+ * What `layer`, drawing `source`, shows: once the layer is ready, the credit and deepest level its
+ * provider declares (for Esri, its service's `copyrightText` and levels); before, the defaults.
+ */
+export function describeShown(source: DetailSource, layer?: ImageryLayer): ShownBasemap {
+  const provider = layer?.ready ? layer.imageryProvider : undefined;
+  const credit = provider?.credit?.html.trim();
+  const fallback = DETAIL_ATTRIBUTIONS[source];
+  return {
+    source,
+    attribution: credit ? { ...fallback, text: credit } : fallback,
+    maximumLevel: provider?.maximumLevel ?? DETAIL_MAX_LEVELS[source],
+  };
 }
 
 /** Told when the basemap picked changes. */

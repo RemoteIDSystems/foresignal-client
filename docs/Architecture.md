@@ -129,7 +129,10 @@ Two layers, clearly separated:
   (built alongside that layer's data). The same record layers render in 2D and 3D. The 3D globe uses
   **self-hosted quantized-mesh terrain** (from a public-domain DEM) for raised relief, with base
   imagery (NASA Blue Marble day + Black Marble night) draped over it; the elevation readout reads
-  terrain height. No Cesium Ion, no account, no external tile service.
+  terrain height. No Cesium Ion and no account. The low-zoom overview is self-hosted (NASA Marble
+  imagery and the terrain); zooming in hands off to keyless external tile services — OSM raster
+  (Map) and Esri World Imagery (Satellite) — with CARTO as an optional keyed alternative for Map
+  (prompt 038).
 
 ### 5.1 Layer pipeline
 

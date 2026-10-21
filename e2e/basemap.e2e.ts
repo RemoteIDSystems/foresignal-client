@@ -115,7 +115,7 @@ test('Satellite draws Esri World Imagery, without a blink, and is remembered', a
       let shown = 0;
       for (let i = 0; i < imageryLayers.length; i++) {
         const layer = imageryLayers.get(i);
-        const url = (layer.imageryProvider as { url?: string }).url ?? '';
+        const url = (layer.imageryProvider as { url?: string } | undefined)?.url ?? '';
         if (layer.show && /openstreetmap|arcgisonline/.test(url)) shown++;
       }
       at.shownLayers.push(shown);
@@ -127,8 +127,9 @@ test('Satellite draws Esri World Imagery, without a blink, and is remembered', a
   await basemap.getByRole('tab', { name: 'Satellite', exact: true }).click();
   await expect(map).toHaveAttribute('data-basemap', 'satellite');
   await expect(map).toHaveAttribute('data-basemap-detail', 'esri');
+  // The service's own credit (its `copyrightText`), read from it live.
   await expect(page.getByTestId('map-attribution')).toContainText(
-    'Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+    'Esri, Vantor, Earthstar Geographics, and the GIS User Community',
   );
   await expect.poll(() => imagesFrom(tiles, ESRI).length, { timeout: 30_000 }).toBeGreaterThan(0);
   // The old street map goes once the imagery is in.
@@ -139,7 +140,8 @@ test('Satellite draws Esri World Imagery, without a blink, and is remembered', a
           const { imageryLayers } = window.__foresignalEngine!.viewer;
           let streets = 0;
           for (let i = 0; i < imageryLayers.length; i++) {
-            const url = (imageryLayers.get(i).imageryProvider as { url?: string }).url ?? '';
+            const url =
+              (imageryLayers.get(i).imageryProvider as { url?: string } | undefined)?.url ?? '';
             if (url.includes('openstreetmap')) streets++;
           }
           return streets;

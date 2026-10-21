@@ -104,8 +104,9 @@ test('a situation opens its full analysis from the Intelligence list, and its ta
     'aria-pressed',
     'true',
   );
-  // The camera stops where the basemap is still sharp: the wheel and the zoom button both hold
-  // the 2D map's span at the limit, not at the situation's small box.
+  // The camera stops where the detailed basemap (038) is still sharp at its deepest level, not
+  // where the NASA overview blurred: the wheel and the zoom button both hold the 2D map's span at
+  // that limit, a few hundred meters for OpenStreetMap's level 19.
   await page.waitForFunction(() => window.__foresignalEngine !== undefined);
   const canvas = map.locator('.cesium-widget canvas');
   const box = (await canvas.boundingBox())!;
@@ -121,7 +122,8 @@ test('a situation opens its full analysis from the Intelligence list, and its ta
         limit: scene.screenSpaceCameraController.minimumZoomDistance,
       };
     });
-  await expect.poll(async () => (await span()).limit).toBeGreaterThan(1_000_000);
+  await expect.poll(async () => (await span()).limit).toBeLessThan(1_000);
+  expect((await span()).limit).toBeGreaterThan(10);
   await expect
     .poll(async () => {
       const { span: across, limit } = await span();

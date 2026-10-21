@@ -10,6 +10,7 @@ import {
   type Viewer as CesiumViewer,
 } from 'cesium';
 import { BASEMAP_METERS_PER_PIXEL } from './imagery';
+import { detailMetersPerPixel } from './basemapStyle';
 import {
   HOME_VIEW,
   homeDestination,
@@ -181,11 +182,13 @@ describe('the sharp-basemap limit', () => {
     // 16,384 pixels around the equator at level 5: about 2.45 km each.
     expect(BASEMAP_METERS_PER_PIXEL).toBeCloseTo(40_075_016.686 / 16_384, 6);
     const span = (1_438 * BASEMAP_METERS_PER_PIXEL) / MAX_BASEMAP_UPSCALE;
-    expect(sharpestDistance(SceneMode.SCENE2D, 1_438, undefined)).toBeCloseTo(span, 6);
+    expect(
+      sharpestDistance(SceneMode.SCENE2D, 1_438, undefined, BASEMAP_METERS_PER_PIXEL),
+    ).toBeCloseTo(span, 6);
     expect(span / 1000).toBeCloseTo(1_758.7, 1);
     // A 60° field of view spans 2·tan(30°) ≈ 1.155 times the height.
     const fov = CesiumMath.toRadians(60);
-    expect(sharpestDistance(SceneMode.SCENE3D, 1_438, fov)).toBeCloseTo(
+    expect(sharpestDistance(SceneMode.SCENE3D, 1_438, fov, BASEMAP_METERS_PER_PIXEL)).toBeCloseTo(
       span / (2 * Math.tan(fov / 2)),
       6,
     );
@@ -197,14 +200,25 @@ describe('the sharp-basemap limit', () => {
         scene: { mode, canvas: { clientWidth: 900, clientHeight: 1_200 } },
         camera: { frustum: { fov: CesiumMath.toRadians(60) } },
       }) as unknown as CesiumViewer;
-    expect(sharpestDistanceOf(viewer(SceneMode.SCENE2D))).toBeCloseTo(
-      sharpestDistance(SceneMode.SCENE2D, 1_200, undefined),
+    expect(sharpestDistanceOf(viewer(SceneMode.SCENE2D), 2)).toBeCloseTo(
+      sharpestDistance(SceneMode.SCENE2D, 1_200, undefined, 2),
       6,
     );
-    expect(sharpestDistanceOf(viewer(SceneMode.SCENE3D))).toBeCloseTo(
-      sharpestDistance(SceneMode.SCENE3D, 1_200, CesiumMath.toRadians(60)),
+    expect(sharpestDistanceOf(viewer(SceneMode.SCENE3D), 2)).toBeCloseTo(
+      sharpestDistance(SceneMode.SCENE3D, 1_200, CesiumMath.toRadians(60), 2),
       6,
     );
+  });
+
+  it("lets the camera close in to the detailed basemap's deepest level (038)", () => {
+    // OpenStreetMap's level 19 across 1,438 pixels at twice its resolution: about 215 m of span,
+    // where the NASA overview alone stopped it at about 1,759 km.
+    const span = sharpestDistance(SceneMode.SCENE2D, 1_438, undefined, detailMetersPerPixel(19));
+    expect(span).toBeCloseTo(214.7, 1);
+    // Esri's deeper levels, as its service declares them, go closer still.
+    expect(
+      sharpestDistance(SceneMode.SCENE2D, 1_438, undefined, detailMetersPerPixel(23)),
+    ).toBeLessThan(span / 15);
   });
 
   it('stops a zoom-in at the minimum and never turns it into a zoom-out', () => {

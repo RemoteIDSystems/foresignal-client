@@ -1,20 +1,33 @@
-import { OpenStreetMapImageryProvider, UrlTemplateImageryProvider } from 'cesium';
+import {
+  ArcGisMapServerImageryProvider,
+  Credit,
+  ImageryLayer,
+  OpenStreetMapImageryProvider,
+  UrlTemplateImageryProvider,
+  type ImageryProvider,
+} from 'cesium';
 import {
   BASEMAP_STYLE_KEY,
   cartoKey,
   cartoTemplate,
   createBasemapStyleStore,
   createDetailProvider,
+  createDetailLayer,
+  describeShown,
   DETAIL_ATTRIBUTIONS,
-  DETAIL_MAX_LEVEL,
+  DETAIL_MAX_LEVELS,
   detailForZoom,
+  detailMetersPerPixel,
   detailSourceFor,
-  ESRI_WORLD_IMAGERY_TEMPLATE,
+  ESRI_WORLD_IMAGERY_URL,
   readBasemapStyle,
 } from './basemapStyle';
 import { DETAIL_FROM_ZOOM, OVERVIEW_BELOW_ZOOM } from './msaa';
 
-afterEach(() => localStorage.clear());
+afterEach(() => {
+  localStorage.clear();
+  vi.restoreAllMocks();
+});
 
 describe('detailSourceFor', () => {
   it('draws OpenStreetMap for the map without a key, and never CARTO unkeyed', () => {
@@ -50,30 +63,79 @@ describe('cartoTemplate', () => {
 
 describe('createDetailProvider', () => {
   it('makes the keyless street map from OpenStreetMap', () => {
-    const provider = createDetailProvider('osm');
+    const provider = createDetailProvider('osm') as ImageryProvider;
     expect(provider).toBeInstanceOf(OpenStreetMapImageryProvider);
     expect((provider as UrlTemplateImageryProvider).url).toContain(
       'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     );
-    expect(provider.maximumLevel).toBe(DETAIL_MAX_LEVEL);
+    expect(provider.maximumLevel).toBe(19);
     expect(provider.credit.html).toBe('© OpenStreetMap contributors');
   });
 
   it('makes CARTO with its key and subdomains, and refuses it without a key', () => {
-    const provider = createDetailProvider('carto', { key: 'k3y', pixelRatio: 2 });
+    const provider = createDetailProvider('carto', {
+      key: 'k3y',
+      pixelRatio: 2,
+    }) as ImageryProvider;
     const url = (provider as UrlTemplateImageryProvider).url;
     expect(url).toContain('basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png');
     expect(url).toContain('key=k3y');
+    expect(provider.maximumLevel).toBe(DETAIL_MAX_LEVELS.carto);
     expect(provider.credit.html).toBe('© OpenStreetMap contributors, © CARTO');
     expect(() => createDetailProvider('carto')).toThrow(/need a key/);
   });
 
-  it('makes Esri World Imagery from its XYZ tiles, with no key', () => {
-    const provider = createDetailProvider('esri');
-    expect((provider as UrlTemplateImageryProvider).url).toBe(ESRI_WORLD_IMAGERY_TEMPLATE);
-    expect(provider.credit.html).toBe(
-      'Esri, Maxar, Earthstar Geographics, and the GIS User Community',
-    );
+  it('makes Esri World Imagery from its map service, which declares its own levels and credit', () => {
+    const provider = new UrlTemplateImageryProvider({ url: 'https://esri.test/{z}/{y}/{x}' });
+    const fromUrl = vi
+      .spyOn(ArcGisMapServerImageryProvider, 'fromUrl')
+      .mockResolvedValue(provider as unknown as ArcGisMapServerImageryProvider);
+    const made = createDetailProvider('esri');
+    expect(made).toBeInstanceOf(Promise);
+    expect(fromUrl).toHaveBeenCalledWith(ESRI_WORLD_IMAGERY_URL);
+    // A layer is made at once and draws once the service has answered.
+    const layer = createDetailLayer('esri');
+    expect(layer).toBeInstanceOf(ImageryLayer);
+    expect(fromUrl).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('describeShown', () => {
+  it("uses the service's own credit and deepest level once the layer is ready", () => {
+    const layer = {
+      ready: true,
+      imageryProvider: {
+        credit: new Credit(
+          'Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community',
+        ),
+        maximumLevel: 23,
+      },
+    } as unknown as ImageryLayer;
+    const shown = describeShown('esri', layer);
+    expect(shown.source).toBe('esri');
+    expect(shown.attribution).toEqual({
+      ...DETAIL_ATTRIBUTIONS.esri,
+      text: 'Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community',
+    });
+    expect(shown.maximumLevel).toBe(23);
+  });
+
+  it('falls back to the known credit and level before the layer is ready', () => {
+    const layer = { ready: false } as unknown as ImageryLayer;
+    expect(describeShown('esri', layer)).toEqual({
+      source: 'esri',
+      attribution: DETAIL_ATTRIBUTIONS.esri,
+      maximumLevel: DETAIL_MAX_LEVELS.esri,
+    });
+    expect(describeShown('osm').maximumLevel).toBe(19);
+  });
+});
+
+describe('detailMetersPerPixel', () => {
+  it('measures a Web Mercator pixel at the equator', () => {
+    expect(detailMetersPerPixel(0)).toBeCloseTo(40_075_016.686 / 256, 6);
+    // OpenStreetMap's level 19: about 0.3 m a pixel.
+    expect(detailMetersPerPixel(19)).toBeCloseTo(0.2986, 4);
   });
 });
 
@@ -85,6 +147,10 @@ describe('DETAIL_ATTRIBUTIONS', () => {
     }
     expect(DETAIL_ATTRIBUTIONS.carto.text).toContain('© CARTO');
     expect(DETAIL_ATTRIBUTIONS.osm.text).not.toContain('CARTO');
+    // The service's credit as read on 2026-10-21, for the About page and until it answers.
+    expect(DETAIL_ATTRIBUTIONS.esri.text).toBe(
+      'Esri, Vantor, Earthstar Geographics, and the GIS User Community',
+    );
   });
 });
 

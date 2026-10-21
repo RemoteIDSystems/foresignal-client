@@ -6,7 +6,6 @@ import {
   SceneMode,
   type Viewer as CesiumViewer,
 } from 'cesium';
-import { BASEMAP_METERS_PER_PIXEL } from './imagery';
 import { boundsAround, type GeoRect } from './records/tileMath';
 import { applySceneMode, type MorphableScene, type SceneModeKey } from './sceneMode';
 
@@ -54,7 +53,9 @@ export const MAX_BASEMAP_UPSCALE = 2;
 
 /**
  * The closest the camera may come and still draw the basemap sharp (no more than
- * {@link MAX_BASEMAP_UPSCALE} on screen), as Cesium measures closeness in each mode: on the 2D map
+ * {@link MAX_BASEMAP_UPSCALE} on screen), for a basemap whose deepest level has `metersPerPixel`
+ * of ground per pixel (038: the detailed basemap's, `detailMetersPerPixel`; the NASA overview's
+ * `BASEMAP_METERS_PER_PIXEL` before it), as Cesium measures closeness in each mode: on the 2D map
  * the width of ground the view spans, in 3D the camera's height, which spans that width across a
  * field of view of `fov` radians. `canvasPixels` is the canvas's longer side in CSS pixels, the
  * side both the 2D span and the 3D field of view apply to; CSS pixels, not drawn ones, so a
@@ -64,18 +65,22 @@ export function sharpestDistance(
   mode: SceneMode,
   canvasPixels: number,
   fov: number | undefined,
+  metersPerPixel: number,
 ): number {
-  const span = (canvasPixels * BASEMAP_METERS_PER_PIXEL) / MAX_BASEMAP_UPSCALE;
+  const span = (canvasPixels * metersPerPixel) / MAX_BASEMAP_UPSCALE;
   if (mode === SceneMode.SCENE2D || fov === undefined) return span;
   return span / (2 * Math.tan(fov / 2));
 }
 
-/** {@link sharpestDistance} for a viewer as it is now: its mode, canvas and field of view. */
-export function sharpestDistanceOf(viewer: CesiumViewer): number {
+/**
+ * {@link sharpestDistance} for a viewer as it is now (its mode, canvas and field of view) and a
+ * basemap of `metersPerPixel` at its deepest level.
+ */
+export function sharpestDistanceOf(viewer: CesiumViewer, metersPerPixel: number): number {
   const { scene, camera } = viewer;
   const canvasPixels = Math.max(scene.canvas.clientWidth, scene.canvas.clientHeight);
   const fov = (camera.frustum as { fov?: number }).fov;
-  return sharpestDistance(scene.mode, canvasPixels, fov);
+  return sharpestDistance(scene.mode, canvasPixels, fov, metersPerPixel);
 }
 
 /**

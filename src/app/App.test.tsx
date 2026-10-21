@@ -232,7 +232,7 @@ describe('About', () => {
     expect(screen.getByTestId('data-credits')).toHaveTextContent('© OpenStreetMap contributors');
     expect(screen.getByTestId('data-credits')).toHaveTextContent('© CARTO');
     expect(screen.getByTestId('data-credits')).toHaveTextContent(
-      'Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+      'Esri, Vantor, Earthstar Geographics, and the GIS User Community',
     );
     expect(screen.getByRole('row', { name: /cesium 1\.146\.0 Apache-2\.0/ })).toBeVisible();
     const sources = await screen.findByTestId('source-credits');

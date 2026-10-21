@@ -1,8 +1,21 @@
 // @vitest-environment node
-import { Event, ImageryLayer, ImageryLayerCollection, SceneMode } from 'cesium';
+import {
+  Event,
+  ImageryLayer,
+  ImageryLayerCollection,
+  SceneMode,
+  UrlTemplateImageryProvider,
+} from 'cesium';
 import { BasemapHandOff, SWAP_TIMEOUT_MS, type HandOffViewer } from './basemapHandOff';
-import { createDetailLayer, type DetailSource } from './basemapStyle';
+import type { DetailSource } from './basemapStyle';
 import { createBaseLayers } from './imagery';
+
+/** A stand-in layer for a source, asking no real server (Esri's would read its service first). */
+function layerOf(source: DetailSource | 'product'): ImageryLayer {
+  return new ImageryLayer(
+    new UrlTemplateImageryProvider({ url: `https://${source}.test/{z}/{x}/{y}.png` }),
+  );
+}
 
 /** A viewer with real camera and globe events and a real layer collection, at a set zoom. */
 function fakeViewer() {
@@ -37,7 +50,7 @@ function setUp(source: DetailSource = 'osm') {
     source,
     above: fake.night,
     createLayer: (detail) => {
-      const layer = createDetailLayer(detail);
+      const layer = layerOf(detail);
       made.push(layer);
       return layer;
     },
@@ -61,7 +74,7 @@ describe('BasemapHandOff', () => {
   it('hands off to the detailed source past the overview zoom, over the night lights', () => {
     const { viewer, night, made, onShown, handOff, zoomTo } = setUp();
     // A product overlay already on top stays on top.
-    const product = createDetailLayer('esri');
+    const product = layerOf('product');
     viewer.imageryLayers.add(product);
     zoomTo(4.2);
     expect(made).toHaveLength(0);
@@ -71,7 +84,7 @@ describe('BasemapHandOff', () => {
     expect(viewer.imageryLayers.indexOf(product)).toBe(3);
     expect(made[0]!.show).toBe(true);
     expect(handOff.shownSource).toBe('osm');
-    expect(onShown).toHaveBeenLastCalledWith('osm');
+    expect(onShown).toHaveBeenLastCalledWith('osm', made[0]);
   });
 
   it('keeps the overview under the detailed layer and hides the layer when zoomed back out', () => {
@@ -85,7 +98,7 @@ describe('BasemapHandOff', () => {
     expect(made[0]!.show).toBe(false);
     expect(viewer.imageryLayers.contains(made[0]!)).toBe(true);
     expect(day.show && night.show).toBe(true);
-    expect(onShown).toHaveBeenLastCalledWith(undefined);
+    expect(onShown).toHaveBeenLastCalledWith(undefined, undefined);
     // Back in, the same layer shows again: nothing new to make.
     zoomTo(8);
     expect(made).toHaveLength(1);
@@ -108,7 +121,7 @@ describe('BasemapHandOff', () => {
     const esri = made[1]!;
     expect(viewer.imageryLayers.indexOf(esri)).toBe(viewer.imageryLayers.indexOf(osm!) + 1);
     expect(osm!.show && esri.show).toBe(true);
-    expect(onShown).toHaveBeenLastCalledWith('esri');
+    expect(onShown).toHaveBeenLastCalledWith('esri', esri);
     viewer.scene.globe.tileLoadProgressEvent.raiseEvent(12);
     expect(viewer.imageryLayers.contains(osm!)).toBe(true);
     viewer.scene.globe.tileLoadProgressEvent.raiseEvent(0);
@@ -136,10 +149,10 @@ describe('BasemapHandOff', () => {
     handOff.setSource('esri');
     expect(viewer.imageryLayers.contains(made[0]!)).toBe(false);
     expect(made).toHaveLength(1);
-    expect(onShown).toHaveBeenLastCalledWith(undefined);
+    expect(onShown).toHaveBeenLastCalledWith(undefined, undefined);
     zoomTo(10);
     expect(made).toHaveLength(2);
-    expect(onShown).toHaveBeenLastCalledWith('esri');
+    expect(onShown).toHaveBeenLastCalledWith('esri', made[1]);
   });
 
   it('waits out a 2D/3D morph, then reads the zoom', () => {
