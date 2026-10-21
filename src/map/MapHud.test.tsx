@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MapHud, type CameraState, type MapHudProps } from './MapHud';
 
@@ -129,5 +129,24 @@ describe('MapHud', () => {
     expect(button).toHaveAttribute('aria-pressed', 'true');
     await userEvent.click(button);
     expect(onToggleLegend).toHaveBeenCalledOnce();
+  });
+
+  it('has no basemap toggle unless given one', () => {
+    renderHud(camera);
+    expect(screen.queryByRole('tablist', { name: 'Basemap' })).toBeNull();
+  });
+
+  it('shows the basemap picked and tells which one the user picks', async () => {
+    const onBasemap = vi.fn();
+    renderHud(camera, { basemap: 'map', onBasemap });
+    const basemap = screen.getByRole('tablist', { name: 'Basemap' });
+    expect(within(basemap).getByRole('tab', { name: 'Map' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await userEvent.click(within(basemap).getByRole('tab', { name: 'Satellite' }));
+    expect(onBasemap).toHaveBeenCalledWith('satellite');
+    // Beside the scene toggle, which still names its own modes.
+    expect(screen.getByRole('tab', { name: '2D Map' })).toBeVisible();
   });
 });

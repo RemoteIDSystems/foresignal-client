@@ -8,14 +8,15 @@ export interface DataCredit {
   use: string;
   /** Who provides it. */
   provider: string;
-  /** The page the files were downloaded from. */
+  /** The page the files were downloaded from, or for a tile service its terms or copyright page. */
   source: string;
 }
 
 /**
  * The map's data: NASA imagery and NOAA terrain, each downloaded once and served from the client's
- * own origin. `public/basemap/README.md` and `public/terrain/README.md` record the exact files and
- * checksums.
+ * own origin (`public/basemap/README.md` and `public/terrain/README.md` record the exact files and
+ * checksums), and the detailed basemaps past the overview zoom (038), fetched from their providers'
+ * tile servers as the map is viewed.
  */
 export const DATA_CREDITS: readonly DataCredit[] = [
   {
@@ -36,6 +37,24 @@ export const DATA_CREDITS: readonly DataCredit[] = [
     use: 'Map terrain in 3D and the elevation readout',
     provider: 'NOAA National Centers for Environmental Information',
     source: 'https://www.ncei.noaa.gov/products/etopo-global-relief-model',
+  },
+  {
+    name: 'OpenStreetMap standard tiles (© OpenStreetMap contributors, ODbL)',
+    use: 'Map basemap past the overview zoom, without a CARTO key',
+    provider: 'OpenStreetMap Foundation',
+    source: 'https://www.openstreetmap.org/copyright',
+  },
+  {
+    name: 'CARTO Dark Matter raster tiles (© OpenStreetMap contributors, © CARTO)',
+    use: 'Map basemap past the overview zoom, in builds with a CARTO key',
+    provider: 'CARTO',
+    source: 'https://carto.com/attribution',
+  },
+  {
+    name: 'World Imagery (Esri, Maxar, Earthstar Geographics, and the GIS User Community)',
+    use: 'Satellite basemap past the overview zoom',
+    provider: 'Esri',
+    source: 'https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9',
   },
 ];
 

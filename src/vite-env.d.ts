@@ -4,6 +4,11 @@
 interface ImportMetaEnv {
   /** Backend base URL; defaults to `/` (same-origin). */
   readonly VITE_FORESIGNAL_BASE_URL?: string;
+  /**
+   * CARTO basemaps key (038). Set, the Map basemap draws CARTO's dark street map past the overview
+   * zoom; unset or blank, it draws OpenStreetMap's tiles, which need no key.
+   */
+  readonly VITE_CARTO_KEY?: string;
 }
 
 interface ImportMeta {

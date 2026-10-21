@@ -201,7 +201,7 @@ describe('App routing', () => {
 });
 
 describe('About', () => {
-  it('opens from Settings and credits Cesium, the NASA imagery and every package', async () => {
+  it('opens from Settings and credits Cesium, the basemaps and every package', async () => {
     backend();
     server.use(
       http.get('/v1/attributions', ({ response }) =>
@@ -229,6 +229,11 @@ describe('About', () => {
     expect(screen.getByTestId('data-credits')).toHaveTextContent('Blue Marble');
     expect(screen.getByTestId('data-credits')).toHaveTextContent('Black Marble');
     expect(screen.getByTestId('data-credits')).toHaveTextContent('ETOPO 2022');
+    expect(screen.getByTestId('data-credits')).toHaveTextContent('© OpenStreetMap contributors');
+    expect(screen.getByTestId('data-credits')).toHaveTextContent('© CARTO');
+    expect(screen.getByTestId('data-credits')).toHaveTextContent(
+      'Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+    );
     expect(screen.getByRole('row', { name: /cesium 1\.146\.0 Apache-2\.0/ })).toBeVisible();
     const sources = await screen.findByTestId('source-credits');
     expect(

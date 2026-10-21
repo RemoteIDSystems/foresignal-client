@@ -115,4 +115,33 @@ describe('MapAttribution', () => {
     );
     expect(screen.getByTestId('map-attribution')).not.toHaveTextContent('NOAA');
   });
+
+  it('puts the basemap credit first, whatever its license asks, once', async () => {
+    server.use(
+      http.get('/v1/attributions', ({ response }) =>
+        response(200).json({ attributions: [shown], text: '' }),
+      ),
+    );
+    const basemap: Attribution = {
+      text: 'NASA Blue Marble, Black Marble',
+      licence: 'US-PD',
+      requiredDisplay: false,
+    };
+    render(<MapAttribution api={api()} basemap={basemap} />);
+    expect(screen.getByTestId('map-attribution')).toHaveTextContent(
+      'NASA Blue Marble, Black Marble',
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId('map-attribution')).toHaveTextContent(
+        'NASA Blue Marble, Black Marble · Map data © OpenStreetMap contributors',
+      ),
+    );
+  });
+
+  it('does not repeat a basemap credit the backend also gives', () => {
+    render(<MapAttribution basemap={shown} extra={[shown]} />);
+    expect(screen.getByTestId('map-attribution').textContent).toBe(
+      'Map data © OpenStreetMap contributors',
+    );
+  });
 });

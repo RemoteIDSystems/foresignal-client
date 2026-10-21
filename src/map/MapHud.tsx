@@ -10,6 +10,7 @@ import {
   type ScaleBar,
 } from './readout';
 import type { SceneModeKey } from './sceneMode';
+import type { BasemapStyle } from './basemapStyle';
 import styles from './MapHud.module.css';
 
 /** A point on the ground for the readout. */
@@ -54,6 +55,8 @@ export interface MapHudActions {
   onHome: () => void;
   /** Opens or closes the legend; without it the HUD has no legend button. */
   onToggleLegend?: () => void;
+  /** Picks the basemap (038); without it the HUD has no basemap toggle. */
+  onBasemap?: (style: BasemapStyle) => void;
 }
 
 /** Props for {@link MapHud}. */
@@ -68,6 +71,8 @@ export interface MapHudProps extends MapHudActions {
   legendOpen?: boolean;
   /** Drawn over the global-view inset, under the visible area (018's activity heat). */
   insetOverlay?: ReactNode;
+  /** The basemap picked, for the basemap toggle; Map by default. */
+  basemap?: BasemapStyle;
 }
 
 /** Why the elevation readout shows a dash: elevation is read only under the pointer. */
@@ -82,8 +87,8 @@ const INSET_WIDTH = 180;
 const INSET_HEIGHT = 90;
 
 /**
- * The map's HUD, drawn as DOM over the canvas (not Cesium widgets): the 2D Map / 3D Globe toggle,
- * compass and zoom, the legend button, the global-view inset with the visible area, and the
+ * The map's HUD, drawn as DOM over the canvas (not Cesium widgets): the Map / Satellite basemap
+ * toggle and the 2D Map / 3D Globe toggle, compass and zoom, the legend button, the global-view inset with the visible area, and the
  * lat/lon/elevation readout with a scale bar.
  */
 export function MapHud({
@@ -97,21 +102,36 @@ export function MapHud({
   onToggleLegend,
   legendOpen = false,
   insetOverlay,
+  basemap = 'map',
+  onBasemap,
 }: MapHudProps) {
   const ground = camera?.ground;
   return (
     <>
-      <Tabs
-        className={styles.sceneToggle}
-        label="Scene mode"
-        variant="pill"
-        value={mode}
-        onChange={onSceneMode}
-        items={[
-          { key: '2d', label: '2D Map' },
-          { key: '3d', label: '3D Globe' },
-        ]}
-      />
+      <div className={styles.toggles}>
+        {onBasemap && (
+          <Tabs
+            label="Basemap"
+            variant="pill"
+            value={basemap}
+            onChange={onBasemap}
+            items={[
+              { key: 'map', label: 'Map' },
+              { key: 'satellite', label: 'Satellite' },
+            ]}
+          />
+        )}
+        <Tabs
+          label="Scene mode"
+          variant="pill"
+          value={mode}
+          onChange={onSceneMode}
+          items={[
+            { key: '2d', label: '2D Map' },
+            { key: '3d', label: '3D Globe' },
+          ]}
+        />
+      </div>
 
       <div className={styles.controls}>
         <button

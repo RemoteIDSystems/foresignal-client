@@ -24,7 +24,14 @@ import {
 import type { ForesignalClient } from '../api/client';
 import type { ChangeStream } from '../api/stream/ChangeStream';
 import { useTheme } from '../app/theme';
-import { createBaseLayers, insetTileUrls } from './imagery';
+import { insetTileUrls } from './imagery';
+import { Basemap } from './Basemap';
+import {
+  basemapStyleStore,
+  DETAIL_ATTRIBUTIONS,
+  OVERVIEW_ATTRIBUTION,
+  type DetailSource,
+} from './basemapStyle';
 import { MapAttribution } from './style/attribution';
 import { MapLegend } from './style/legend';
 import type { LegendScope } from './style/legendModel';
@@ -196,8 +203,8 @@ function startDestination(start: CommittedViewport | undefined): Cartesian3 | Re
 }
 
 /**
- * Lives inside the Resium viewer: applies the theme and day/night lighting, adds the basemap and
- * the self-hosted terrain, opens on the last committed view (from the store, 012) or the home view, tracks the mouse pointer over the canvas, and
+ * Lives inside the Resium viewer: applies the theme and day/night lighting, adds the self-hosted
+ * terrain (the basemap is {@link Basemap}'s), opens on the last committed view (from the store, 012) or the home view, tracks the mouse pointer over the canvas, and
  * reports camera state after each render, only when a displayed value changed.
  */
 function SceneBridge({
@@ -216,9 +223,6 @@ function SceneBridge({
   useEffect(() => {
     if (!viewer) return;
     styleScene(viewer);
-    // Base layers per viewer instance: destroying a viewer destroys its layers.
-    const baseLayers = createBaseLayers();
-    baseLayers.forEach((layer, index) => viewer.imageryLayers.add(layer, index));
     let active = true;
     let sampler: TerrainSampler | undefined;
     createTerrainProvider()
@@ -258,8 +262,6 @@ function SceneBridge({
       remove();
       handler.destroy();
       viewer.scene.canvas.removeEventListener('pointerleave', onLeave);
-      if (!viewer.isDestroyed())
-        baseLayers.forEach((layer) => viewer.imageryLayers.remove(layer, true));
     };
   }, [viewer, onReady, onCamera]);
   return null;
@@ -377,7 +379,10 @@ const NO_PRODUCTS: readonly Product[] = [];
 /**
  * The map engine: a Resium viewer with Cesium's own widgets removed, the self-hosted NASA
  * Blue Marble / Black Marble day/night basemap draped over self-hosted ETOPO terrain (raised in
- * 3D, flat in 2D), the 2D Map / 3D Globe toggle (2D by default), and
+ * 3D, flat in 2D), handed off past the overview zoom to the Map (OpenStreetMap, or CARTO with a
+ * key) or Satellite (Esri World Imagery) tiles the HUD's basemap toggle picks (038:
+ * `data-basemap` names the pick, `data-basemap-detail` the detailed source drawn or `overview`),
+ * the 2D Map / 3D Globe toggle (2D by default), and
  * the DOM HUD (compass, zoom, inset, pointer lat/lon/elevation readout, scale bar). Renders at
  * device pixel ratio for sharp output. The clock runs in real time so the terminator moves, and
  * stands at the time machine's instant while the map is pinned (013). Cesium's credits go to a
@@ -548,6 +553,10 @@ export function MapViewer({
       .filter((product) => ids.has(product.id) && product.attribution)
       .map((product) => product.attribution as Attribution);
   }, [products, productLayers]);
+  // The basemap picked (Map or Satellite, 038), shared by every map and kept in this browser, and
+  // the detailed source drawn now, for its credit; undefined while only the NASA overview shows.
+  const basemapStyle = useSyncExternalStore(basemapStyleStore.subscribe, basemapStyleStore.get);
+  const [basemapDetail, setBasemapDetail] = useState<DetailSource>();
   const drawnProducts = productLayers.filter((key) => productStatus[key]?.state === 'ready');
 
   // The latest camera state, read when switching mode without re-creating the callback each frame.
@@ -717,6 +726,8 @@ export function MapViewer({
       className={styles.region}
       data-testid="map-viewer"
       data-scene-mode={mode}
+      data-basemap={basemapStyle}
+      data-basemap-detail={basemapDetail ?? 'overview'}
       data-record-features={drawnRecords}
       data-record-cells={drawnCells}
       data-product-layers={drawnProducts.join(' ')}
@@ -748,6 +759,7 @@ export function MapViewer({
         creditContainer={creditContainer}
       >
         <SceneBridge onReady={setViewer} onCamera={onCamera} start={startView} />
+        <Basemap style={basemapStyle} onShown={setBasemapDetail} />
         <ViewportTracker store={viewport} />
         <AdaptiveMsaa />
         {api && (
@@ -805,9 +817,15 @@ export function MapViewer({
         onToggleLegend={api ? onToggleLegend : undefined}
         legendOpen={legendOpen}
         insetOverlay={insetOverlay}
+        basemap={basemapStyle}
+        onBasemap={basemapStyleStore.set}
       />
       {legend}
-      <MapAttribution api={api} extra={productAttributions} />
+      <MapAttribution
+        api={api}
+        extra={productAttributions}
+        basemap={basemapDetail ? DETAIL_ATTRIBUTIONS[basemapDetail] : OVERVIEW_ATTRIBUTION}
+      />
       {children}
     </div>
   );

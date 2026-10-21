@@ -16,15 +16,20 @@ export interface MapAttributionProps {
    * 009); shown after the backend's, when their license requires display.
    */
   extra?: readonly Attribution[];
+  /**
+   * The credit of the basemap drawn now (038): shown first, whatever its license asks, since it
+   * names what the map itself is.
+   */
+  basemap?: Attribution;
 }
 
 /**
  * The map's required attribution line, from the backend's structured attributions
  * (`getAttributions`, never hard-coded). Shows only entries whose license requires display, each
- * linked to its terms when it has a link, then those of the products on the map; renders nothing
- * when none do.
+ * linked to its terms when it has a link, then those of the products on the map, after the
+ * basemap's credit when there is one; renders nothing when there is nothing to credit.
  */
-export function MapAttribution({ api, sources, extra }: MapAttributionProps) {
+export function MapAttribution({ api, sources, extra, basemap }: MapAttributionProps) {
   const [loaded, setLoaded] = useState<{ key: string; items: Attribution[] }>();
   const sourceKey = sources?.join(',');
   const key = sourceKey ?? '*';
@@ -46,7 +51,10 @@ export function MapAttribution({ api, sources, extra }: MapAttributionProps) {
   }, [api, sourceKey, key]);
 
   const fromApi = api && sourceKey !== '' && loaded?.key === key ? loaded.items : [];
-  const items = extra?.length ? requiredAttributions([...fromApi, ...extra]) : fromApi;
+  const required = extra?.length ? requiredAttributions([...fromApi, ...extra]) : fromApi;
+  const items = basemap
+    ? [basemap, ...required.filter((item) => item.text !== basemap.text)]
+    : required;
   if (items.length === 0) return null;
   return (
     <div className={styles.attribution} data-testid="map-attribution">
