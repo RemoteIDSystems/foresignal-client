@@ -30,9 +30,9 @@ export interface ContrastPair {
 }
 
 /**
- * The theme's text and chip pairs, each with the WCAG AA minimum it is held to (036): body and
- * secondary text on the page, panels and raised surfaces; muted text (hints and labels) and the
- * accent as large text or interface color; each chip's text on its own background.
+ * The theme's text and chip pairs, each with the WCAG AA minimum it is held to (036): body,
+ * secondary and muted text (hints and labels) on the page, panels and raised surfaces; the accent
+ * as large text or interface color; each chip's text on its own background.
  */
 export function themePairs(tokens: ThemeTokens): ContrastPair[] {
   const { color, tone } = tokens;
@@ -52,7 +52,7 @@ export function themePairs(tokens: ThemeTokens): ContrastPair[] {
     pairs.push({
       name: `muted text on ${surface}`,
       ratio: contrast(color.textMuted, background),
-      minimum: AA_LARGE,
+      minimum: AA_TEXT,
     });
     pairs.push({
       name: `accent on ${surface}`,

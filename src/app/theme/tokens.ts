@@ -21,7 +21,7 @@ export const darkTokens = {
     accentSoft: '#10285a',
     text: '#e6edf5',
     textSecondary: '#a3b0bf',
-    textMuted: '#6c7a8a',
+    textMuted: '#7f8b99',
     live: '#3ddc97',
     liveSoft: '#082420',
     danger: '#ff5a5f',

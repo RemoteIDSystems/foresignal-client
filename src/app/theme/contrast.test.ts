@@ -10,7 +10,7 @@ describe('contrast', () => {
     expect(contrast('#777777', '#777777')).toBe(1);
   });
 
-  it('holds the theme to its minimums: body text 4.5:1, muted text and accent 3:1', () => {
+  it('holds the theme to its minimums: all text 4.5:1, the accent 3:1', () => {
     const pairs = themePairs(darkTokens);
     expect(pairs.filter((pair) => pair.minimum === AA_TEXT).length).toBeGreaterThan(0);
     expect(pairs.filter((pair) => pair.minimum === AA_LARGE).length).toBeGreaterThan(0);
