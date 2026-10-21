@@ -1,7 +1,8 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { expect, test, type Request } from '@playwright/test';
 import { CLUSTER_POINT_BUDGET } from '../src/map/records/clientClusters';
-import { SLOW_FRAME_MS } from '../src/map/stress/frameStats';
+import { SIXTY_FPS_P95_MS } from '../src/map/stress/frameStats';
+import { DETAIL_MSAA, OVERVIEW_MSAA } from '../src/map/msaa';
 import type { ScaleReport } from '../src/map/stress/scaleScenario';
 import { DENSE_KINDS, standInCatalog } from './dense-support';
 
@@ -17,8 +18,10 @@ import { DENSE_KINDS, standInCatalog } from './dense-support';
  *
  * At world zoom the catalog's points are far more than the clustering budget, so the layers the
  * backend does not aggregate are drawn as the client's cells (037): the world draws few records one
- * by one and counts the rest in cells. With `E2E_GPU=1` the world's 95th-percentile frame must be
- * within the 33.3 ms budget, as must region's and city's.
+ * by one and counts the rest in cells. The world is an overview, drawn without multisample
+ * antialiasing, and the city with the shipped 4× (adaptive MSAA, 037). With `E2E_GPU=1` the
+ * world must hold 60 fps: its 95th-percentile frame within {@link SIXTY_FPS_P95_MS} (25 ms; a
+ * frame that misses the refresh takes 33.3 ms). Region and city must be within the 33.3 ms budget.
  */
 test('the full catalog at three zooms: one change stream, aggregated and in-view data, in budget', async ({
   page,
@@ -70,9 +73,12 @@ test('the full catalog at three zooms: one change stream, aggregated and in-view
   // Raw records load only in view: the city holds fewer than the world draws or counts.
   expect(city!.totals.features).toBeLessThan(world!.totals.features + world!.totals.aggregated);
   expect(region).toBeDefined();
+  // MSAA by zoom: none at the world overview, the shipped 4× at the city.
+  expect(world!.msaa).toBe(OVERVIEW_MSAA);
+  expect(city!.msaa).toBe(DETAIL_MSAA);
   // Software WebGL does not time frames as a GPU does, so the frame budget is held with E2E_GPU=1.
   if (gpu) {
-    expect(world!.frames.p95).toBeLessThanOrEqual(SLOW_FRAME_MS);
+    expect(world!.frames.p95).toBeLessThanOrEqual(SIXTY_FPS_P95_MS);
     expect(report.problems).toEqual([]);
   } else expect(report.problems.filter((problem) => !problem.includes('frame'))).toEqual([]);
 });

@@ -53,6 +53,8 @@ export interface ScaleStepResult {
   peakRequests: { active: number; waiting: number };
   /** Frame timing while panning, once settled. */
   frames: FrameStats;
+  /** The scene's multisample antialiasing samples while the frames were timed (adaptive, 037). */
+  msaa?: number;
   /** The JavaScript heap in use (Chromium's `performance.memory`), when the browser reports it. */
   heapBytes?: number;
   /** Server-sent event connections open, by path. */
@@ -155,6 +157,7 @@ export async function runScaleScenario(
     const settled = await settle(engine, settleTimeoutMs, wait, now);
     const totals = engine.layers.totals();
     const frames = await measure(engine, frameMs);
+    const msaa = engine.viewer.scene.msaaSamples;
     const open = streams();
     maxChangeStreams = Math.max(maxChangeStreams, open[CHANGE_STREAM_PATH] ?? 0);
     const used = heap();
@@ -166,6 +169,7 @@ export async function runScaleScenario(
       totals,
       peakRequests: settled.peak,
       frames,
+      ...(msaa !== undefined && { msaa }),
       ...(used !== undefined && { heapBytes: used }),
       streams: open,
     });

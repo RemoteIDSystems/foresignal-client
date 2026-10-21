@@ -60,7 +60,7 @@ function engine(samples: { totals: DrawnTotals; requests: { active: number; wait
   });
   return {
     engine: {
-      viewer: { camera: { setView }, scene: { mode: SceneMode.SCENE2D } },
+      viewer: { camera: { setView }, scene: { mode: SceneMode.SCENE2D, msaaSamples: 1 } },
       layers: {
         totals: () => current().totals,
         get requests() {
@@ -156,7 +156,7 @@ describe('the scale scenario', () => {
     expect(result.ms).toBe(1000);
   });
 
-  it('moves through each zoom, recording what is drawn, the frames, the heap and the streams', async () => {
+  it('moves through each zoom, recording what is drawn, the frames, the MSAA, the heap and the streams', async () => {
     const quiet = { totals: totals(700, 40), requests: { active: 0, waiting: 0 } };
     const { engine: map, setView } = engine([quiet]);
     let clock = 0;
@@ -180,7 +180,13 @@ describe('the scale scenario', () => {
       maxChangeStreams: 1,
       problems: [],
       steps: [
-        { label: 'World', settled: true, heapBytes: 123_000_000, totals: { features: 700 } },
+        {
+          label: 'World',
+          settled: true,
+          heapBytes: 123_000_000,
+          msaa: 1,
+          totals: { features: 700 },
+        },
         { label: 'City', settled: true, frames: { p95: 16 } },
       ],
     });

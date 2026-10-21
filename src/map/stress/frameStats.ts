@@ -1,6 +1,16 @@
 /** A frame slower than this misses 30 frames per second, in ms. */
 export const SLOW_FRAME_MS = 1000 / 30;
 
+/** One frame at 60 frames per second, in ms. */
+export const SIXTY_FPS_FRAME_MS = 1000 / 60;
+
+/**
+ * The 95th-percentile frame interval within which a view holds 60 frames per second: one and a
+ * half frames, 25 ms. A frame that misses the display's refresh is shown a whole refresh later
+ * (33.3 ms or more), so a 95th percentile under this means 95 frames in 100 met the refresh.
+ */
+export const SIXTY_FPS_P95_MS = 1.5 * SIXTY_FPS_FRAME_MS;
+
 /** Frame timing over a stretch of rendered frames. */
 export interface FrameStats {
   /** Frame intervals measured. */

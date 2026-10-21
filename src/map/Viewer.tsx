@@ -36,6 +36,7 @@ import { parseProductLayerKey, type ProductLayerStatus } from './products/produc
 import type { Product } from './products/productApi';
 import type { Attribution } from './style/attributionModel';
 import { ViewportTracker } from './ViewportTracker';
+import { AdaptiveMsaa } from './AdaptiveMsaa';
 import { viewportStore, type CommittedViewport, type ViewportStore } from '../state/viewport';
 import type { RecordLayerStatus } from './records/recordLayers';
 import { RecordMarker } from './records/RecordMarker';
@@ -748,6 +749,7 @@ export function MapViewer({
       >
         <SceneBridge onReady={setViewer} onCamera={onCamera} start={startView} />
         <ViewportTracker store={viewport} />
+        <AdaptiveMsaa />
         {api && (
           <ProductLayersBridge
             api={api}
