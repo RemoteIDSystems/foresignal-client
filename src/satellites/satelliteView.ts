@@ -1,9 +1,8 @@
+import type { Bbox } from './area';
 import type { Satellite } from './constellation';
 import { apsides, elementAgeHours, orbitType, periodMinutes, positionAt } from './orbit';
+export { areaOf, type Bbox } from './area';
 import { recordField, type SatelliteRecord, type Sensor } from './satelliteApi';
-
-/** A bounding box: west, south, east, north. */
-export type Bbox = readonly [number, number, number, number];
 
 /** The scrubber's reach either side of now, in hours, and the ticks the mock labels. */
 export const SCRUB_HOURS = 24;
@@ -14,21 +13,6 @@ export const SCRUB_TICKS: readonly { hours: number; label: string }[] = [
   { hours: 6, label: '+6h' },
   { hours: 24, label: '+24h' },
 ];
-
-/**
- * The area the sensors are discovered for: the map's view, to a whole degree outward, so a camera
- * that moves a little does not read them again; the world before the map commits a view.
- */
-export function areaOf(bbox: Bbox | undefined): Bbox {
-  if (!bbox) return [-180, -90, 180, 90];
-  const [west, south, east, north] = bbox;
-  return [
-    Math.max(-180, Math.floor(west)),
-    Math.max(-90, Math.floor(south)),
-    Math.min(180, Math.ceil(east)),
-    Math.min(90, Math.ceil(north)),
-  ];
-}
 
 /** The middle of an area, for passes over it; across the antimeridian, the middle of the wrap. */
 export function centerOf(area: Bbox): { longitude: number; latitude: number } {

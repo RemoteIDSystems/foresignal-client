@@ -1,4 +1,4 @@
-import { Map, RadioTower, Workflow } from 'lucide-react';
+import { Map, Workflow } from 'lucide-react';
 import { PlaceholderView } from './PlaceholderView';
 
 /** Full-screen map. */
@@ -9,18 +9,6 @@ export function MapView() {
       title="Map"
       description="The full 2D map and 3D globe with every layer."
       builtIn="005–010"
-    />
-  );
-}
-
-/** RF and sensors. */
-export function RfSensorsView() {
-  return (
-    <PlaceholderView
-      icon={RadioTower}
-      title="RF / Sensors"
-      description="RF and spectrum layers, the sensor catalog and ground-station passes."
-      builtIn="032"
     />
   );
 }
