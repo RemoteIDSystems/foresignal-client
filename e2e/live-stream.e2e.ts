@@ -6,6 +6,7 @@ import {
   expectLiveEarthquakes,
   kindToggle,
   openGlobal,
+  STREAM_LIVE_MS,
   waitForRecords,
 } from './support';
 
@@ -34,7 +35,7 @@ test('one live stream stays connected, re-filters in place, and resumes after a 
   await openGlobal(page);
   const badge = page.getByTestId('live-state');
   // The real backend's stream: hello arrives and the badge reads as the mock's.
-  await expect(badge).toHaveAttribute('data-state', 'live', { timeout: 30_000 });
+  await expect(badge).toHaveAttribute('data-state', 'live', { timeout: STREAM_LIVE_MS });
   await expect(badge).toHaveText('◆ LIVE');
   await expect(badge).not.toHaveAttribute('data-filter-pending');
   const version = Number(await badge.getAttribute('data-filter-version'));
@@ -63,7 +64,7 @@ test('one live stream stays connected, re-filters in place, and resumes after a 
   await page.evaluate(() => window.__foresignalEngine!.stream!.reconnectNow());
   await expect(badge).toHaveAttribute('data-connections', String(connections + 1));
   // The dropped stream's place is held a while, so the reconnect may wait out the limit.
-  await expect(badge).toHaveAttribute('data-state', 'live', { timeout: 60_000 });
+  await expect(badge).toHaveAttribute('data-state', 'live', { timeout: STREAM_LIVE_MS });
   expect(streams.length).toBeGreaterThan(before);
   for (const stream of streams.slice(before)) {
     expect(await stream.headerValue('last-event-id')).toBe(`c=${lastSeq}`);
@@ -211,7 +212,7 @@ test('a change on the stream shows on the map; a dropped stream catches up and r
   await expect.poll(() => drawn(page), { timeout: 20_000 }).toBeGreaterThanOrEqual(3);
   // The stream drops; the reconnect catches up first, then resumes from the caught-up cursor.
   await expect.poll(() => drawn(page), { timeout: 30_000 }).toBe(5);
-  await expect(badge).toHaveAttribute('data-state', 'live', { timeout: 30_000 });
+  await expect(badge).toHaveAttribute('data-state', 'live', { timeout: STREAM_LIVE_MS });
   expect(cursors.slice(0, 3)).toEqual([null, 'c=5002', 'c=5003']);
   expect(catchUps[0]!.searchParams.get('after')).toBe('5001');
   expect(catchUps[0]!.searchParams.getAll('kind')).toContain('earthquake');

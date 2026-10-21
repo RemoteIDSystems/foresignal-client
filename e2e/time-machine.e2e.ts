@@ -8,6 +8,7 @@ import {
   openGlobal,
   pixelsNear,
   waitForRecords,
+  STREAM_LIVE_MS,
 } from './support';
 
 /** Console errors and uncaught exceptions on the page; a check fails if any appear. */
@@ -57,7 +58,7 @@ test('dragging the scrubber pins the map at an instant, playback steps through f
   const map = page.getByTestId('map-viewer');
   const badge = page.getByTestId('live-state');
   await expect(map).toHaveAttribute('data-time', 'live');
-  await expect(badge).toHaveAttribute('data-state', 'live');
+  await expect(badge).toHaveAttribute('data-state', 'live', { timeout: STREAM_LIVE_MS });
   // The histogram of the last day for the drawn kinds.
   await expect
     .poll(async () => Number(await page.getByTestId('time-histogram').getAttribute('data-buckets')))
@@ -117,7 +118,7 @@ test('dragging the scrubber pins the map at an instant, playback steps through f
   await page.getByRole('button', { name: 'Return to live' }).click();
   await expect(map).toHaveAttribute('data-time', 'live');
   await expect(map).not.toHaveAttribute('data-playback');
-  await expect(badge).toHaveAttribute('data-state', 'live');
+  await expect(badge).toHaveAttribute('data-state', 'live', { timeout: STREAM_LIVE_MS });
   await expect(badge).toHaveAttribute('data-connections', connections!);
   await expect.poll(() => tiles.slice(afresh).length).toBeGreaterThan(0);
   for (const url of tiles.slice(afresh)) expect(new URL(url).searchParams.has('asOf')).toBe(false);

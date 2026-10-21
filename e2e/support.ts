@@ -9,6 +9,14 @@ import {
 /** The live earthquake style's icon color (usgs-earthquakes, `#D9480F`). */
 export const EARTHQUAKE_RGB: [number, number, number] = [0xd9, 0x48, 0x0f];
 
+/**
+ * How long a check waits for the change stream to be live. The backend allows 4 open streams per
+ * caller and counts a closed one until it notices, by the heartbeat (every 15 s by default); the
+ * development build's double mount opens and drops a pair on every load. A reconnect can wait that
+ * out, with Retry-After, before it is live.
+ */
+export const STREAM_LIVE_MS = 60_000;
+
 /** Records the map reports drawn for the enabled layers. */
 export async function drawn(page: Page): Promise<number> {
   return Number(await page.getByTestId('map-viewer').getAttribute('data-record-features'));
