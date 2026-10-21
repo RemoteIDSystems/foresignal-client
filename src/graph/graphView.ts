@@ -139,6 +139,11 @@ export interface ViewEdge {
   /** The backend's label: `confirmed`, `likely`, `possible` or `speculative`. */
   label?: Relation['label'];
   confidence?: number;
+  /**
+   * Whether the backend materialized the relation (`projected`) and it cannot be retired by hand;
+   * false for an operator or agent relation, which `deleteRelation` may retire.
+   */
+  projected?: boolean;
 }
 
 /** A graph ready to draw, list or tabulate. */
@@ -212,6 +217,7 @@ export function toViewGraph(
       type: edge.type,
       label: edge.label,
       confidence: edge.confidence,
+      projected: edge.projected,
     }));
   return { nodes, edges };
 }

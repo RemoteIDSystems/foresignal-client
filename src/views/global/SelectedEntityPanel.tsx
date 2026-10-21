@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { ChevronRight, Ellipsis, ExternalLink, X } from 'lucide-react';
 import type { ForesignalClient } from '../../api/client';
+import { AnnotationsPanel } from '../../annotations/AnnotationsPanel';
 import { prettifyId } from '../../lib/labels';
 import { parseObjectRef } from '../../lib/objectRef';
 import { KindSwatch } from '../../map/style/legend';
@@ -31,7 +32,7 @@ import { useRecordLayers } from './recordLayersContext';
 import { useSelectedDossier } from './useSelectedDossier';
 import styles from './GlobalDashboard.module.css';
 
-type EntityTab = 'overview' | 'imagery' | 'forecast' | 'impacts' | 'related';
+type EntityTab = 'overview' | 'imagery' | 'forecast' | 'impacts' | 'related' | 'notes';
 
 /** The envelope action that adds an object to a workspace (the OpenAPI's example id). */
 const ADD_TO_WORKSPACE_ACTION = 'add-to-workspace';
@@ -240,6 +241,7 @@ function DossierBody({
           { key: 'forecast', label: 'Forecast' },
           { key: 'impacts', label: 'Impacts' },
           { key: 'related', label: `Related (${relatedCount(dossier)})` },
+          { key: 'notes', label: 'Notes' },
         ]}
       />
       <div className={styles.entityBody}>
@@ -340,6 +342,14 @@ function DossierBody({
               </ul>
             </Section>
           </>
+        )}
+        {tab === 'notes' && (
+          <AnnotationsPanel
+            api={api}
+            objectRef={dossier.envelope.ref}
+            actions={dossier.envelope.actions}
+            heading="Notes"
+          />
         )}
         {tab === 'related' && (
           <Section

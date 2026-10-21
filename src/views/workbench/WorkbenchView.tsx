@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { ObjectNotes } from '../../annotations/ObjectNotes';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import type { ForesignalClient } from '../../api/client';
 import type { ViewGraph } from '../../graph/graphView';
@@ -80,6 +81,8 @@ export function WorkbenchView({ api, store, kind }: WorkbenchViewProps) {
   );
   const [selected, setSelected] = useState<string>();
   const [graph, setGraph] = useState<ViewGraph>();
+  const [graphVersion, setGraphVersion] = useState(0);
+  const [notesOpen, setNotesOpen] = useState(false);
   const navigate = useNavigate();
   const open = useOpenObject(api, store);
   const workspaces = useWorkspaceSync();
@@ -141,8 +144,10 @@ export function WorkbenchView({ api, store, kind }: WorkbenchViewProps) {
         <button
           type="button"
           className={analysis.railItem}
-          disabled
-          title="Notes and annotations: built in 026"
+          disabled={!subjectRef}
+          aria-pressed={subjectRef ? notesOpen : undefined}
+          title={subjectRef ? undefined : 'Notes: open an investigation or situation first'}
+          onClick={() => setNotesOpen((open) => !open)}
         >
           <StickyNote size={15} aria-hidden="true" />
           Notes
@@ -199,14 +204,24 @@ export function WorkbenchView({ api, store, kind }: WorkbenchViewProps) {
               seeds={opened.status === 'ready' ? opened.value.seeds : []}
               onSelect={onSelect}
               onGraph={setGraph}
+              version={graphVersion}
               {...(selected !== undefined && { selected })}
             />
-            <GraphSidePanel
-              graph={graph}
-              selected={selected}
-              onSelect={onSelect}
-              onOpen={(ref) => void open(ref)}
-            />
+            <div className={styles.sideColumn}>
+              {notesOpen && subjectRef && (
+                <section className={`${analysis.card} ${styles.subjectNotes}`}>
+                  <ObjectNotes api={api} objectRef={subjectRef} />
+                </section>
+              )}
+              <GraphSidePanel
+                api={api}
+                graph={graph}
+                selected={selected}
+                onSelect={onSelect}
+                onOpen={(ref) => void open(ref)}
+                onGraphChanged={() => setGraphVersion((version) => version + 1)}
+              />
+            </div>
           </div>
         )}
       </main>

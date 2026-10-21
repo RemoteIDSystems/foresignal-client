@@ -33,6 +33,7 @@ import { AnalysisMap } from './AnalysisMap';
 import { AnalysisRail } from './AnalysisRail';
 import { AnalysisEvidence } from './EvidenceTab';
 import { AssessmentTab } from './AssessmentTab';
+import { ObjectNotes } from '../../annotations/ObjectNotes';
 import { workbenchPath } from '../workbench/workbench';
 import { ForecastsTab } from './ForecastsTab';
 import { HypothesesTab } from './HypothesesTab';
@@ -375,6 +376,15 @@ function renderTab(tab: AnalysisTab, analysis: Analysis, context: TabContext): R
           api={context.api}
           situationId={analysis.kind === 'situation' ? analysis.situation.id : undefined}
           onOpen={context.open}
+          notes={
+            analysis.kind === 'situation' ? (
+              <ObjectNotes
+                api={context.api}
+                objectRef={`situation:${analysis.situation.id}`}
+                heading="Analyst Notes"
+              />
+            ) : undefined
+          }
         />
       );
     case 'forecasts':

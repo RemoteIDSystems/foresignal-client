@@ -55,6 +55,8 @@ export interface EvidenceGraphProps {
   onSelect: (ref: string | undefined) => void;
   /** Called with each graph drawn, so the side panel reads the same one. */
   onGraph: (graph: ViewGraph) => void;
+  /** Bumped when a relation was drawn or retired, so the subgraph is read again (026). */
+  version?: number;
 }
 
 /**
@@ -63,7 +65,14 @@ export interface EvidenceGraphProps {
  * and time window filter what was read; the depth and the relation type read the subgraph again.
  * The Common dependencies mode shows instead what the seeds share (`findCommonDependencies`).
  */
-export function EvidenceGraph({ api, seeds, selected, onSelect, onGraph }: EvidenceGraphProps) {
+export function EvidenceGraph({
+  api,
+  seeds,
+  selected,
+  onSelect,
+  onGraph,
+  version = 0,
+}: EvidenceGraphProps) {
   const [mode, setMode] = useState<GraphMode>('graph');
   const [search, setSearch] = useState('');
   const [type, setType] = useState('');
@@ -78,14 +87,23 @@ export function EvidenceGraph({ api, seeds, selected, onSelect, onGraph }: Evide
     depth,
     ...(relation && { relation }),
   } satisfies GraphQueryKey);
-  const result = useRead(api, seeds.length > 0 ? queryKey : undefined, (client, key, signal) => {
-    const query = JSON.parse(key) as GraphQueryKey;
-    return queryGraph(
-      client,
-      { refs: query.seeds, depth: query.depth, ...(query.relation && { types: [query.relation] }) },
-      signal,
-    );
-  });
+  const result = useRead(
+    api,
+    seeds.length > 0 ? queryKey : undefined,
+    (client, key, signal) => {
+      const query = JSON.parse(key) as GraphQueryKey;
+      return queryGraph(
+        client,
+        {
+          refs: query.seeds,
+          depth: query.depth,
+          ...(query.relation && { types: [query.relation] }),
+        },
+        signal,
+      );
+    },
+    version,
+  );
   const sharedRefs = commonRefs(seeds);
   const commonPart = useRead(
     api,

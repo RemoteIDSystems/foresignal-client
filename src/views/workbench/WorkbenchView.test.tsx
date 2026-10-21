@@ -233,6 +233,37 @@ describe('the Analyst Workbench', () => {
     expect(await screen.findByText('Full analysis')).toBeInTheDocument();
   });
 
+  it('opens the investigation’s own notes from the WORKSPACE rail', async () => {
+    const notesPath = `/v1/objects/${encodeURIComponent(REFS.investigation)}/annotations`;
+    const { api, asked } = standInApi({
+      ...answers(),
+      [`GET /v1/objects/${encodeURIComponent(REFS.investigation)}`]: () =>
+        json(graphResult.nodes[0]),
+      [`GET ${notesPath}`]: () =>
+        json([
+          {
+            id: '01JA8Q00000000000000000N01',
+            targetRef: REFS.investigation,
+            kind: 'note',
+            body: 'Brief the duty officer at 0800.',
+            author: '01JA8Q00000000000000000P01',
+            private: false,
+            createdAt: '2026-10-18T12:00:00Z',
+            updatedAt: '2026-10-18T12:00:00Z',
+          },
+        ]),
+    });
+    renderAt(`/analyst/investigations/${GRAPH_INVESTIGATION_ID}`, api, createStore(INITIAL_STATE));
+    await graphBox();
+    const rail = screen.getByRole('navigation', { name: 'Analysis tools' });
+    await userEvent.click(within(rail).getByRole('button', { name: 'Notes' }));
+    const notes = await screen.findByRole('region', { name: 'Analysis Notes' });
+    expect(await within(notes).findByText('Brief the duty officer at 0800.')).toBeInTheDocument();
+    // The investigation's envelope offers no annotate action here, so none is offered.
+    expect(within(notes).queryByRole('button', { name: 'Add Note' })).not.toBeInTheDocument();
+    expect(asked).toContain(`GET ${notesPath}?limit=500`);
+  });
+
   it('says why an investigation did not open', async () => {
     const { api } = standInApi({
       [`GET ${investigationPath}`]: () =>

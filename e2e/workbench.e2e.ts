@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { graphResult, GRAPH_INVESTIGATION_ID } from '../src/graph/testing/graphFixtures';
+import { me } from '../src/annotations/testing/annotationFixtures';
 import { investigation } from '../src/intel/testing/fixtures';
 import { collectProblems } from './support';
 
@@ -18,6 +19,11 @@ test.beforeEach(async ({ page }) => {
     route.fulfill({ json: investigation }),
   );
   await page.route(/\/v1\/graph$/, (route) => route.fulfill({ json: graphResult }));
+  // The side panel's notes (026): none, read by a caller with read scope.
+  await page.route(/\/v1\/objects\/[^/]+\/annotations(\?.*)?$/, (route) =>
+    route.fulfill({ json: [] }),
+  );
+  await page.route(/\/v1\/me$/, (route) => route.fulfill({ json: me() }));
   await page.route(/\/v1\/objects\/[^/]+\/dossier(\?.*)?$/, (route) => {
     const ref = decodeURIComponent(new URL(route.request().url()).pathname.split('/')[3] ?? '');
     const envelope = graphResult.nodes.find((node) => node.ref === ref) ?? {

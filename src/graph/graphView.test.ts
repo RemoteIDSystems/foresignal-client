@@ -73,6 +73,7 @@ describe('the graph view logic', () => {
       type: 'causes',
       label: 'likely',
       confidence: 0.6,
+      projected: true,
     });
   });
 

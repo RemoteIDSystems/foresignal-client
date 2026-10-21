@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes, useSearchParams } from 'react-router';
 import { createForesignalClient } from '../../api/client';
 import type { RecordHit } from '../../map/records/recordPicking';
 import type { Dossier } from '../../objects/objectApi';
+import { me, NOTES } from '../../annotations/testing/annotationFixtures';
 import { createStore, INITIAL_STATE, type AppState } from '../../state/store';
 import type { WorkspaceSync } from '../../workspace/WorkspaceSync';
 import { WorkspaceSyncContext } from '../../workspace/workspaceSyncContext';
@@ -263,6 +264,24 @@ describe('SelectedEntityPanel', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: 'Open in new view' }));
     expect(await screen.findByTestId('workbench-probe')).toHaveTextContent(REF);
+  });
+
+  it('shows the object’s notes in a Notes tab, with Add Note where the envelope offers it', async () => {
+    answer = () => {
+      const path = asked.at(-1)?.path ?? '';
+      if (path.includes('/annotations')) return json(NOTES);
+      if (path === '/v1/me') return json(me());
+      return json(dossier, 200, '"d-1"');
+    };
+    renderPanel(quake);
+    await userEvent.click(await screen.findByRole('tab', { name: 'Notes' }));
+    expect(
+      await screen.findByText('Swarm consistent with geothermal injection.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add Note' })).toBeInTheDocument();
+    expect(asked.map((entry) => entry.path)).toContain(
+      `/v1/objects/${encodeURIComponent(REF)}/annotations?limit=500`,
+    );
   });
 });
 
