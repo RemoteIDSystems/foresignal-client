@@ -108,3 +108,13 @@ test('the constellation renders, animates with the clock, and a satellite select
   await expect(page.getByTestId('pass-table')).toContainText('SENTINEL-2A');
   expect(problems).toEqual([]);
 });
+
+test('the constellation opens on the 3D globe, and the Global map keeps its own mode', async ({
+  page,
+}) => {
+  await page.goto('/satellites');
+  const map = page.getByTestId('constellation').locator('[data-scene-mode]');
+  await expect(map).toHaveAttribute('data-scene-mode', '3d');
+  await page.getByRole('link', { name: 'Global' }).click();
+  await expect(page.locator('[data-scene-mode]')).toHaveAttribute('data-scene-mode', '2d');
+});

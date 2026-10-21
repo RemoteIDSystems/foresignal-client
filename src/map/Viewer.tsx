@@ -340,6 +340,13 @@ export interface MapViewerProps {
   stream?: ChangeStream;
   /** A saved view's own stream, which keeps its layer current (031). */
   liveAreas?: LiveAreaSource;
+  /**
+   * The scene mode, when the screen keeps its own (the Satellites screen opens on the 3D globe);
+   * otherwise the store's `sceneMode`, shared by the screens that do not.
+   */
+  sceneMode?: SceneModeKey;
+  /** Told of a scene-mode change, with {@link MapViewerProps.sceneMode}. */
+  onSceneModeChange?: (mode: SceneModeKey) => void;
   /** The store holding the scene mode (012); the app's by default. */
   store?: Store<AppState>;
   /** Areas outlined over the map, such as a situation's footprint (019). */
@@ -377,8 +384,8 @@ const NO_PRODUCTS: readonly Product[] = [];
  * selects it, marked as the Global mock marks the selected entity, and clicking nothing or pressing
  * Escape clears it; `data-hovered` and `data-selected` name them. With the live stream (011), the
  * tiles a change touches are fetched again and new product frames are swapped in as announced. The
- * scene mode is the store's `sceneMode` (012): the toggle writes it and any change to it morphs the
- * map; a new map opens in that mode, over the viewport last committed to the store. The store's
+ * scene mode is the store's `sceneMode` (012), unless the screen keeps its own (`sceneMode`): the
+ * toggle writes it and any change to it morphs the map; a new map opens in that mode, over the viewport last committed to the store. The store's
  * `time` pins the records at an instant (013: `data-time` names it, or `live`), its `playback`
  * draws a history step in place of the tiles (`data-playback`), and the selected record shows its
  * trail up to the cursor (`data-trail`, the positions drawn).
@@ -405,12 +412,15 @@ export function MapViewer({
   store = appStore,
   areas,
   scene,
+  sceneMode: ownMode,
+  onSceneModeChange,
 }: MapViewerProps) {
   const [webgl] = useState(supportsWebGL);
   const [viewer, setViewer] = useState<CesiumViewer>();
   const [cameraStore] = useState(createCameraStore);
   // The mode lives in the store (012), so whatever selects an item can switch the map (014).
-  const mode = useStoreKey('sceneMode', store);
+  const storeMode = useStoreKey('sceneMode', store);
+  const mode = ownMode ?? storeMode;
   // The mode the viewer was created in; later changes morph it.
   const [initialMode] = useState(mode);
   // The time machine (013): pinned at an instant, or playing history, from the store.
@@ -536,7 +546,11 @@ export function MapViewer({
     if (viewer) setSceneTime(viewer, asOf);
   }, [viewer, asOf]);
 
-  const onSceneMode = useCallback((next: SceneModeKey) => store.set('sceneMode', next), [store]);
+  const onSceneMode = useCallback(
+    (next: SceneModeKey) =>
+      ownMode !== undefined ? onSceneModeChange?.(next) : store.set('sceneMode', next),
+    [ownMode, onSceneModeChange, store],
+  );
 
   // Contextual 3D (014): a newly selected item with a 3D view switches the map to the globe and
   // flies to it; any other is brought into view on the 2D map. The selection the map opens with

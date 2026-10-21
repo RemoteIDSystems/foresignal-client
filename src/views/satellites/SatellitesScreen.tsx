@@ -18,6 +18,7 @@ import { utcText } from '../../intel/analysisView';
 import { useRead } from '../../intel/useHypotheses';
 import { useOpenObject } from '../../intel/useOpenObject';
 import { MapViewer } from '../../map';
+import type { SceneModeKey } from '../../map/sceneMode';
 import { ConstellationLayer } from '../../satellites/ConstellationLayer';
 import {
   CONSTELLATION_SOURCES,
@@ -96,6 +97,8 @@ export default function SatellitesScreen({ api, store }: SatellitesScreenProps) 
   const [offsetHours, setOffsetHours] = useState(0);
   const [clockAt, setClockAt] = useState(() => new Date());
   const [search, setSearch] = useState('');
+  // The constellation opens on the 3D globe, as its mock does; this screen keeps its own mode.
+  const [sceneMode, setSceneMode] = useState<SceneModeKey>('3d');
   const { satellites, sources } = useConstellation(api, chosen);
   const tokens = useTheme().tokens;
   const colors = useMemo(() => sourceColors(tokens), [tokens]);
@@ -266,6 +269,8 @@ export default function SatellitesScreen({ api, store }: SatellitesScreenProps) 
             <MapViewer
               api={api}
               store={store}
+              sceneMode={sceneMode}
+              onSceneModeChange={setSceneMode}
               legendEmptyNote="Satellites are colored by data source."
               scene={
                 <ConstellationLayer
