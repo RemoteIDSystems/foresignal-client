@@ -176,6 +176,8 @@ describe('the Imagery Comparison', () => {
     });
     expect(swipe).toHaveAttribute('data-position', '30');
     expect(screen.getByTestId('swipe-before')).toHaveStyle({ clipPath: 'inset(0 70% 0 0)' });
+    // A drag on a picture is the swipe's, not the browser's image drag (which would cancel it).
+    expect(fireEvent.dragStart(before)).toBe(false);
 
     await userEvent.selectOptions(
       screen.getByRole('combobox', { name: 'Before' }),

@@ -226,6 +226,9 @@ export function SwipeCompare({
         onPointerMove={(event) => dragging.current && moveTo(event)}
         onPointerUp={() => (dragging.current = false)}
         onPointerCancel={() => (dragging.current = false)}
+        // A drag on a picture would otherwise start the browser's own image drag, which cancels
+        // the pointer and leaves the handle where the drag began.
+        onDragStart={(event) => event.preventDefault()}
       >
         <div className={styles.swipeLayer} data-testid="swipe-after">
           <Picture api={api} spec={after.spec} size="full" alt={`${alt}, ${afterLabel}`} />
