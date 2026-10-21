@@ -32,13 +32,18 @@ interface TileRequest {
   agg: string | null;
 }
 
-/** Records every record tile the page requests. */
+/** Records the record tiles the page requests, each tile once. */
 function watchTiles(page: Page): TileRequest[] {
   const requested: TileRequest[] = [];
+  // Each tile once: the local backend limits anonymous requests, and a tile it refuses (429) is
+  // asked for again, at the same zoom, which is not the map going back a zoom.
+  const seen = new Set<string>();
   page.on('request', (request) => {
     const url = new URL(request.url());
     const match = /\/v1\/tiles\/([^/]+)\/(\d+)\/\d+\/\d+\.mvt$/.exec(url.pathname);
-    if (match) {
+    const key = `${url.pathname}?${url.searchParams.get('agg')}`;
+    if (match && !seen.has(key)) {
+      seen.add(key);
       requested.push({ layer: match[1]!, z: Number(match[2]), agg: url.searchParams.get('agg') });
     }
   });
