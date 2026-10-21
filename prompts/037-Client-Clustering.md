@@ -29,7 +29,8 @@ into cells at low zoom on the client, so the world-zoom-all-on view draws hundre
 styling), so aggregation looks identical whether it comes from the backend or the client.
 
 **Done when (owner verifies on GPU).** Write the scale test so the **World** check expects
-≤ 33.3 ms (60fps) with all layers on; region/city unchanged; crossing the cluster zoom doesn't blink.
+≤ 33.3 ms (**30fps** — the all-on-world stress bar; 60fps = 16.7 ms is the normal-use target, already
+met at region/city) with all layers on; region/city unchanged; crossing the cluster zoom doesn't blink.
 Per the standing rule, **write the test but do not run it** — the owner's `E2E_GPU=1` scale run then
 confirms World is within budget. Update the 035 report's "World zoom" section once it passes.
 
