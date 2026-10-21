@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import type { Annotation } from '../src/annotations/annotationApi';
 import { me, ME_ID } from '../src/annotations/testing/annotationFixtures';
 import { graphResult, GRAPH_INVESTIGATION_ID, REFS } from '../src/graph/testing/graphFixtures';
-import { investigation } from '../src/intel/testing/fixtures';
+import { investigation, investigationEnvelope } from '../src/intel/testing/fixtures';
 import { standInTestToken } from './standIns';
 import { collectProblems } from './support';
 
@@ -42,6 +42,10 @@ test.beforeEach(async ({ page }) => {
   await standInTestToken(page);
   await page.route(new RegExp(`/v1/investigations/${GRAPH_INVESTIGATION_ID}(\\?.*)?$`), (route) =>
     route.fulfill({ json: investigation }),
+  );
+  // The workbench reads the investigation as its full analysis does, with its envelope (019).
+  await page.route(/\/v1\/objects\/investigation%3A[^/]+$/, (route) =>
+    route.fulfill({ json: investigationEnvelope }),
   );
   await page.route(/\/v1\/graph$/, (route) =>
     route.fulfill({ json: { ...graphResult, nodes: annotatable } }),

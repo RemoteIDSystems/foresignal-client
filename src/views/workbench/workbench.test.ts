@@ -1,5 +1,12 @@
 import { investigation, INVESTIGATION_ID } from '../../intel/testing/fixtures';
-import { commonRefs, investigationSeeds, WORKBENCH_TOOLS, workbenchPath } from './workbench';
+import { ANALYSIS_TABS } from '../analysis/frame';
+import {
+  commonRefs,
+  investigationSeeds,
+  WORKBENCH_TABS,
+  WORKBENCH_TOOLS,
+  workbenchPath,
+} from './workbench';
 
 describe('the workbench’s routes and seeds', () => {
   it('opens an investigation or situation on its own path, and anything else by ref', () => {
@@ -49,5 +56,26 @@ describe('the workbench’s routes and seeds', () => {
       'Reports',
     ]);
     expect(WORKBENCH_TOOLS[0]?.current).toBe(true);
+  });
+
+  it('lists the mock’s top tabs, each opening a full-analysis tab that exists', () => {
+    expect(WORKBENCH_TABS.map((tab) => tab.label)).toEqual([
+      'Evidence Graph',
+      'Timeline',
+      'Map',
+      'Hypotheses',
+      'Key Findings',
+      'Forecasts',
+      'Related',
+      'Documents',
+      'Analyst Notes',
+    ]);
+    for (const { tab } of WORKBENCH_TABS) {
+      if (tab) expect(ANALYSIS_TABS).toContain(tab);
+    }
+    expect(WORKBENCH_TABS.filter((tab) => tab.current).map((tab) => tab.label)).toEqual([
+      'Evidence Graph',
+    ]);
+    expect(WORKBENCH_TABS.find((tab) => tab.label === 'Analyst Notes')?.notes).toBe(true);
   });
 });

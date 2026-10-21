@@ -1,18 +1,22 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { ObjectNotes } from '../../annotations/ObjectNotes';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import type { ForesignalClient } from '../../api/client';
 import { useToken } from '../../api/useToken';
 import type { ViewGraph } from '../../graph/graphView';
 import { BookOpen, Download, Share2, StickyNote } from 'lucide-react';
-import { analysisPath, utcText } from '../../intel/analysisView';
+import { analysisPath, itemRows, timelineRows, utcText } from '../../intel/analysisView';
 import {
-  getInvestigation,
-  listInvestigations,
-  type Investigation,
-} from '../../intel/investigationApi';
-import { getSituation } from '../../intel/situationApi';
-import { useRead } from '../../intel/useHypotheses';
+  getHypothesisSet,
+  listIndicators,
+  type HypothesisSet,
+  type Indicator,
+} from '../../intel/hypothesisApi';
+import { hypothesisScope, primarySet } from '../../intel/hypothesesView';
+import { listInvestigations, type Investigation } from '../../intel/investigationApi';
+import { useAnalysis, type Analysis, type AnalysisState } from '../../intel/useAnalysis';
+import type { Part } from '../../intel/useEvidence';
+import { useHypothesisSets, useRead } from '../../intel/useHypotheses';
 import { useOpenObject } from '../../intel/useOpenObject';
 import { hitForRef, selectionRef } from '../../objects/selectObject';
 import { Button } from '../../ui/Button';
@@ -23,10 +27,14 @@ import { EvidenceGraph } from './EvidenceGraph';
 import { GraphSidePanel } from './GraphSidePanel';
 import {
   investigationSeeds,
+  WORKBENCH_TABS,
   WORKBENCH_TOOLS,
   workbenchPath,
   type WorkbenchSubject,
 } from './workbench';
+import { problemText, RANGES, rangeStart } from '../analysis/frame';
+import { HypothesesPanel } from '../analysis/HypothesesTab';
+import { TimelineList } from '../analysis/SituationTabs';
 import analysis from '../analysis/Analysis.module.css';
 import { SAVED_ENTRIES } from '../../saved/savedEntries';
 import styles from './Workbench.module.css';
@@ -46,13 +54,30 @@ interface Opened {
   facts?: { label: string; value: string }[];
 }
 
+/** The Evidence Timeline's window for a situation, as the graph's own default. */
+const TIMELINE_RANGE = RANGES[2];
+
+/** No seeds, the same list on every render. */
+const NO_SEEDS: readonly string[] = [];
+
+/** While a read is under way, the same value on every render. */
+const LOADING = { status: 'loading' } as const;
+
+const readSet = (api: ForesignalClient, id: string, signal: AbortSignal) =>
+  getHypothesisSet(api, id, signal);
+const readIndicators = (api: ForesignalClient, id: string, signal: AbortSignal) =>
+  listIndicators(api, { setId: id }, signal);
+
 /**
  * The Analyst Workbench (024), as the mock lays it out: the ANALYSIS TOOLS rail, the header, the
- * EVIDENCE GRAPH in the center and the SELECTED ENTITY panel on the right. It opens on an
- * investigation (`/analyst/investigations/:id`, its items as the graph's seeds), a situation
+ * row of tabs, the EVIDENCE GRAPH in the center with COMPETING HYPOTHESES and the EVIDENCE TIMELINE
+ * under it, and the SELECTED ENTITY panel on the right. It opens on an investigation
+ * (`/analyst/investigations/:id`, its items as the graph's seeds), a situation
  * (`/analyst/situations/:id`), or objects by ref (`/analyst?ref=…`). With none, it offers the
  * selected object and the investigations to open. Selecting a node selects it app-wide (014) and
- * shows it in the side panel.
+ * shows it in the side panel. An investigation or situation is read as its full analysis is (019,
+ * `useAnalysis`); the hypotheses are its primary set's (021) and the timeline its own, in the
+ * full analysis's components.
  */
 export function WorkbenchView({ api, store, kind }: WorkbenchViewProps) {
   const { id } = useParams();
@@ -60,27 +85,40 @@ export function WorkbenchView({ api, store, kind }: WorkbenchViewProps) {
   const refs = params.getAll('ref');
   const subject: WorkbenchSubject =
     kind && id ? { kind, id } : refs.length > 0 ? { kind: 'refs', refs } : { kind: 'none' };
-  const opened = useRead(
+  const analysisKind =
+    subject.kind === 'investigation' || subject.kind === 'situation' ? subject.kind : undefined;
+  const [since] = useState(() => rangeStart(TIMELINE_RANGE.days, Date.now()));
+  const { state } = useAnalysis(
+    analysisKind ? api : undefined,
+    undefined,
+    analysisKind ?? 'investigation',
+    analysisKind && 'id' in subject ? subject.id : '',
+    since,
+  );
+  const refsOpened = useRead(
     api,
-    subject.kind === 'none' ? undefined : JSON.stringify(subject),
-    async (client, key, signal): Promise<Opened> => {
-      const which = JSON.parse(key) as WorkbenchSubject;
-      if (which.kind === 'investigation') {
-        const investigation = await getInvestigation(client, which.id, signal);
-        return {
-          title: investigation.title,
-          seeds: investigationSeeds(investigation),
-          facts: investigationFacts(investigation),
-        };
-      }
-      if (which.kind === 'situation') {
-        const situation = await getSituation(client, which.id, signal);
-        return { title: situation.title, seeds: [`situation:${which.id}`] };
-      }
-      const seeds = which.kind === 'refs' ? which.refs : [];
+    subject.kind === 'refs' ? JSON.stringify(subject.refs) : undefined,
+    async (_client, key): Promise<Opened> => {
+      const seeds = JSON.parse(key) as string[];
       return { title: seeds.length === 1 ? (seeds[0] ?? '') : `${seeds.length} objects`, seeds };
     },
   );
+  const analysisOpened = useMemo(
+    () => (analysisKind ? openedOf(state, analysisKind) : undefined),
+    [state, analysisKind],
+  );
+  const opened = analysisOpened ?? refsOpened;
+  // The analysis is read again every minute; the graph keeps its seeds while they are the same.
+  const seedsKey = JSON.stringify(opened.status === 'ready' ? opened.value.seeds : NO_SEEDS);
+  const seeds = useMemo(() => JSON.parse(seedsKey) as string[], [seedsKey]);
+  const loaded = state.status === 'ready' && analysisKind ? state.analysis : undefined;
+  const scopeKey = loaded ? JSON.stringify(hypothesisScope(loaded)) : undefined;
+  const sets = useHypothesisSets(api, scopeKey);
+  const primary = sets.status === 'ready' ? primarySet(sets.value) : undefined;
+  const [setVersion, setSetVersion] = useState(0);
+  const setDetail = useRead(api, primary?.id, readSet, setVersion);
+  const indicators = useRead(api, primary?.id, readIndicators, setVersion);
+  const set = setDetail.status === 'ready' ? setDetail.value : primary;
   const [selected, setSelected] = useState<string>();
   const [graph, setGraph] = useState<ViewGraph>();
   const [graphVersion, setGraphVersion] = useState(0);
@@ -204,6 +242,36 @@ export function WorkbenchView({ api, store, kind }: WorkbenchViewProps) {
             )}
           </div>
         </header>
+        {fullAnalysis && (
+          <nav className={styles.tabRow} aria-label="Workbench sections">
+            {WORKBENCH_TABS.map((entry) => {
+              const target = entry.tab ? `${fullAnalysis}?tab=${entry.tab}` : undefined;
+              const count = entry.counted && set ? ` (${set.hypotheses.length})` : '';
+              return (
+                <button
+                  key={entry.label}
+                  type="button"
+                  className={styles.tab}
+                  aria-current={entry.current ? 'page' : undefined}
+                  aria-pressed={entry.notes ? notesOpen : undefined}
+                  disabled={!entry.current && !entry.notes && !target}
+                  title={
+                    entry.current || entry.notes || target
+                      ? undefined
+                      : `${entry.label}: not built; there is no screen for it`
+                  }
+                  onClick={() => {
+                    if (entry.notes) setNotesOpen((open) => !open);
+                    else if (target) void navigate(target);
+                  }}
+                >
+                  {entry.label}
+                  {count}
+                </button>
+              );
+            })}
+          </nav>
+        )}
         {subject.kind === 'none' ? (
           <WorkbenchStart api={api} store={store} />
         ) : opened.status === 'error' ? (
@@ -212,14 +280,30 @@ export function WorkbenchView({ api, store, kind }: WorkbenchViewProps) {
           </p>
         ) : (
           <div className={styles.body}>
-            <EvidenceGraph
-              api={api}
-              seeds={opened.status === 'ready' ? opened.value.seeds : []}
-              onSelect={onSelect}
-              onGraph={setGraph}
-              version={graphVersion}
-              {...(selected !== undefined && { selected })}
-            />
+            <div className={styles.mainColumn}>
+              <EvidenceGraph
+                api={api}
+                seeds={seeds}
+                onSelect={onSelect}
+                onGraph={setGraph}
+                version={graphVersion}
+                {...(selected !== undefined && { selected })}
+              />
+              {loaded && fullAnalysis && (
+                <div className={styles.bottomRow}>
+                  <HypothesesCard
+                    api={api}
+                    sets={sets}
+                    set={set}
+                    indicators={indicators}
+                    kind={loaded.kind}
+                    onAdded={() => setSetVersion((version) => version + 1)}
+                    onMatrix={() => void navigate(`${fullAnalysis}?tab=hypotheses`)}
+                  />
+                  <EvidenceTimeline analysis={loaded} onOpen={(ref) => void open(ref)} />
+                </div>
+              )}
+            </div>
             <div className={styles.sideColumn}>
               {notesOpen && subjectRef && (
                 <section className={`${analysis.card} ${styles.subjectNotes}`}>
@@ -239,6 +323,116 @@ export function WorkbenchView({ api, store, kind }: WorkbenchViewProps) {
         )}
       </main>
     </div>
+  );
+}
+
+/**
+ * The workbench's view of a full-analysis read: the title, the graph's seeds (an investigation
+ * and its items' objects, or the situation) and an investigation's header facts.
+ */
+function openedOf(state: AnalysisState, kind: 'investigation' | 'situation'): Part<Opened> {
+  if (state.status === 'loading') return LOADING;
+  if (state.status === 'error') {
+    return { status: 'error', message: problemText(state.error, kind) };
+  }
+  const loaded = state.analysis;
+  if (loaded.kind === 'investigation') {
+    const { investigation } = loaded;
+    return {
+      status: 'ready',
+      value: {
+        title: investigation.title,
+        seeds: investigationSeeds(investigation),
+        facts: investigationFacts(investigation),
+      },
+    };
+  }
+  return {
+    status: 'ready',
+    value: { title: loaded.situation.title, seeds: [`situation:${loaded.situation.id}`] },
+  };
+}
+
+/**
+ * COMPETING HYPOTHESES under the graph: the primary set's hypotheses in the full analysis's own
+ * panel (021), its "View hypothesis analysis" opening the Hypotheses tab; or why there are none.
+ */
+function HypothesesCard({
+  api,
+  sets,
+  set,
+  indicators,
+  kind,
+  onAdded,
+  onMatrix,
+}: {
+  api: ForesignalClient | undefined;
+  sets: Part<unknown>;
+  set: HypothesisSet | undefined;
+  indicators: Part<Indicator[]>;
+  kind: Analysis['kind'];
+  onAdded: () => void;
+  onMatrix: () => void;
+}) {
+  if (set) {
+    return (
+      <HypothesesPanel
+        api={api}
+        set={set}
+        indicators={indicators.status === 'ready' ? indicators.value : []}
+        onAdded={onAdded}
+        onMatrix={onMatrix}
+      />
+    );
+  }
+  let note: ReactNode;
+  if (sets.status === 'loading') note = 'Loading the hypothesis sets…';
+  else if (sets.status === 'error') note = sets.message;
+  else note = `No hypothesis sets are linked to this ${kind}.`;
+  return (
+    <section className={analysis.card} aria-labelledby="hypotheses-title">
+      <h2 id="hypotheses-title" className={analysis.cardTitle}>
+        Competing Hypotheses
+      </h2>
+      <p className={analysis.muted}>{note}</p>
+    </section>
+  );
+}
+
+/**
+ * The EVIDENCE TIMELINE under the graph, in the full analysis's timeline list: a situation's
+ * timeline over {@link TIMELINE_RANGE}, or an investigation's items as they were added.
+ */
+function EvidenceTimeline({
+  analysis: loaded,
+  onOpen,
+}: {
+  analysis: Analysis;
+  onOpen: (ref: string) => void;
+}) {
+  const rows = useMemo(
+    () =>
+      loaded.kind === 'situation'
+        ? timelineRows(loaded.timeline)
+        : itemRows(loaded.investigation.items ?? []),
+    [loaded],
+  );
+  return (
+    <section
+      className={`${analysis.card} ${styles.timelineCard}`}
+      aria-labelledby="evidence-timeline-title"
+      data-testid="evidence-timeline"
+    >
+      <div className={analysis.drawerHead}>
+        <h2 id="evidence-timeline-title" className={analysis.cardTitle}>
+          Evidence Timeline
+        </h2>
+        <span className={analysis.muted}>
+          {loaded.kind === 'situation' ? TIMELINE_RANGE.label : 'Items as added'}
+        </span>
+      </div>
+      <TimelineList rows={rows} onOpen={onOpen} />
+    </section>
   );
 }
 

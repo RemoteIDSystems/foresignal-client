@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { MemoryRouter, Route, Routes, useSearchParams } from 'react-router';
 import type { TokenStore } from '../../api/auth';
 import type { ForesignalClient } from '../../api/client';
 import { TokenStoreContext } from '../../api/useToken';
@@ -11,7 +11,20 @@ import {
   GRAPH_INVESTIGATION_ID,
   REFS,
 } from '../../graph/testing/graphFixtures';
-import { investigation } from '../../intel/testing/fixtures';
+import {
+  changes,
+  investigation,
+  member,
+  situation,
+  SITUATION_ID,
+  timeline,
+} from '../../intel/testing/fixtures';
+import {
+  hypothesisSet,
+  indicators,
+  SET_ID,
+  setEnvelope,
+} from '../../intel/testing/hypothesisFixtures';
 import { json, standInApi, type Answer } from '../../intel/testing/standIn';
 import { createStore, INITIAL_STATE, type AppState, type Store } from '../../state/store';
 import { WorkbenchView } from './WorkbenchView';
@@ -70,7 +83,12 @@ function renderAt(
             path="/analyst/investigations/:id"
             element={<WorkbenchView kind="investigation" api={api} store={store} />}
           />
-          <Route path="/intelligence/investigations/:id" element={<p>Full analysis</p>} />
+          <Route
+            path="/analyst/situations/:id"
+            element={<WorkbenchView kind="situation" api={api} store={store} />}
+          />
+          <Route path="/intelligence/investigations/:id" element={<FullAnalysis />} />
+          <Route path="/intelligence/situations/:id" element={<FullAnalysis />} />
           <Route path="/global" element={<p>Global dashboard</p>} />
         </Routes>
       </MemoryRouter>
@@ -79,6 +97,28 @@ function renderAt(
 }
 
 const graphBox = () => screen.findByTestId('relation-graph');
+
+/** The full-analysis route's stand-in: says which tab it was opened on. */
+function FullAnalysis() {
+  const [params] = useSearchParams();
+  return <p>Full analysis {params.get('tab') ?? 'overview'}</p>;
+}
+
+const situationPath = `/v1/situations/${SITUATION_ID}`;
+const listed = (items: unknown[]) => () => json({ items, nextCursor: null });
+
+/** A situation with its members, timeline and one linked hypothesis set. */
+const situationAnswers = (): Record<string, Answer> => ({
+  [`GET ${situationPath}`]: () => json(situation),
+  [`GET ${situationPath}/members`]: listed([member]),
+  [`GET ${situationPath}/timeline`]: listed(timeline),
+  [`GET ${situationPath}/changes`]: () => json(changes),
+  'POST /v1/graph': () => json(graphResult),
+  'GET /v1/hypotheses/sets': listed([hypothesisSet]),
+  [`GET /v1/hypotheses/sets/${SET_ID}`]: () => json(hypothesisSet),
+  'GET /v1/indicators': listed(indicators),
+  [`GET /v1/objects/hypothesis-set%3A${SET_ID}`]: () => json(setEnvelope),
+});
 
 /** Opens the time window to all time, so the fixtures' dates hold whenever the tests run. */
 async function allTime() {
@@ -239,7 +279,7 @@ describe('the Analyst Workbench', () => {
     );
     expect(within(rail).getByRole('button', { name: 'Correlation Finder' })).toBeDisabled();
     await userEvent.click(within(rail).getByRole('button', { name: 'Timeline' }));
-    expect(await screen.findByText('Full analysis')).toBeInTheDocument();
+    expect(await screen.findByText('Full analysis timeline')).toBeInTheDocument();
   });
 
   it('opens the investigation’s own notes from the WORKSPACE rail', async () => {
@@ -332,5 +372,68 @@ describe('the Analyst Workbench', () => {
       await screen.findByText('Listing investigations needs an access token. Add one in Settings.'),
     ).toBeInTheDocument();
     expect(asked.filter((call) => call.includes('/v1/investigations'))).toEqual([]);
+  });
+
+  it('opens the full analysis’s tabs from the row over the graph, and the notes in place', async () => {
+    const { api } = standInApi(answers());
+    renderAt(`/analyst/investigations/${GRAPH_INVESTIGATION_ID}`, api, createStore(INITIAL_STATE));
+    await graphBox();
+    const row = screen.getByRole('navigation', { name: 'Workbench sections' });
+    expect(within(row).getByRole('button', { name: 'Evidence Graph' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(within(row).getByRole('button', { name: 'Documents' })).toBeDisabled();
+    const notes = within(row).getByRole('button', { name: 'Analyst Notes' });
+    expect(notes).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(notes);
+    expect(notes).toHaveAttribute('aria-pressed', 'true');
+    expect(await screen.findByRole('region', { name: 'Analysis Notes' })).toBeInTheDocument();
+    await userEvent.click(within(row).getByRole('button', { name: 'Key Findings' }));
+    expect(await screen.findByText('Full analysis evidence')).toBeInTheDocument();
+  });
+
+  it('shows an investigation’s items as its evidence timeline, and says it has no hypotheses', async () => {
+    const { api } = standInApi(answers());
+    renderAt(`/analyst/investigations/${GRAPH_INVESTIGATION_ID}`, api, createStore(INITIAL_STATE));
+    const timelineCard = await screen.findByTestId('evidence-timeline');
+    expect(within(timelineCard).getAllByRole('listitem')).toHaveLength(
+      investigation.items?.length ?? 0,
+    );
+    expect(within(timelineCard).getByText('M 4.6 - 10 km NE of The Geysers')).toBeInTheDocument();
+    expect(
+      await screen.findByText('No hypothesis sets are linked to this investigation.'),
+    ).toBeInTheDocument();
+    // No set, so no count on the tab.
+    expect(
+      within(screen.getByRole('navigation', { name: 'Workbench sections' })).getByRole('button', {
+        name: 'Hypotheses',
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows a situation’s competing hypotheses and timeline under its graph', async () => {
+    const { api, asked } = standInApi(situationAnswers());
+    renderAt(`/analyst/situations/${SITUATION_ID}`, api, createStore(INITIAL_STATE));
+    const panel = await screen.findByTestId('hypotheses-panel');
+    expect(panel).toHaveTextContent(hypothesisSet.question);
+    for (const hypothesis of hypothesisSet.hypotheses) {
+      expect(panel).toHaveTextContent(hypothesis.statement);
+    }
+    const row = screen.getByRole('navigation', { name: 'Workbench sections' });
+    expect(
+      within(row).getByRole('button', {
+        name: `Hypotheses (${hypothesisSet.hypotheses.length})`,
+      }),
+    ).toBeInTheDocument();
+    const timelineCard = screen.getByTestId('evidence-timeline');
+    expect(timelineCard).toHaveTextContent('Last 90 days');
+    expect(within(timelineCard).getAllByRole('listitem').length).toBeGreaterThan(0);
+    // The situation is read once, as its full analysis reads it, and seeds the graph.
+    expect(asked.filter((line) => line === `GET ${situationPath}`)).toHaveLength(1);
+    const timelineRead = asked.find((line) => line.startsWith(`GET ${situationPath}/timeline?`));
+    expect(timelineRead).toMatch(/[?&]from=/);
+    await userEvent.click(within(panel).getByRole('button', { name: /View hypothesis analysis/ }));
+    expect(await screen.findByText('Full analysis hypotheses')).toBeInTheDocument();
   });
 });

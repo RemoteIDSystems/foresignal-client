@@ -15,6 +15,7 @@ import { itemRef } from '../../intel/analysisView';
 import type { Investigation } from '../../intel/investigationApi';
 import { parseObjectRef } from '../../lib/objectRef';
 import { COMMON_MAX_REFS, GRAPH_MAX_SEEDS, type RelationType } from '../../graph/graphApi';
+import type { AnalysisTab } from '../analysis/frame';
 
 /** What the workbench is opened on: an investigation, a situation, or some objects by ref. */
 export type WorkbenchSubject =
@@ -95,4 +96,36 @@ export const WORKBENCH_TOOLS: readonly ToolEntry[] = [
   { label: 'Hypothesis Builder', icon: FlaskConical, tab: 'hypotheses' },
   { label: 'Forecasts', icon: TrendingUp, tab: 'forecasts' },
   { label: 'Reports', icon: FileText, tab: 'reports' },
+];
+
+/** A tab of the workbench's top row. */
+export interface WorkbenchTab {
+  label: string;
+  /** The full-analysis tab it opens for the workbench's investigation or situation. */
+  tab?: AnalysisTab;
+  /** This screen itself. */
+  current?: boolean;
+  /** Shows and hides the investigation's or situation's own notes. */
+  notes?: boolean;
+  /** Labeled with the open hypothesis set's count of hypotheses, once known. */
+  counted?: boolean;
+}
+
+/**
+ * The top row of tabs, in the Analyst Workbench mock's order. Each but Evidence Graph (this screen)
+ * and Analyst Notes (the notes beside the graph) opens a tab of the full analysis. Key Findings
+ * opens the Evidence tab, where the findings are. Related opens the Related tab, which lists related
+ * objects of every type, so it is not labeled "Related Investigations" as in the mock. Documents has
+ * no screen and is shown disabled.
+ */
+export const WORKBENCH_TABS: readonly WorkbenchTab[] = [
+  { label: 'Evidence Graph', current: true },
+  { label: 'Timeline', tab: 'timeline' },
+  { label: 'Map', tab: 'map' },
+  { label: 'Hypotheses', tab: 'hypotheses', counted: true },
+  { label: 'Key Findings', tab: 'evidence' },
+  { label: 'Forecasts', tab: 'forecasts' },
+  { label: 'Related', tab: 'related' },
+  { label: 'Documents' },
+  { label: 'Analyst Notes', notes: true },
 ];

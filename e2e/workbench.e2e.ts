@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { graphResult, GRAPH_INVESTIGATION_ID } from '../src/graph/testing/graphFixtures';
 import { me } from '../src/annotations/testing/annotationFixtures';
-import { investigation } from '../src/intel/testing/fixtures';
+import { investigation, investigationEnvelope } from '../src/intel/testing/fixtures';
 import { collectProblems } from './support';
 
 /**
@@ -17,6 +17,10 @@ test.beforeEach(async ({ page }) => {
   problems = collectProblems(page);
   await page.route(new RegExp(`/v1/investigations/${GRAPH_INVESTIGATION_ID}(\\?.*)?$`), (route) =>
     route.fulfill({ json: investigation }),
+  );
+  // The workbench reads the investigation as its full analysis does, with its envelope (019).
+  await page.route(/\/v1\/objects\/investigation%3A[^/]+$/, (route) =>
+    route.fulfill({ json: investigationEnvelope }),
   );
   await page.route(/\/v1\/graph$/, (route) => route.fulfill({ json: graphResult }));
   // The side panel's notes (026): none, read by a caller with read scope.
