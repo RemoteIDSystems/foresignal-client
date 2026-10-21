@@ -37,7 +37,6 @@ export type AnalysisTab = (typeof ANALYSIS_TABS)[number];
 
 /** The prompts that fill the tabs this one does not, shown on those tabs until then. */
 export const PENDING_TABS: Readonly<Partial<Record<AnalysisTab, string>>> = {
-  analysis: '023 (Assessments)',
   reports: 'a later prompt',
 };
 

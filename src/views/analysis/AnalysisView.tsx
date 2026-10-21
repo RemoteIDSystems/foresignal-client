@@ -32,6 +32,7 @@ import { AnalysisHeader } from './AnalysisHeader';
 import { AnalysisMap } from './AnalysisMap';
 import { AnalysisRail } from './AnalysisRail';
 import { AnalysisEvidence } from './EvidenceTab';
+import { AssessmentTab } from './AssessmentTab';
 import { ForecastsTab } from './ForecastsTab';
 import { HypothesesTab } from './HypothesesTab';
 import { ExportPanel, InvestigationOverview, ItemsTab } from './InvestigationTabs';
@@ -64,10 +65,10 @@ export interface AnalysisViewProps {
  * Tropical-Storm workspace), at `/intelligence/situations/:id` or `/intelligence/investigations/:id`,
  * the tab in `?tab=`. The analysis rail on the left; the header (title and status, the subline, the
  * Confidence gauge, the Information Value meter, Last Updated with auto-refresh, and actions); the
- * tab strip; and the tab. Overview, Timeline, Map, Entities (a situation's members) or Items (an
- * investigation's, added and removed where its envelope allows), Evidence (020), Hypotheses (021),
- * Forecasts (022), Related and, for an investigation, Export are filled; the other tabs name the
- * prompt that fills them.
+ * tab strip; and the tab. Overview, Full Analysis (023), Timeline, Map, Entities (a situation's
+ * members) or Items (an investigation's, added and removed where its envelope allows), Evidence
+ * (020), Hypotheses (021), Forecasts (022), Related and, for an investigation, Export are filled;
+ * Reports names the prompt that fills it.
  */
 export function AnalysisView({ api, stream, store = appStore, kind }: AnalysisViewProps) {
   const { id = '' } = useParams();
@@ -362,6 +363,14 @@ function renderTab(tab: AnalysisTab, analysis: Analysis, context: TabContext): R
       return <AnalysisEvidence api={context.api} analysis={analysis} onOpen={context.open} />;
     case 'hypotheses':
       return <HypothesesTab api={context.api} sets={context.sets} onOpen={context.open} />;
+    case 'analysis':
+      return (
+        <AssessmentTab
+          api={context.api}
+          situationId={analysis.kind === 'situation' ? analysis.situation.id : undefined}
+          onOpen={context.open}
+        />
+      );
     case 'forecasts':
       return <ForecastsTab api={context.api} scope={questionScope(analysis)} />;
     case 'related':

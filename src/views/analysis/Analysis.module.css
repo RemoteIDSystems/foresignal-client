@@ -702,3 +702,59 @@
 .legendKey[data-tone='info']::before {
   background: var(--fs-tone-info-fg);
 }
+
+/* The Full Analysis tab (023): sections, Key Takeaways and prompts. */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.section > :global(span):first-child {
+  align-self: flex-start;
+}
+
+.takeaways {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.takeaway {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-panel-alt);
+  font-size: var(--fs-font-size-sm);
+}
+
+.takeawayNumber {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--fs-tone-info-bg);
+  color: var(--fs-tone-info-fg);
+  font-weight: 600;
+}
+
+.prompt {
+  max-height: 360px;
+  overflow: auto;
+  margin: 0;
+  padding: 8px;
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-raised);
+  font-family: var(--fs-font-mono);
+  font-size: var(--fs-font-size-xs);
+  white-space: pre-wrap;
+}
