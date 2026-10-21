@@ -1,0 +1,875 @@
+{
+  "about": "GPU probe of the World view (035/037), 2026-10-21, Radeon 780M via ANGLE GL, 984x527 canvas, dpr 1. Per variant: what was drawn, and 3 s of frames panning and still: interval, Cesium CPU (preUpdate to postRender), GPU (EXT_disjoint_timer_query_webgl2), draw commands, globe tiles; then a CPU profile while panning. zoomProbe: map zoom and MSAA after the adaptive change (commit 3ee7ebc), no layers on.",
+  "variants": {
+    "baseline": {
+      "drawn": {
+        "features": 0,
+        "cells": 0,
+        "aggregated": 0,
+        "pointsShown": 0,
+        "cellsShown": 0,
+        "msaa": 4,
+        "groundPrimitives": 0,
+        "primitives": 1
+      },
+      "pan": {
+        "label": "baseline pan",
+        "frames": 180,
+        "interval": {
+          "p50": 16.6,
+          "p95": 18.8
+        },
+        "cesiumCpu": {
+          "p50": 2.1,
+          "p95": 3.3
+        },
+        "gpu": {
+          "p50": 14.5,
+          "p95": 15.9,
+          "n": 181
+        },
+        "commands": {
+          "p50": 8,
+          "p95": 8
+        },
+        "globeTiles": {
+          "p50": 8,
+          "p95": 8
+        }
+      },
+      "still": {
+        "label": "baseline still",
+        "frames": 180,
+        "interval": {
+          "p50": 16.7,
+          "p95": 17.6
+        },
+        "cesiumCpu": {
+          "p50": 1.1,
+          "p95": 2.2
+        },
+        "gpu": {
+          "p50": 12.6,
+          "p95": 15.2,
+          "n": 181
+        },
+        "commands": {
+          "p50": 6,
+          "p95": 6
+        },
+        "globeTiles": {
+          "p50": 6,
+          "p95": 6
+        }
+      }
+    },
+    "baselineMsaa1": {
+      "drawn": {
+        "features": 0,
+        "cells": 0,
+        "aggregated": 0,
+        "pointsShown": 0,
+        "cellsShown": 0,
+        "msaa": 1,
+        "groundPrimitives": 0,
+        "primitives": 1
+      },
+      "pan": {
+        "label": "baseline msaa1 pan",
+        "frames": 180,
+        "interval": {
+          "p50": 16.7,
+          "p95": 17.3
+        },
+        "cesiumCpu": {
+          "p50": 1,
+          "p95": 1.4
+        },
+        "gpu": {
+          "p50": 2.8,
+          "p95": 3.1,
+          "n": 181
+        },
+        "commands": {
+          "p50": 8,
+          "p95": 8
+        },
+        "globeTiles": {
+          "p50": 8,
+          "p95": 8
+        }
+      },
+      "still": {
+        "label": "baseline msaa1 still",
+        "frames": 180,
+        "interval": {
+          "p50": 16.7,
+          "p95": 17.4
+        },
+        "cesiumCpu": {
+          "p50": 1.2,
+          "p95": 1.6
+        },
+        "gpu": {
+          "p50": 2.8,
+          "p95": 3.2,
+          "n": 181
+        },
+        "commands": {
+          "p50": 6,
+          "p95": 6
+        },
+        "globeTiles": {
+          "p50": 6,
+          "p95": 6
+        }
+      }
+    },
+    "all": {
+      "drawn": {
+        "features": 0,
+        "cells": 1224,
+        "aggregated": 43236,
+        "pointsShown": 0,
+        "cellsShown": 1224,
+        "msaa": 4,
+        "groundPrimitives": 0,
+        "primitives": 3
+      },
+      "pan": {
+        "label": "all pan",
+        "frames": 99,
+        "interval": {
+          "p50": 27.7,
+          "p95": 69.3
+        },
+        "cesiumCpu": {
+          "p50": 2,
+          "p95": 2.7
+        },
+        "gpu": {
+          "p50": 28,
+          "p95": 30.8,
+          "n": 100
+        },
+        "commands": {
+          "p50": 12,
+          "p95": 12
+        },
+        "globeTiles": {
+          "p50": 6,
+          "p95": 6
+        }
+      },
+      "still": {
+        "label": "all still",
+        "frames": 103,
+        "interval": {
+          "p50": 28.9,
+          "p95": 53.4
+        },
+        "cesiumCpu": {
+          "p50": 1.8,
+          "p95": 2.2
+        },
+        "gpu": {
+          "p50": 28.7,
+          "p95": 30.5,
+          "n": 101
+        },
+        "commands": {
+          "p50": 12,
+          "p95": 12
+        },
+        "globeTiles": {
+          "p50": 6,
+          "p95": 6
+        }
+      }
+    },
+    "noCellFills": {
+      "drawn": {
+        "features": 0,
+        "cells": 1224,
+        "aggregated": 43236,
+        "pointsShown": 0,
+        "cellsShown": 1224,
+        "msaa": 4,
+        "groundPrimitives": 0,
+        "primitives": 3
+      },
+      "pan": {
+        "label": "cell fills hidden pan",
+        "frames": 124,
+        "interval": {
+          "p50": 22.8,
+          "p95": 46.2
+        },
+        "cesiumCpu": {
+          "p50": 1.8,
+          "p95": 2.3
+        },
+        "gpu": {
+          "p50": 22.7,
+          "p95": 24.6,
+          "n": 125
+        },
+        "commands": {
+          "p50": 9,
+          "p95": 11
+        },
+        "globeTiles": {
+          "p50": 6,
+          "p95": 8
+        }
+      },
+      "still": {
+        "label": "cell fills hidden still",
+        "frames": 129,
+        "interval": {
+          "p50": 23.2,
+          "p95": 42.2
+        },
+        "cesiumCpu": {
+          "p50": 1.8,
+          "p95": 2.3
+        },
+        "gpu": {
+          "p50": 22.6,
+          "p95": 24,
+          "n": 130
+        },
+        "commands": {
+          "p50": 9,
+          "p95": 9
+        },
+        "globeTiles": {
+          "p50": 6,
+          "p95": 6
+        }
+      }
+    },
+    "noCellLines": {
+      "drawn": {
+        "features": 0,
+        "cells": 1224,
+        "aggregated": 43236,
+        "pointsShown": 0,
+        "cellsShown": 1224,
+        "msaa": 4,
+        "groundPrimitives": 0,
+        "primitives": 3
+      },
+      "pan": {
+        "label": "cell outlines hidden pan",
+        "frames": 128,
+        "interval": {
+          "p50": 20.5,
+          "p95": 47.1
+        },
+        "cesiumCpu": {
+          "p50": 1.8,
+          "p95": 2.2
+        },
+        "gpu": {
+          "p50": 22.3,
+          "p95": 23.5,
+          "n": 129
+        },
+        "commands": {
+          "p50": 9,
+          "p95": 11
+        },
+        "globeTiles": {
+          "p50": 6,
+          "p95": 8
+        }
+      },
+      "still": {
+        "label": "cell outlines hidden still",
+        "frames": 134,
+        "interval": {
+          "p50": 21.7,
+          "p95": 38.8
+        },
+        "cesiumCpu": {
+          "p50": 1.7,
+          "p95": 2.2
+        },
+        "gpu": {
+          "p50": 21.9,
+          "p95": 23.8,
+          "n": 134
+        },
+        "commands": {
+          "p50": 9,
+          "p95": 9
+        },
+        "globeTiles": {
+          "p50": 6,
+          "p95": 6
+        }
+      }
+    },
+    "noCells": {
+      "drawn": {
+        "features": 0,
+        "cells": 1224,
+        "aggregated": 43236,
+        "pointsShown": 0,
+        "cellsShown": 1224,
+        "msaa": 4,
+        "groundPrimitives": 0,
+        "primitives": 3
+      },
+      "pan": {
+        "label": "cells hidden pan",
+        "frames": 180,
+        "interval": {
+          "p50": 16.7,
+          "p95": 17.7
+        },
+        "cesiumCpu": {
+          "p50": 1.6,
+          "p95": 2
+        },
+        "gpu": {
+          "p50": 12.1,
+          "p95": 13.3,
+          "n": 181
+        },
+        "commands": {
+          "p50": 8,
+          "p95": 8
+        },
+        "globeTiles": {
+          "p50": 8,
+          "p95": 8
+        }
+      },
+      "still": {
+        "label": "cells hidden still",
+        "frames": 180,
+        "interval": {
+          "p50": 16.7,
+          "p95": 17.2
+        },
+        "cesiumCpu": {
+          "p50": 1.3,
+          "p95": 1.6
+        },
+        "gpu": {
+          "p50": 11.5,
+          "p95": 12.1,
+          "n": 181
+        },
+        "commands": {
+          "p50": 6,
+          "p95": 6
+        },
+        "globeTiles": {
+          "p50": 6,
+          "p95": 6
+        }
+      }
+    },
+    "noPoints": {
+      "drawn": {
+        "features": 0,
+        "cells": 1224,
+        "aggregated": 43236,
+        "pointsShown": 0,
+        "cellsShown": 1224,
+        "msaa": 4,
+        "groundPrimitives": 0,
+        "primitives": 3
+      },
+      "pan": {
+        "label": "points hidden pan",
+        "frames": 99,
+        "interval": {
+          "p50": 27.4,
+          "p95": 68.8
+        },
+        "cesiumCpu": {
+          "p50": 1.9,
+          "p95": 2.4
+        },
+        "gpu": {
+          "p50": 28,
+          "p95": 29.6,
+          "n": 100
+        },
+        "commands": {
+          "p50": 12,
+          "p95": 12
+        },
+        "globeTiles": {
+          "p50": 6,
+          "p95": 6
+        }
+      },
+      "still": {
+        "label": "points hidden still",
+        "frames": 104,
+        "interval": {
+          "p50": 28.8,
+          "p95": 48.9
+        },
+        "cesiumCpu": {
+          "p50": 1.9,
+          "p95": 2.2
+        },
+        "gpu": {
+          "p50": 28.6,
+          "p95": 31.7,
+          "n": 101
+        },
+        "commands": {
+          "p50": 12,
+          "p95": 12
+        },
+        "globeTiles": {
+          "p50": 6,
+          "p95": 6
+        }
+      }
+    },
+    "noGround": {
+      "drawn": {
+        "features": 0,
+        "cells": 1224,
+        "aggregated": 43236,
+        "pointsShown": 0,
+        "cellsShown": 1224,
+        "msaa": 4,
+        "groundPrimitives": 0,
+        "primitives": 3
+      },
+      "pan": {
+        "label": "ground primitives hidden pan",
+        "frames": 101,
+        "interval": {
+          "p50": 26.9,
+          "p95": 72.1
+        },
+        "cesiumCpu": {
+          "p50": 1.9,
+          "p95": 2.3
+        },
+        "gpu": {
+          "p50": 27.9,
+          "p95": 29.3,
+          "n": 102
+        },
+        "commands": {
+          "p50": 12,
+          "p95": 12
+        },
+        "globeTiles": {
+          "p50": 6,
+          "p95": 6
+        }
+      },
+      "still": {
+        "label": "ground primitives hidden still",
+        "frames": 105,
+        "interval": {
+          "p50": 28,
+          "p95": 50.6
+        },
+        "cesiumCpu": {
+          "p50": 1.8,
+          "p95": 2.3
+        },
+        "gpu": {
+          "p50": 27.8,
+          "p95": 29.2,
+          "n": 104
+        },
+        "commands": {
+          "p50": 12,
+          "p95": 12
+        },
+        "globeTiles": {
+          "p50": 6,
+          "p95": 6
+        }
+      }
+    },
+    "noGlobe": {
+      "drawn": {
+        "features": 0,
+        "cells": 1224,
+        "aggregated": 43236,
+        "pointsShown": 0,
+        "cellsShown": 1224,
+        "msaa": 4,
+        "groundPrimitives": 0,
+        "primitives": 3
+      },
+      "pan": {
+        "label": "globe hidden pan",
+        "frames": 119,
+        "interval": {
+          "p50": 22,
+          "p95": 55.6
+        },
+        "cesiumCpu": {
+          "p50": 1.3,
+          "p95": 1.7
+        },
+        "gpu": {
+          "p50": 24.3,
+          "p95": 26.4,
+          "n": 120
+        },
+        "commands": {
+          "p50": 6,
+          "p95": 6
+        },
+        "globeTiles": {
+          "p50": 6,
+          "p95": 6
+        }
+      },
+      "still": {
+        "label": "globe hidden still",
+        "frames": 117,
+        "interval": {
+          "p50": 25.5,
+          "p95": 45.7
+        },
+        "cesiumCpu": {
+          "p50": 1.4,
+          "p95": 1.7
+        },
+        "gpu": {
+          "p50": 25.6,
+          "p95": 27.7,
+          "n": 116
+        },
+        "commands": {
+          "p50": 6,
+          "p95": 6
+        },
+        "globeTiles": {
+          "p50": 6,
+          "p95": 6
+        }
+      }
+    },
+    "msaa1": {
+      "drawn": {
+        "features": 0,
+        "cells": 1224,
+        "aggregated": 43236,
+        "pointsShown": 0,
+        "cellsShown": 1224,
+        "msaa": 1,
+        "groundPrimitives": 0,
+        "primitives": 3
+      },
+      "pan": {
+        "label": "all msaa1 pan",
+        "frames": 180,
+        "interval": {
+          "p50": 16.7,
+          "p95": 17.5
+        },
+        "cesiumCpu": {
+          "p50": 2,
+          "p95": 2.4
+        },
+        "gpu": {
+          "p50": 14.5,
+          "p95": 16.4,
+          "n": 181
+        },
+        "commands": {
+          "p50": 14,
+          "p95": 14
+        },
+        "globeTiles": {
+          "p50": 8,
+          "p95": 8
+        }
+      },
+      "still": {
+        "label": "all msaa1 still",
+        "frames": 180,
+        "interval": {
+          "p50": 16.7,
+          "p95": 17.4
+        },
+        "cesiumCpu": {
+          "p50": 1.3,
+          "p95": 2
+        },
+        "gpu": {
+          "p50": 14.1,
+          "p95": 15.2,
+          "n": 181
+        },
+        "commands": {
+          "p50": 12,
+          "p95": 12
+        },
+        "globeTiles": {
+          "p50": 6,
+          "p95": 6
+        }
+      }
+    },
+    "allAgain": {
+      "drawn": {
+        "features": 0,
+        "cells": 1224,
+        "aggregated": 43236,
+        "pointsShown": 0,
+        "cellsShown": 1224,
+        "msaa": 4,
+        "groundPrimitives": 0,
+        "primitives": 3
+      },
+      "pan": {
+        "label": "all again pan",
+        "frames": 102,
+        "interval": {
+          "p50": 27,
+          "p95": 58.2
+        },
+        "cesiumCpu": {
+          "p50": 1.9,
+          "p95": 2.3
+        },
+        "gpu": {
+          "p50": 27.8,
+          "p95": 29,
+          "n": 103
+        },
+        "commands": {
+          "p50": 12,
+          "p95": 14
+        },
+        "globeTiles": {
+          "p50": 6,
+          "p95": 8
+        }
+      },
+      "still": {
+        "label": "all again still",
+        "frames": 106,
+        "interval": {
+          "p50": 28.2,
+          "p95": 52.1
+        },
+        "cesiumCpu": {
+          "p50": 1.9,
+          "p95": 2.3
+        },
+        "gpu": {
+          "p50": 27.6,
+          "p95": 29.4,
+          "n": 104
+        },
+        "commands": {
+          "p50": 12,
+          "p95": 12
+        },
+        "globeTiles": {
+          "p50": 6,
+          "p95": 6
+        }
+      }
+    }
+  },
+  "profile": {
+    "frames": {
+      "label": "profiled pan",
+      "frames": 114,
+      "interval": {
+        "p50": 19.4,
+        "p95": 53.1
+      },
+      "cesiumCpu": {
+        "p50": 2.1,
+        "p95": 2.6
+      },
+      "gpu": {
+        "p50": 27.7,
+        "p95": 30.4,
+        "n": 115
+      },
+      "commands": {
+        "p50": 12,
+        "p95": 14
+      },
+      "globeTiles": {
+        "p50": 6,
+        "p95": 8
+      }
+    },
+    "totalMs": "3338",
+    "buckets": [
+      "(idle): 1986 ms",
+      "other js: 694 ms",
+      "(program): 460 ms",
+      "app src: 79 ms",
+      "run: 21 ms",
+      "get clientWidth: 10 ms",
+      "(garbage collector): 9 ms",
+      "createTask: 8 ms",
+      "measure: 7 ms",
+      "bindVertexArray: 6 ms",
+      "bindFramebuffer: 5 ms",
+      "postMessage: 4 ms",
+      "drawBuffers: 4 ms",
+      "bindTexture: 4 ms",
+      "now: 3 ms",
+      "(native): 3 ms",
+      "setAttribute: 3 ms",
+      "clear: 2 ms",
+      "drawElements: 2 ms",
+      "useProgram: 2 ms",
+      "queueMicrotask: 2 ms",
+      "uniformMatrix4fv: 2 ms",
+      "beginQuery: 2 ms",
+      "activeTexture: 2 ms",
+      "endQuery: 2 ms",
+      "uniform3f: 2 ms",
+      "uniformMatrix3fv: 1 ms",
+      "uniform1iv: 1 ms",
+      "poll: 1 ms",
+      "uniform1fv: 1 ms",
+      "createQuery: 1 ms",
+      "requestAnimationFrame: 1 ms",
+      "viewport: 1 ms",
+      "disable: 1 ms",
+      "enable: 1 ms",
+      "setTimeout: 1 ms",
+      "fetch: 1 ms",
+      "clearMeasures: 1 ms",
+      "uniform4f: 1 ms",
+      "depthFunc: 1 ms",
+      "Request: 0 ms",
+      "get nodeName: 0 ms",
+      "get ownerDocument: 0 ms",
+      "getParameter: 0 ms",
+      "getQueryParameter: 0 ms",
+      "clearColor: 0 ms",
+      "getRootNode: 0 ms",
+      "blendEquationSeparate: 0 ms",
+      "cullFace: 0 ms",
+      "blendFuncSeparate: 0 ms",
+      "get nodeType: 0 ms",
+      "get namespaceURI: 0 ms",
+      "parseEvaluationResultValue: 0 ms",
+      "get childNodes: 0 ms",
+      "serialize: 0 ms"
+    ],
+    "selfTop": [
+      "  1986 ms  (idle) @ :0",
+      "   460 ms  (program) @ :0",
+      "   141 ms  exports.jsxDEV @ node_modules/.vite/deps/react_jsx-dev-runtime.js:192",
+      "    66 ms  exports.createElement @ node_modules/.vite/deps/react-eZXm9bZy.js:624",
+      "    36 ms  jsxDEVImpl @ node_modules/.vite/deps/react_jsx-dev-runtime.js:149",
+      "    21 ms  run @ :0",
+      "    18 ms  validatePropertiesInDevelopment @ node_modules/.vite/deps/react-dom_client.js:10241",
+      "    15 ms  continueDraw @ node_modules/.vite/deps/Cesium-Bv26NQ6E.js:62871",
+      "    14 ms  niceScale @ src/map/readout.ts:14",
+      "    12 ms  updateMembers @ node_modules/.vite/deps/Cesium-Bv26NQ6E.js:229147",
+      "    11 ms  validateProperty @ node_modules/.vite/deps/react-dom_client.js:1974",
+      "    11 ms  report @ src/map/records/recordLayers.ts:588",
+      "    11 ms  addDrawCommandsForTile @ node_modules/.vite/deps/Cesium-Bv26NQ6E.js:225195",
+      "    10 ms  runWithFiberInDEV @ node_modules/.vite/deps/react-dom_client.js:940",
+      "    10 ms  get clientWidth @ :0",
+      "     9 ms  (garbage collector) @ :0",
+      "     9 ms  ShaderProgram._setUniforms @ node_modules/.vite/deps/Cesium-Bv26NQ6E.js:52481",
+      "     8 ms  addObjectDiffToProperties @ node_modules/.vite/deps/react-dom_client.js:2561",
+      "     8 ms  ReactElement @ node_modules/.vite/deps/react-eZXm9bZy.js:133",
+      "     8 ms  plan @ src/map/records/recordLayers.ts:277",
+      "     8 ms  createTask @ :0",
+      "     7 ms  buildLucideIconNode @ node_modules/.vite/deps/lucide-react.js:104",
+      "     7 ms  measure @ :0",
+      "     6 ms  updateElement @ node_modules/.vite/deps/react-dom_client.js:3782",
+      "     6 ms  multiply @ node_modules/.vite/deps/Cesium-Bv26NQ6E.js:8050",
+      "     6 ms  multiplyTransformation @ node_modules/.vite/deps/Cesium-Bv26NQ6E.js:8199",
+      "     6 ms  updateProperties @ node_modules/.vite/deps/react-dom_client.js:10695",
+      "     6 ms  beginWork @ node_modules/.vite/deps/react-dom_client.js:6328",
+      "     6 ms  computeSimonMoon @ node_modules/.vite/deps/Cesium-Bv26NQ6E.js:59678",
+      "     6 ms  bindVertexArray @ :0"
+    ],
+    "inclusiveApp": [
+      "    96 ms  MapHud @ src/map/MapHud.tsx:20",
+      "    39 ms  (anon) @ src/map/Viewer.tsx:192",
+      "    34 ms  update @ src/map/records/recordLayers.ts:83",
+      "    34 ms  plan @ src/map/records/recordLayers.ts:277",
+      "    30 ms  readCamera @ src/map/Viewer.tsx:73",
+      "    21 ms  Histogram @ src/views/global/TimeHud.tsx:429",
+      "    21 ms  LiveHud @ src/map/Viewer.tsx:241",
+      "    21 ms  (anon) @ src/views/global/TimeHud.tsx:450",
+      "    19 ms  measureScale @ src/map/Viewer.tsx:107",
+      "    16 ms  report @ src/map/records/recordLayers.ts:588",
+      "    15 ms  IconButton @ src/ui/Button.tsx:24",
+      "    14 ms  niceScale @ src/map/readout.ts:14",
+      "    14 ms  Tabs @ src/ui/Tabs.tsx:10",
+      "    14 ms  pump @ src/map/records/recordLayers.ts:311",
+      "     9 ms  StressHarness @ src/map/stress/StressHarness.tsx:20",
+      "     8 ms  (anon) @ src/ui/Tabs.tsx:35",
+      "     8 ms  (anon) @ src/map/MapHud.tsx:162",
+      "     8 ms  flatViewRectangle @ src/map/view.ts:115",
+      "     8 ms  visibleRectangle @ src/map/view.ts:101",
+      "     6 ms  settle @ src/map/records/recordLayers.ts:368",
+      "     6 ms  planTiles @ src/map/records/tileMath.ts:121",
+      "     6 ms  TimeHud @ src/views/global/TimeHud.tsx:38",
+      "     5 ms  set @ src/map/Viewer.tsx:226",
+      "     5 ms  GlobalDashboard @ src/views/global/GlobalDashboard.tsx:127",
+      "     5 ms  CategoryRow @ src/views/global/LayersRail.tsx:349",
+      "     4 ms  layerShare @ src/map/records/clientCellLayer.ts:84",
+      "     4 ms  InsetHeat @ src/views/global/GlanceStrip.tsx:124",
+      "     3 ms  buildCatalog @ src/map/records/catalog.ts:9",
+      "     3 ms  (anon) @ src/map/records/useLayerCatalog.ts:82",
+      "     3 ms  useLayerCatalog @ src/map/records/useLayerCatalog.ts:29"
+    ],
+    "inclusiveCesium": []
+  },
+  "zoomProbe": [
+    {
+      "label": "World",
+      "longitude": -40,
+      "latitude": 25,
+      "height": 20000000,
+      "msaa": 1,
+      "zoom": 1.945454299022547,
+      "canvas": [984, 527]
+    },
+    {
+      "label": "Region",
+      "longitude": -95,
+      "latitude": 37,
+      "height": 2500000,
+      "msaa": 4,
+      "zoom": 4.943501087575139,
+      "canvas": [984, 527]
+    },
+    {
+      "label": "City",
+      "longitude": -95.36,
+      "latitude": 29.76,
+      "height": 60000,
+      "msaa": 4,
+      "zoom": 10.324848673070266,
+      "canvas": [984, 527]
+    },
+    {
+      "label": "World again",
+      "longitude": -40,
+      "latitude": 25,
+      "height": 20000000,
+      "msaa": 1,
+      "zoom": 1.945454299022547,
+      "canvas": [984, 527]
+    }
+  ]
+}

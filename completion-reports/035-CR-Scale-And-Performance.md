@@ -1,12 +1,12 @@
 # 035 — Completion Report: Scale And Performance
 
-| Field                 | Value                                                                                                                    |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Status                | Complete. Measured on 2026-10-21 on the GPU and in software WebGL. World zoom's 32 fps is accepted by the owner (below). |
-| Implementation commit | `5ef168ec451539a217318c0bf8e38b804b3c2116`                                                                               |
-| Run mode              | Unattended (owner's batch 023–036, no pausing)                                                                           |
-| Screenshots           | None taken (compile-only run).                                                                                           |
-| Mock comparison       | Not applicable: the harness is a development-only panel (`?stress` in a development build).                              |
+| Field                 | Value                                                                                                          |
+| --------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Status                | **Closed by the owner on 2026-10-21.** The world-zoom frame gap is closed by adaptive MSAA (`3ee7ebc`, below). |
+| Implementation commit | `5ef168ec451539a217318c0bf8e38b804b3c2116`; world-zoom fix `3ee7ebc660665cfea1759c0b41365d0a8412997c`          |
+| Run mode              | Unattended (owner's batch 023–036, no pausing); the world-zoom fix was attended                                |
+| Screenshots           | None taken.                                                                                                    |
+| Mock comparison       | Not applicable: the harness is a development-only panel (`?stress` in a development build).                    |
 
 ## Results
 
@@ -21,8 +21,9 @@
   1. waits for the layers to settle (nothing loading, no tile request waiting or in flight, no
      merged primitive building, for five samples in a row; at most 120 s);
   2. records what is drawn (layers, records, cells, tiles, merged instances), the peak of tile
-     requests in flight and waiting while settling, frame timing while panning (3 s), the
-     JavaScript heap (Chromium's `performance.memory`) and the open event streams by path.
+     requests in flight and waiting while settling, frame timing while panning (3 s), the scene's
+     MSAA samples (since `3ee7ebc`), the JavaScript heap (Chromium's `performance.memory`) and the
+     open event streams by path.
 
   It ends by timing one layer turned off and on. The report is shown as a table and kept as JSON
   (`data-testid="scale-report"`).
@@ -33,7 +34,7 @@
   - a 95th-percentile frame over the 33.3 ms budget (30 fps);
   - more records drawn at city zoom than at world zoom, since raw records must load only in view.
 - **SSE connections are counted.** Every server-sent event connection goes through one transport
-  (`fetchSseTransport`), which now keeps a tally of the open connections by path (`openStreams()`).
+  (`fetchSseTransport`), which keeps a tally of the open connections by path (`openStreams()`).
   The harness shows it live and the scenario records it at each zoom. The end-to-end spec also
   counts `/v1/events/stream` requests from outside the page, through the browser's request events.
 - **Raster overlays are bounded.** At most **4** product layers are drawn at once: the top ones in
@@ -55,10 +56,10 @@
   - `grep -rn "MAX_\w*PRODUCT\|MAX_\w*RASTER\|MAX_\w*OVERLAY\|maxProduct" src` found no bound
     before this change; `MAX_PRODUCT_LAYERS` is that bound now.
 
-## The numbers
+## The numbers (as first measured)
 
 Both runs were on 2026-10-21 against the local backend, with 190 kind layers on (stand-in records,
-as 010). Heap is `usedJSHeapSize` in decimal MB.
+as 010), before client clustering (037) and adaptive MSAA. Heap is `usedJSHeapSize` in decimal MB.
 
 - **GPU:** `E2E_GPU=1 npx playwright test e2e/scale.e2e.ts`, 1.8 min, source
   `test-results/035-scale-gpu.json`. The renderer, read from `WEBGL_debug_renderer_info` under the
@@ -106,10 +107,9 @@ SwiftShader draws on the CPU, so its frame times say nothing about a GPU.
 
 ### What the numbers show
 
-- **The frame ceiling is the client's, at world zoom.** On the GPU the world view (37,500 records,
-  396 cells, 792 merged instances) pans at 32 fps with a p95 of 53.6 ms: 27 of 97 frames are over
-  budget. Region and city zooms hold 60 fps. Nothing on the backend is involved in drawing a
-  frame, so this is the client's limit.
+- **The frame ceiling was the client's, at world zoom.** Region and city zooms held 60 fps; the
+  world view did not. Nothing on the backend is involved in drawing a frame. Where the time went is
+  below ("World zoom").
 - **The load ceiling is the tile queue.** Every zoom peaked at 12 requests in flight, which is the
   client's own cap (`MAX_TILE_REQUESTS`, `src/map/records/layerSources.ts:15`), with 517 to 1,114
   waiting. The world view took 87.0 s to settle on the GPU and 82.9 s in software, nearly the
@@ -124,45 +124,112 @@ SwiftShader draws on the CPU, so its frame times say nothing about a GPU.
   not a measurement of growth. The runs' launch arguments (`playwright.config.ts`) do not include
   Chromium's `--enable-precise-memory-info`.
 
-### World zoom: accepted, and what aggregation does there
+## World zoom: closed by adaptive MSAA
 
-**Decided by the owner on 2026-10-21:** world zoom's 32 fps (p95 53.6 ms) on the GPU is accepted
-as the worst case, measured with stand-in data that does not aggregate. No code change is made to
-meet the frame budget. The owner's reasoning: real data aggregates to hexagon cells below a layer's
-`aggBelowZoom`. The scale spec still fails under `E2E_GPU=1` on this one problem; its assertion was
-not changed.
+### How it went
 
-What the world view drew, and what was checked on 2026-10-21:
+1. **First accepted, then reopened.** The owner first accepted world zoom's 32 fps as the worst
+   case with stand-in data that does not aggregate. A check then found that only aircraft declares
+   `aggBelowZoom` on the local backend (17 of 596 layers in `GET /v1/tiles.json`: the `aircraft`
+   kind and 16 aircraft sources), so real records of the other kinds would draw raw at world zoom.
+   The client does switch to the backend's cells from the backend's own value: probed with
+   aircraft, its tiles were `agg=hex` at z1–z2 at 20,000 km.
+2. **Client clustering (037) did not move it.** With 037 the world view drew **0 points** and
+   **1,224 merged cells** counting 43,166 records, and its p95 was **53.3 ms** (GPU scale run,
+   2026-10-21), against 53.6 ms before. The points were not the cost.
+3. **The cost was measured, not guessed.** A GPU probe of the World view (2026-10-21, the same
+   Radeon 780M, 984×527 canvas at 1× pixel ratio) timed every frame: the interval, Cesium's CPU
+   time for the render (`preUpdate` to `postRender`), the GPU time (WebGL timer queries around the
+   render), the draw commands and the globe tiles. It then hid one thing at a time, and took a CPU
+   profile while panning. The findings are kept in `completion-reports/035-world-probe.json`.
+4. **Fixed by adaptive MSAA** (`3ee7ebc`), decided by the owner on 2026-10-21.
 
-- **The 37,500 raw records came from kinds that never aggregate.** The stand-in gives 200 points to
-  each of 183 kinds (190 kinds, less the 6 dense ones and earthquake). Earthquake keeps its 914 live
-  records. The 6 dense kinds (`DENSE_KINDS`, `e2e/dense-support.ts:16`) have their TileJSON's
-  `aggBelowZoom` set to 7 by the stand-in, and they drew the 396 cells.
-- **The client switches to cells from the backend's own value.** Probe: `/v1/kinds` was stood in
-  only to list aircraft, and its TileJSON and tiles came from the backend unchanged. The TileJSON
-  said `foresignal:aggBelowZoom: 7`. At 20,000 km the layer's state was `aggregated`, and every
-  aircraft tile requested was `agg=hex` at z1–z2. Earthquake (no `aggBelowZoom`) requested record
-  tiles and drew its 914 records. The client code is `aggregating()` and `plan()`
-  (`src/map/records/recordLayers.ts`). No fix was needed.
-- **Only aircraft declares `aggBelowZoom` on the local backend.** In `GET /v1/tiles.json`, 17 of
-  596 layers declare it (7): the `aircraft` kind and 16 aircraft sources. The other 189 kinds,
-  vessel among them, have `null`, which the OpenAPI defines as "never aggregate". So at world zoom,
-  real records of those kinds would draw raw, as the stand-in's did. Whether more kinds should
-  declare it is the backend's setting, not the client's.
-- **The local backend has records of one kind.** `GET /v1/kinds` lists earthquake (914 records)
-  and nothing else, so a world view of live data alone draws 914 records and no cells.
+### The probe's findings
+
+No layers on (the basemap and terrain only):
+
+| MSAA         | Frame p50 / p95 (still) | Cesium CPU p50 | GPU p50 / p95  |
+| ------------ | ----------------------- | -------------- | -------------- |
+| 4× (shipped) | 16.7 / 17.6 ms          | 1.1 ms         | 12.6 / 15.2 ms |
+| 1×           | 16.7 / 17.4 ms          | 1.2 ms         | 2.8 / 3.2 ms   |
+
+All 190 layers on, settled (0 points, 1,224 cells counting 43,236 records, no ground primitives,
+12 draw commands):
+
+| What was hidden                 | Frame p50 / p95 (still) | GPU p50     |
+| ------------------------------- | ----------------------- | ----------- |
+| Nothing                         | 28.9 / 53.4 ms          | 28.7 ms     |
+| Cell fills                      | 23.2 / 42.2 ms          | 22.6 ms     |
+| Cell outlines                   | 21.7 / 38.8 ms          | 21.9 ms     |
+| All cells                       | 16.7 / 17.2 ms          | 11.5 ms     |
+| Points (none at world zoom)     | 28.8 / 48.9 ms          | 28.6 ms     |
+| Ground primitives (none)        | 28.0 / 50.6 ms          | 27.8 ms     |
+| The globe (imagery and terrain) | 25.5 / 45.7 ms          | 25.6 ms     |
+| **Nothing, with MSAA 1×**       | **16.7 / 17.4 ms**      | **14.1 ms** |
+
+Panning gave the same picture (all on: GPU p50 28.0 ms; with MSAA 1×: 14.5 ms, frame p95 17.5 ms).
+A repeat of "nothing hidden" at the end gave a GPU p50 of 27.6 ms.
+
+- **The cost is GPU time in the cells' translucent pass under 4× MSAA.** Hiding the cells, or
+  drawing without MSAA, brings the frame back to 60 fps. Fills alone add about 11 ms of GPU time
+  and outlines alone about 10 ms, both about 17 ms, which reads as a mostly fixed cost of the
+  translucent pass on a multisampled frame; which sub-pass it is was not measured.
+- **Not the CPU.** Cesium's render takes about 2 ms a frame. Over 3.3 s of panning the JavaScript
+  profile was about 2.0 s idle, and the app's own code took 79 ms in all.
+- **Not draw calls.** 12 commands with every layer on, against 6–8 with none: the 190 layers and
+  760 tiles are 3 primitives.
+- **Not rebuilds.** The probe measured settled views (nothing building, the counts unchanged for
+  5 s), and the still view was as slow as the panning one.
+- **The globe** costs about 3 ms of GPU time; the basemap's own 4× MSAA about 10 ms.
+- **Why the p95 is about twice the GPU time:** a frame that misses the display's refresh is shown a
+  whole refresh later, so 28 ms of GPU time lands on 33 or 50 ms.
+
+### The fix
+
+`src/map/msaa.ts` and `src/map/adaptMsaa.ts`, mounted by `AdaptiveMsaa` in the map viewer:
+
+- **Below map zoom 4** (`OVERVIEW_BELOW_ZOOM`) the scene is drawn **without MSAA**
+  (`OVERVIEW_MSAA`, 1); **at or above zoom 4.5** (`DETAIL_FROM_ZOOM`) with the **shipped 4×**
+  (`DETAIL_MSAA`, Cesium's default). Between the two it keeps what it has, so a view resting near
+  the threshold does not switch back and forth.
+- **It is decided on camera events, not per frame:** the camera's `changed` and `moveEnd`, and
+  after a 2D/3D switch. `scene.msaaSamples` is written only when the value changes, so the
+  framebuffers are rebuilt at the crossing only.
+- **The map zoom** is the record layers' (`readRecordView`), at the center of the canvas.
+- **Checked in the running client** (GPU, no layers on, 2026-10-21, `zoomProbe` in the probe file):
+
+  | Step        | Map zoom | MSAA |
+  | ----------- | -------- | ---- |
+  | World       | 1.95     | 1    |
+  | Region      | 4.94     | 4    |
+  | City        | 10.32    | 4    |
+  | World again | 1.95     | 1    |
+
+- **The scale spec** (`e2e/scale.e2e.ts`) now holds world zoom to **60 fps**: with `E2E_GPU=1`,
+  its p95 frame must be within `SIXTY_FPS_P95_MS`, 25 ms (one and a half frames: a frame that
+  misses the refresh takes 33.3 ms, so a p95 under 25 ms means 95 frames in 100 met it). It also
+  asserts the world step drawn at MSAA 1 and the city at 4. Region and city keep the 33.3 ms
+  budget through `scaleProblems`.
+- **The full GPU scale run has not been repeated with the fix.** The 60 fps figure is the probe's,
+  measured with MSAA forced to 1 on the same view; the switch itself was checked by the zoom probe
+  above. `E2E_GPU=1 npx playwright test e2e/scale.e2e.ts` confirms it end to end.
 
 ## What was built
 
 - `src/map/stress/scaleScenario.ts`:
   - `SCALE_STEPS`, `runScaleScenario`, `settle`, `scaleProblems`, `heapBytes`;
   - `CHANGE_STREAM_PATH`, `STEP_FRAMES_MS`, `SETTLE_TIMEOUT_MS`;
-  - the `ScaleReport` and `ScaleStepResult` types.
+  - the `ScaleReport` and `ScaleStepResult` types (with `msaa` since `3ee7ebc`).
 - `src/map/stress/StressHarness.tsx`: live **Streams** and **Heap** rows, the **Scale scenario**
   button, the report table and its JSON.
 - `src/api/stream/sse.ts`: the open-connection tally and `openStreams()`.
 - `src/map/products/productCatalog.ts`: `MAX_PRODUCT_LAYERS`, `OVER_LIMIT_MESSAGE`,
   `boundProductLayers`. `GlobalDashboard.tsx` draws the bounded list and marks the rest.
+- **The world-zoom fix (`3ee7ebc`):**
+  - `src/map/msaa.ts`: `msaaForZoom` and its constants;
+  - `src/map/adaptMsaa.ts`: `adaptMsaa`;
+  - `src/map/AdaptiveMsaa.tsx`, mounted in `src/map/Viewer.tsx`;
+  - `src/map/stress/frameStats.ts`: `SIXTY_FPS_FRAME_MS`, `SIXTY_FPS_P95_MS`.
 
 ## How it was checked
 
@@ -173,77 +240,98 @@ What the world view drew, and what was checked on 2026-10-21:
   - every problem reported (three streams, unsettled, slow p95, a city fuller than the world);
   - settling after five quiet samples, with the peak of requests;
   - giving up at the timeout;
-  - the scenario moving through each zoom and recording totals, frames, heap and streams.
+  - the scenario moving through each zoom and recording totals, frames, MSAA, heap and streams.
 - `api/stream/sse.test.ts` (1 more): the tally counts each connection by path while open, and once
   on close.
 - `map/products/productCatalog.test.ts` (2): every layer under the bound; the top four past it,
   the rest named, and the message.
+- `map/msaa.test.ts` (4):
+  - the overview gets 1×, a closer view 4×;
+  - between the two zooms it keeps what it has;
+  - the samples are written only at a crossing, on camera and morph events, and 4× is restored
+    when stopped;
+  - nothing is written mid-morph.
 - `e2e/scale.e2e.ts` (1). It turns the full catalog on (stand-in records, as 010), runs the scale
   scenario and writes the JSON report. It then asserts:
   - the browser saw at most one `/v1/events/stream` open at once, and the client's tally agrees;
   - every zoom settled;
-  - cells at world zoom (the dense kinds aggregate below zoom 7);
-  - fewer records at city zoom than at world zoom;
-  - no problems (frame timing only with `E2E_GPU=1`).
+  - cells at world zoom, few records drawn one by one there and the rest counted in cells (037);
+  - fewer records at city zoom than the world draws or counts;
+  - MSAA 1 at the world step and 4 at the city;
+  - with `E2E_GPU=1`, the world's p95 within 25 ms (60 fps) and no problems; otherwise no
+    problems but frame timing.
 
 ### Checks
 
-| Check                                                       | Result                                                                                                                                 |
-| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run typecheck`                                         | Passed                                                                                                                                 |
-| `npm run lint`                                              | Passed                                                                                                                                 |
-| `npx prettier --check src e2e`                              | Passed (and `scripts`)                                                                                                                 |
-| `npm run build`                                             | Passed. `index` 875.55 kB (263.29 kB gzip)                                                                                             |
-| `npm run verify:dist`                                       | "✓ dist is ready to deploy."                                                                                                           |
-| `npm test`, `npm run e2e`                                   | **Not run** at the time (standing rule). On 2026-10-21 the scale spec passed in software and **failed on the GPU** (world p95 53.6 ms) |
-| Guard: `test_us_english.py`                                 | 14 tests OK (167.9 s)                                                                                                                  |
-| Guard: `check_us_english.py` over the project               | 804 hits, unchanged                                                                                                                    |
-| Guard: `check_us_english.py` over the new and changed files | 0 hits                                                                                                                                 |
+The world-zoom fix (`3ee7ebc`):
+
+| Check                                                       | Result                                     |
+| ----------------------------------------------------------- | ------------------------------------------ |
+| `npm run typecheck`                                         | Passed                                     |
+| `npm run lint`                                              | Passed                                     |
+| `npx prettier --check src e2e scripts`                      | Passed                                     |
+| `npm run build`                                             | Passed. `index` 896.78 kB (269.98 kB gzip) |
+| `npm run verify:dist`                                       | "✓ dist is ready to deploy."               |
+| `npm test`, `npm run e2e`                                   | **Not run** (standing rule)                |
+| Zoom probe (GPU, scratch, not a spec)                       | MSAA 1 at World, 4 at Region and City      |
+| Guard: `test_us_english.py`                                 | 14 tests OK (176.2 s)                      |
+| Guard: `check_us_english.py` over the project               | 804 hits, unchanged                        |
+| Guard: `check_us_english.py` over the new and changed files | 0 hits                                     |
+
+The first build (`5ef168e`): typecheck, lint, Prettier, build (`index` 875.55 kB, 263.29 kB gzip)
+and `verify:dist` passed; the guards passed (14 tests OK, 804 hits, 0 in changed files). The scale
+spec then passed in software and failed on the GPU (world p95 53.6 ms), as above.
 
 ## Compared to the mock
 
-Not applicable: development tooling. The one visible change is a product layer over the bound,
-which shows in the rail's existing error state with its message.
+Not applicable: development tooling. The visible changes are a product layer over the bound, which
+shows in the rail's existing error state with its message, and, at the world and continental
+overview, edges drawn without multisample antialiasing.
 
-## Decisions taken (unattended run)
+## Decisions taken
 
 1. **The harness extends 010's** (`?stress`), rather than a second tool. It stays out of
    production builds: `stressModeOn` requires `import.meta.env.DEV`.
 2. **The three zooms** are the world, a region and a city over the United States, where the local
    backend's live data is.
-3. **Frame budget:** 30 fps (the existing `SLOW_FRAME_MS`), held at the 95th percentile.
+3. **Frame budget:** 30 fps (the existing `SLOW_FRAME_MS`) at the 95th percentile for every zoom,
+   and 60 fps at world zoom since the fix (owner, 2026-10-21).
 4. **The overlay bound is 4**, keeping the top ones (the ones seen). The rest show an error rather
    than being turned off, so the person's choice is kept.
 5. **The SSE tally lives in the shared transport,** so every stream (change, alerts, inbox, saved
    views) is counted, and only the change stream is required to be one.
 6. **Memory** is Chromium's `performance.memory.usedJSHeapSize` where present. It is left out
    elsewhere, not estimated.
+7. **Adaptive MSAA thresholds:** 1× below zoom 4, 4× from zoom 4.5. World is zoom 1.95 and region
+   4.94 at the e2e viewport, so the world and continental overview go without MSAA and the region
+   keeps 4×, which it ran at 60 fps.
+8. **The world's 60 fps check is a p95 within 25 ms**, not within 16.7 ms: frames are shown on the
+   display's refresh, so a p95 of exactly one frame would fail on timer jitter alone (the probe's
+   1× world p95 was 17.4 ms).
 
 ## Deviations from the prompt text
 
 - **"Confirm the limit is the backend, not the client"**: answered in part. The frame limit at
-  world zoom is the client's (above). The settle time is the tile queue: the client's cap of 12 in
-  flight and the backend's response time together, which these runs do not separate.
-- **The frame budget is not met at world zoom on the GPU** (p95 53.6 ms against 33.3 ms). The
-  owner accepted it on 2026-10-21, and nothing was changed to meet it (above).
+  world zoom was the client's, and it is closed (above). The settle time is the tile queue: the
+  client's cap of 12 in flight and the backend's response time together, which these runs do not
+  separate.
 
 ## Backend observations
 
-- No backend call was made for this prompt. The scale run reads the live tile index and kinds,
-  as 010's does, when the owner runs it.
+- No backend call was made for this prompt beyond the reads the scale run makes (the live tile
+  index and kinds, as 010's does) and the `GET /v1/tiles.json` read for `aggBelowZoom` (above).
 
 ## Owner questions
 
-1. **World zoom over budget.** Decided 2026-10-21: accepted as the worst case, with no code change.
-   Still open: only aircraft declares `aggBelowZoom` on the local backend, so records of the other
-   kinds draw raw at world zoom (above). Should the decision stand on that basis? And should the
-   scale spec's GPU assertion allow the accepted world-zoom figure, rather than keep failing?
-   **Default in place: no change to the code or the spec.**
+1. **World zoom.** Closed by adaptive MSAA (owner, 2026-10-21). Still the backend's setting: only
+   aircraft declares `aggBelowZoom`, so other dense kinds are counted into cells by the client
+   (037) rather than the backend.
 2. **Overlay bound.** Is 4 drawn product layers the right bound, and should the rail stop a fifth
    from being turned on, rather than showing it as not drawn? **Default in place: 4, the rest
    marked.**
-3. **Frame budget.** Is 30 fps at the 95th percentile the budget, or 60 fps? **Default in place:
-   30 fps.**
+3. **Frame budget elsewhere.** Region and city are held to 30 fps at the 95th percentile, and the
+   world to 60 fps. Should region and city be held to 60 fps too? Both ran at 60 fps on the GPU.
+   **Default in place: 30 fps.**
 4. **Other streams.** Alerts and inbox each hold their own connection beside the change stream.
    Should they share it? **Default in place: separate, as 029 built them.**
 
