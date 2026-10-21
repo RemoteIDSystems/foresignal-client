@@ -1,4 +1,10 @@
-import { expect, type APIRequestContext, type APIResponse, type Page } from '@playwright/test';
+import {
+  expect,
+  type APIRequestContext,
+  type APIResponse,
+  type Page,
+  type Route,
+} from '@playwright/test';
 
 /** The live earthquake style's icon color (usgs-earthquakes, `#D9480F`). */
 export const EARTHQUAKE_RGB: [number, number, number] = [0xd9, 0x48, 0x0f];
@@ -120,6 +126,22 @@ export async function showLegend(page: Page) {
 }
 
 /**
+ * A routed request sent on to the backend (or to `url`), with any `429` waited out per
+ * `Retry-After`: a stand-in's own fetch goes past the app's retry, and the local backend limits
+ * anonymous requests, which a burst of tiles meets.
+ */
+async function fetchPastLimit(route: Route, url?: string): Promise<APIResponse> {
+  const send = () => route.fetch(url === undefined ? undefined : { url });
+  let response = await send();
+  for (let attempt = 0; response.status() === 429 && attempt < 10; attempt++) {
+    const wait = Number(response.headers()['retry-after'] ?? '1');
+    await new Promise((resolve) => setTimeout(resolve, (Number.isFinite(wait) ? wait : 1) * 1000));
+    response = await send();
+  }
+  return response;
+}
+
+/**
  * Stand-in data for layers that aggregate. Live aircraft (`aggBelowZoom` 7) has no records, and
  * only kinds with records are drawn, so `listKinds` is given one record of each kind here, each
  * kind's TileJSON says it aggregates below zoom 7 (aircraft's already does), and its `agg=hex`
@@ -129,15 +151,7 @@ export async function showLegend(page: Page) {
 export async function standInDense(page: Page, kinds: readonly string[] = ['aircraft']) {
   const dense = kinds.join('|');
   await page.route('**/v1/kinds', async (route) => {
-    // Straight to the backend, past the app's own retry, so a rate limit is waited out here.
-    let response = await route.fetch();
-    for (let attempt = 0; response.status() === 429 && attempt < 10; attempt++) {
-      const wait = Number(response.headers()['retry-after'] ?? '1');
-      await new Promise((resolve) =>
-        setTimeout(resolve, (Number.isFinite(wait) ? wait : 1) * 1000),
-      );
-      response = await route.fetch();
-    }
+    const response = await fetchPastLimit(route);
     if (!response.ok()) return route.fulfill({ response });
     const live = (await response.json()) as { kind: string }[];
     await route.fulfill({
@@ -149,7 +163,7 @@ export async function standInDense(page: Page, kinds: readonly string[] = ['airc
     });
   });
   await page.route(new RegExp(`/v1/tiles/(${dense})\\.json$`), async (route) => {
-    const response = await route.fetch();
+    const response = await fetchPastLimit(route);
     const tileJson = (await response.json()) as Record<string, unknown>;
     await route.fulfill({ response, json: { ...tileJson, 'foresignal:aggBelowZoom': 7 } });
   });
@@ -160,7 +174,7 @@ export async function standInDense(page: Page, kinds: readonly string[] = ['airc
         .request()
         .url()
         .replace(/\/tiles\/[^/]+\//, '/tiles/earthquake/');
-      await route.fulfill({ response: await route.fetch({ url }) });
+      await route.fulfill({ response: await fetchPastLimit(route, url) });
     },
   );
 }
