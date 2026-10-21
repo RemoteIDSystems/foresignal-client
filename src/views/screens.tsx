@@ -1,4 +1,4 @@
-import { Image, Map, RadioTower, Satellite, Workflow } from 'lucide-react';
+import { Image, Map, RadioTower, Workflow } from 'lucide-react';
 import { PlaceholderView } from './PlaceholderView';
 
 /** Full-screen map. */
@@ -21,18 +21,6 @@ export function ImageryView() {
       title="Imagery"
       description="Recent imagery, product frames and before/after change detection."
       builtIn="028"
-    />
-  );
-}
-
-/** Satellite operations (mockup `ForeSignal_Analysis_View.png`). */
-export function SatellitesView() {
-  return (
-    <PlaceholderView
-      icon={Satellite}
-      title="Satellite Operations"
-      description="Constellation on the 3D globe with live orbits, passes and imagery."
-      builtIn="027–028"
     />
   );
 }

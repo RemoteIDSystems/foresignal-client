@@ -64,6 +64,7 @@ export const PACKAGE_CREDITS: readonly PackageCredit[] = [
     use: 'Relationship graph layout',
   },
   { name: 'resium', license: 'MIT', use: 'React bindings for Cesium' },
+  { name: 'satellite.js', license: 'MIT', use: 'Satellite orbit propagation (SGP4)' },
   { name: 'react', license: 'MIT', use: 'User interface' },
   { name: 'react-dom', license: 'MIT', use: 'User interface' },
   { name: 'react-router', license: 'MIT', use: 'Navigation' },

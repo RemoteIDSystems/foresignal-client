@@ -54,7 +54,10 @@ export function App({ session, initialPath }: AppProps) {
         />
         <Route path="/map" element={<MapView />} />
         <Route path="/imagery" element={<ImageryView />} />
-        <Route path="/satellites" element={<SatellitesView />} />
+        <Route
+          path="/satellites"
+          element={<SatellitesView api={session.api} store={session.store} />}
+        />
         <Route path="/rf-sensors" element={<RfSensorsView />} />
         <Route path="/intelligence" element={<IntelligenceHome api={session.api} />} />
         <Route

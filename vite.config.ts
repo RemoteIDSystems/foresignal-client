@@ -21,7 +21,7 @@ const DEFAULT_BACKEND = 'http://localhost:8080';
  * Vite configuration for the ForeSignal Client.
  *
  * Vite is build-time only: `vite build` emits static assets that the backend serves
- * same-origin. In development the dev server proxies the backend's paths (`/v1`, `/mcp`,
+ * same-origin. In development the dev server proxies the backend's paths (`/v1`, `/compat`, `/mcp`,
  * `/actuator`) so the app is same-origin in dev exactly as in production; the proxy is dev
  * tooling and never ships.
  */
@@ -38,6 +38,7 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         '/v1': proxied,
+        '/compat': proxied,
         '/mcp': proxied,
         '/actuator': proxied,
       },
@@ -45,6 +46,7 @@ export default defineConfig(({ mode }) => {
     preview: {
       proxy: {
         '/v1': proxied,
+        '/compat': proxied,
         '/mcp': proxied,
         '/actuator': proxied,
       },

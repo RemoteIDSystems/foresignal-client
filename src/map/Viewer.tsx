@@ -338,6 +338,11 @@ export interface MapViewerProps {
   store?: Store<AppState>;
   /** Areas outlined over the map, such as a situation's footprint (019). */
   areas?: readonly (Geometry | null | undefined)[];
+  /**
+   * Layers drawn inside the viewer, where Resium's `useCesium` reaches it (027's constellation);
+   * `children` are drawn over the map, outside it.
+   */
+  scene?: ReactNode;
 }
 
 /** No record layers. */
@@ -391,6 +396,7 @@ export function MapViewer({
   stream,
   store = appStore,
   areas,
+  scene,
 }: MapViewerProps) {
   const [webgl] = useState(supportsWebGL);
   const [viewer, setViewer] = useState<CesiumViewer>();
@@ -711,6 +717,7 @@ export function MapViewer({
             onTrail={setTrail}
           />
         )}
+        {scene}
       </ResiumViewer>
       {viewer && shownSelection && (
         <RecordMarker viewer={viewer} hit={shownSelection} variant="selected" />

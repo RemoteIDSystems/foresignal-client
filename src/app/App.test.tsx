@@ -123,7 +123,8 @@ describe('App routing', () => {
     };
     for (const [tab, heading] of Object.entries(expected)) {
       await user.click(screen.getByRole('link', { name: tab }));
-      expect(screen.getByRole('heading', { level: 1, name: heading })).toBeInTheDocument();
+      // Satellite Operations loads with its own chunk (027), so its heading arrives a moment later.
+      expect(await screen.findByRole('heading', { level: 1, name: heading })).toBeInTheDocument();
     }
   });
 

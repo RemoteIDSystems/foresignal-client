@@ -1,0 +1,215 @@
+/* Satellite Operations (027): the globe with its scrubber, the Selected Satellite panel and the passes. */
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px 0;
+}
+
+.search {
+  position: relative;
+  width: min(280px, 100%);
+}
+
+.matches {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid var(--fs-color-border-strong);
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-raised);
+  list-style: none;
+}
+
+.body {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-rows: minmax(320px, 1fr) minmax(160px, 34%);
+  gap: 12px;
+  min-height: 0;
+  padding: 12px 16px 16px;
+}
+
+.globe {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-md);
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  grid-row: 1 / span 2;
+  gap: 10px;
+  min-height: 0;
+  padding: 12px;
+  overflow-y: auto;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-md);
+  background: var(--fs-color-panel);
+}
+
+.sideHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sideTitle {
+  margin: 0;
+  font-size: var(--fs-font-size-lg);
+}
+
+.fact {
+  display: contents;
+}
+
+.sensorList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  font-size: var(--fs-font-size-sm);
+  list-style: none;
+}
+
+.sensorList li {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--fs-color-border);
+}
+
+.bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-md);
+  background: var(--fs-color-panel);
+}
+
+.sources {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.source {
+  display: grid;
+  grid-template-columns: auto 10px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 8px;
+  color: var(--fs-color-text-secondary);
+  font-size: var(--fs-font-size-sm);
+  cursor: pointer;
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.sourceName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sourceCount {
+  color: var(--fs-color-text-muted);
+  font-size: var(--fs-font-size-xs);
+}
+
+.scrubber {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: min(260px, calc(100% - 24px));
+  padding: 8px 10px;
+  border: 1px solid var(--fs-color-border-strong);
+  border-radius: var(--fs-radius-md);
+  background: color-mix(in srgb, var(--fs-color-panel) 88%, transparent);
+  font-size: var(--fs-font-size-sm);
+}
+
+.scrubberHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.clock {
+  font-variant-numeric: tabular-nums;
+}
+
+.liveOn,
+.liveOff {
+  padding: 2px 8px;
+  border: 1px solid var(--fs-color-border-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fs-color-text-muted);
+  font: inherit;
+  font-size: var(--fs-font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.liveOn {
+  border-color: var(--fs-color-live);
+  background: var(--fs-color-live-soft);
+  color: var(--fs-color-live);
+}
+
+.ticks {
+  display: flex;
+  justify-content: space-between;
+  color: var(--fs-color-text-muted);
+  font-size: var(--fs-font-size-xs);
+}
+
+@media (max-width: 900px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(320px, 60vh) auto auto;
+  }
+
+  .side {
+    grid-row: auto;
+  }
+}
