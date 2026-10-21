@@ -33,7 +33,13 @@ export function AnalysisRail({
   const onArrow = useArrowNavigation('button');
   const item = (entry: RailEntry) => {
     const Icon = entry.icon;
-    const current = entry.home ? atHome : !atHome && entry.tab !== undefined && entry.tab === tab;
+    // Where two entries open one tab (Indicators opens Hypotheses), the first is the one marked.
+    const current = entry.home
+      ? atHome
+      : !atHome &&
+        entry.tab !== undefined &&
+        entry.tab === tab &&
+        [...ANALYSIS_ENTRIES, ...TOOL_ENTRIES].find((other) => other.tab === tab) === entry;
     const disabled = entry.workbench
       ? !onWorkbench
       : entry.workspaces
