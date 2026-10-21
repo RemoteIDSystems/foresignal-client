@@ -5,3 +5,5 @@ coverage/
 .env*.local
 test-results/
 playwright-report/
+# Screenshots the e2e specs write on every run.
+review/*.png
