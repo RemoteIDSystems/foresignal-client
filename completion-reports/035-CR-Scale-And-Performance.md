@@ -1,12 +1,12 @@
 # 035 — Completion Report: Scale And Performance
 
-| Field                 | Value                                                                                                                  |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Status                | Complete. Measured on 2026-10-21 on the GPU and in software WebGL. On the GPU the world zoom is over the frame budget. |
-| Implementation commit | `5ef168ec451539a217318c0bf8e38b804b3c2116`                                                                             |
-| Run mode              | Unattended (owner's batch 023–036, no pausing)                                                                         |
-| Screenshots           | None taken (compile-only run).                                                                                         |
-| Mock comparison       | Not applicable: the harness is a development-only panel (`?stress` in a development build).                            |
+| Field                 | Value                                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Status                | Complete. Measured on 2026-10-21 on the GPU and in software WebGL. World zoom's 32 fps is accepted by the owner (below). |
+| Implementation commit | `5ef168ec451539a217318c0bf8e38b804b3c2116`                                                                               |
+| Run mode              | Unattended (owner's batch 023–036, no pausing)                                                                           |
+| Screenshots           | None taken (compile-only run).                                                                                           |
+| Mock comparison       | Not applicable: the harness is a development-only panel (`?stress` in a development build).                              |
 
 ## Results
 
@@ -124,6 +124,34 @@ SwiftShader draws on the CPU, so its frame times say nothing about a GPU.
   not a measurement of growth. The runs' launch arguments (`playwright.config.ts`) do not include
   Chromium's `--enable-precise-memory-info`.
 
+### World zoom: accepted, and what aggregation does there
+
+**Decided by the owner on 2026-10-21:** world zoom's 32 fps (p95 53.6 ms) on the GPU is accepted
+as the worst case, measured with stand-in data that does not aggregate. No code change is made to
+meet the frame budget. The owner's reasoning: real data aggregates to hexagon cells below a layer's
+`aggBelowZoom`. The scale spec still fails under `E2E_GPU=1` on this one problem; its assertion was
+not changed.
+
+What the world view drew, and what was checked on 2026-10-21:
+
+- **The 37,500 raw records came from kinds that never aggregate.** The stand-in gives 200 points to
+  each of 183 kinds (190 kinds, less the 6 dense ones and earthquake). Earthquake keeps its 914 live
+  records. The 6 dense kinds (`DENSE_KINDS`, `e2e/dense-support.ts:16`) have their TileJSON's
+  `aggBelowZoom` set to 7 by the stand-in, and they drew the 396 cells.
+- **The client switches to cells from the backend's own value.** Probe: `/v1/kinds` was stood in
+  only to list aircraft, and its TileJSON and tiles came from the backend unchanged. The TileJSON
+  said `foresignal:aggBelowZoom: 7`. At 20,000 km the layer's state was `aggregated`, and every
+  aircraft tile requested was `agg=hex` at z1–z2. Earthquake (no `aggBelowZoom`) requested record
+  tiles and drew its 914 records. The client code is `aggregating()` and `plan()`
+  (`src/map/records/recordLayers.ts`). No fix was needed.
+- **Only aircraft declares `aggBelowZoom` on the local backend.** In `GET /v1/tiles.json`, 17 of
+  596 layers declare it (7): the `aircraft` kind and 16 aircraft sources. The other 189 kinds,
+  vessel among them, have `null`, which the OpenAPI defines as "never aggregate". So at world zoom,
+  real records of those kinds would draw raw, as the stand-in's did. Whether more kinds should
+  declare it is the backend's setting, not the client's.
+- **The local backend has records of one kind.** `GET /v1/kinds` lists earthquake (914 records)
+  and nothing else, so a world view of live data alone draws 914 records and no cells.
+
 ## What was built
 
 - `src/map/stress/scaleScenario.ts`:
@@ -196,8 +224,8 @@ which shows in the rail's existing error state with its message.
 - **"Confirm the limit is the backend, not the client"**: answered in part. The frame limit at
   world zoom is the client's (above). The settle time is the tile queue: the client's cap of 12 in
   flight and the backend's response time together, which these runs do not separate.
-- **The frame budget is not met at world zoom on the GPU** (p95 53.6 ms against 33.3 ms). Nothing
-  was changed to meet it. That is owner question 1.
+- **The frame budget is not met at world zoom on the GPU** (p95 53.6 ms against 33.3 ms). The
+  owner accepted it on 2026-10-21, and nothing was changed to meet it (above).
 
 ## Backend observations
 
@@ -206,10 +234,11 @@ which shows in the rail's existing error state with its message.
 
 ## Owner questions
 
-1. **World zoom over budget.** On the Radeon 780M the world view pans at 32 fps, with a p95 of
-   53.6 ms. Should drawing at world zoom be made cheaper (fewer cells or merged instances drawn at
-   once), or is 32 fps acceptable at that zoom? **Default in place: unchanged; the scale spec fails
-   on the GPU.**
+1. **World zoom over budget.** Decided 2026-10-21: accepted as the worst case, with no code change.
+   Still open: only aircraft declares `aggBelowZoom` on the local backend, so records of the other
+   kinds draw raw at world zoom (above). Should the decision stand on that basis? And should the
+   scale spec's GPU assertion allow the accepted world-zoom figure, rather than keep failing?
+   **Default in place: no change to the code or the spec.**
 2. **Overlay bound.** Is 4 drawn product layers the right bound, and should the rail stop a fifth
    from being turned on, rather than showing it as not drawn? **Default in place: 4, the rest
    marked.**
