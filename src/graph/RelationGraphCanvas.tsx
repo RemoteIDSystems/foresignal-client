@@ -102,6 +102,8 @@ export default function RelationGraphCanvas({
 
     const drawMini = () => drawMiniMap(mini.current, sigma, built, tokens.color.accent);
     sigma.on('afterRender', drawMini);
+    // Sigma drew its first frame in its constructor, before the listener was there.
+    drawMini();
 
     let supervisor: FA2LayoutSupervisor | undefined;
     let timer: number | undefined;
