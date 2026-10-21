@@ -3,12 +3,13 @@ import type { Annotation } from '../src/annotations/annotationApi';
 import { me, ME_ID } from '../src/annotations/testing/annotationFixtures';
 import { graphResult, GRAPH_INVESTIGATION_ID, REFS } from '../src/graph/testing/graphFixtures';
 import { investigation } from '../src/intel/testing/fixtures';
+import { standInTestToken } from './standIns';
 import { collectProblems } from './support';
 
 /**
- * Notes on an object (026), in the Analyst Workbench's side panel. The local backend's notes need a
- * token, so the investigation, its graph and the notes are stand-ins; a note added is kept by the
- * stand-in and must come back in the list.
+ * Notes on an object (026), in the Analyst Workbench's side panel. Notes need a token, so the page
+ * runs with a test token (the app asks for none without one), and the investigation, its graph and
+ * the notes are stand-ins; a note added is kept by the stand-in and must come back in the list.
  */
 
 /** Console errors and uncaught exceptions on the page; a check fails if any appear. */
@@ -38,6 +39,7 @@ const annotatable = graphResult.nodes.map((node) =>
 test.beforeEach(async ({ page }) => {
   problems = collectProblems(page);
   held.clear();
+  await standInTestToken(page);
   await page.route(new RegExp(`/v1/investigations/${GRAPH_INVESTIGATION_ID}(\\?.*)?$`), (route) =>
     route.fulfill({ json: investigation }),
   );
