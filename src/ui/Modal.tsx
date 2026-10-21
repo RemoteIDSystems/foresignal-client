@@ -48,13 +48,19 @@ function keepFocusIn(dialog: HTMLElement, event: KeyboardEvent) {
 export function Modal({ open, title, onClose, children, size = 'default' }: ModalProps) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
+  // The latest onClose, so a caller's new function each render does not run the effect again:
+  // that would move focus back to the dialog after every key typed in one of its fields.
+  const closeRef = useRef(onClose);
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
     const previous = document.activeElement as HTMLElement | null;
     dialogRef.current?.focus();
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') closeRef.current();
       else if (event.key === 'Tab' && dialogRef.current) keepFocusIn(dialogRef.current, event);
     };
     document.addEventListener('keydown', onKey);
@@ -62,7 +68,7 @@ export function Modal({ open, title, onClose, children, size = 'default' }: Moda
       document.removeEventListener('keydown', onKey);
       previous?.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
   return createPortal(

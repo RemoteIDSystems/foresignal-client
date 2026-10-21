@@ -67,6 +67,22 @@ describe('Modal', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it('keeps focus in a field while its owner re-renders with a new onClose', async () => {
+    const user = userEvent.setup();
+    function Owner() {
+      const [name, setName] = useState('');
+      return (
+        <Modal open title="Name" onClose={() => {}}>
+          <input aria-label="Name" value={name} onChange={(event) => setName(event.target.value)} />
+        </Modal>
+      );
+    }
+    render(<Owner />);
+    await user.click(screen.getByRole('textbox', { name: 'Name' }));
+    await user.keyboard('Fires');
+    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('Fires');
+  });
+
   it('keeps Tab and Shift+Tab inside the dialog, wrapping at either end', async () => {
     const user = userEvent.setup();
     render(
