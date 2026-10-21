@@ -302,6 +302,8 @@ export interface MapViewerProps {
   children?: ReactNode;
   /** Drawn over the HUD's global-view inset (018's activity heat). */
   insetOverlay?: ReactNode;
+  /** Whether the legend starts open (the analysis map's, as in the Conflict mock); closed otherwise. */
+  legendInitiallyOpen?: boolean;
   /** Backend client for the overlay style, legend and attribution; without it the map has none. */
   api?: ForesignalClient;
   /**
@@ -384,6 +386,7 @@ const NO_PRODUCTS: readonly Product[] = [];
 export function MapViewer({
   children,
   insetOverlay,
+  legendInitiallyOpen = false,
   api,
   overlayStyle: sharedStyle,
   recordLayers = NO_LAYERS,
@@ -441,8 +444,9 @@ export function MapViewer({
   const ownStyle = useOverlayStyle(sharedStyle ? undefined : api, theme.name);
   const overlayStyle = sharedStyle ?? ownStyle;
   const overlay = overlayStyle.status === 'ready' ? overlayStyle.overlay : undefined;
-  // Open by default, as in the Conflict mockup.
-  const [legendOpen, setLegendOpen] = useState(true);
+  // Closed unless asked for: the Global, Satellites and RF mocks show none; the Conflict mock's
+  // analysis map does.
+  const [legendOpen, setLegendOpen] = useState(legendInitiallyOpen);
   const [layerStatus, setLayerStatus] = useState<Record<string, RecordLayerStatus>>({});
   const statusListener = useRef(onLayerStatus);
   useEffect(() => {

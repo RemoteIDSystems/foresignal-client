@@ -113,6 +113,12 @@ export async function openGlobal(page: Page) {
   await page.locator('.cesium-widget canvas').waitFor();
 }
 
+/** Opens the map legend, which starts closed on the Global map, unless it is open. */
+export async function showLegend(page: Page) {
+  const toggle = page.getByRole('button', { name: /^(Show|Hide) legend$/ });
+  if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+}
+
 /**
  * Stand-in data for layers that aggregate. Live aircraft (`aggBelowZoom` 7) has no records, and
  * only kinds with records are drawn, so `listKinds` is given one record of each kind here, each

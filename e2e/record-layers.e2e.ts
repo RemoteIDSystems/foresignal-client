@@ -5,6 +5,7 @@ import {
   expectLiveEarthquakes,
   kindToggle,
   openGlobal,
+  showLegend,
   pixelsNear,
   waitForRecords,
 } from './support';
@@ -19,6 +20,7 @@ test.beforeEach(async ({ page, request }) => {
 
 test('the rail opens grouped by category, with the mock’s categories on', async ({ page }) => {
   await openGlobal(page);
+  await showLegend(page);
   const state = (id: string) =>
     page.locator(`li[data-category="${id}"]`).getAttribute('data-category-state');
   for (const id of ['events', 'weather', 'infrastructure']) expect(await state(id)).toBe('on');
@@ -34,6 +36,7 @@ test('the rail opens grouped by category, with the mock’s categories on', asyn
 for (const mode of ['2D Map', '3D Globe'] as const) {
   test(`toggling the earthquake layer shows and hides its records (${mode})`, async ({ page }) => {
     await openGlobal(page);
+    await showLegend(page);
     await page.getByRole('tab', { name: mode }).click();
     const toggle = await kindToggle(page, 'Disasters / Hazards', 'earthquake');
     await expect(toggle).not.toBeChecked();
@@ -63,6 +66,7 @@ test('hiding a source in Filters takes its records off the map, and Show all bri
   page,
 }) => {
   await openGlobal(page);
+  await showLegend(page);
   await (await kindToggle(page, 'Disasters / Hazards', 'earthquake')).check();
   await waitForRecords(page, true);
   const shown = await pixelsNear(page, EARTHQUAKE_RGB);

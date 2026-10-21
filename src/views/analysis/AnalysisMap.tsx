@@ -96,6 +96,7 @@ export function AnalysisMap({
         data-layers={recordLayers.join(' ')}
       >
         <MapViewer
+          legendInitiallyOpen
           api={api}
           overlayStyle={overlayStyle}
           recordLayers={recordLayers}

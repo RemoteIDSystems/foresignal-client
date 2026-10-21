@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { collectProblems, getBackend, openCategory, openGlobal } from './support';
+import { collectProblems, getBackend, openCategory, openGlobal, showLegend } from './support';
 import { LOOP_FRAMES, standInProducts } from './products-support';
 
 /** Console errors and uncaught exceptions on the page; a check fails if any appear. */
@@ -89,6 +89,7 @@ const GREEN = (r: number, g: number, b: number) => g > 120 && r < 90 && b < 90;
 
 test('the default weather products draw over the basemap, with their legends', async ({ page }) => {
   await openGlobal(page);
+  await showLegend(page);
   // The curated defaults: the mock's Weather row is checked.
   await expect
     .poll(() => drawnProducts(page), { timeout: 60_000 })
@@ -140,6 +141,7 @@ test('a weather product animates through its loop, dropping expired frames', asy
     if (request.url().includes('/v1/products/loop?')) loops.push(request.url());
   });
   await openGlobal(page);
+  await showLegend(page);
   await expect.poll(() => drawnProducts(page), { timeout: 60_000 }).toContain('mrms-reflectivity');
   await page.waitForTimeout(4_000);
   // Where the tiles put the storm, to compare with where the loop's images put it: two paths
@@ -189,6 +191,7 @@ test('wind draws as a speed raster, as barbs, and as moving particles', async ({
   // Software WebGL draws the particles slowly, and this check turns on three layers in turn.
   test.setTimeout(240_000);
   await openGlobal(page);
+  await showLegend(page);
   await page.getByRole('button', { name: 'Turn all off' }).click();
   await expect.poll(() => drawnProducts(page)).toEqual([]);
   await page.waitForTimeout(2_000);
