@@ -3,6 +3,12 @@ import type { ForesignalClient } from '../api/client';
 import { unwrap } from '../api/client';
 import type { components } from '../api/generated/schema';
 
+/**
+ * The one value a read returns while loading, so it is the same object on every render (an
+ * effect or memo that lists the result does not run again for nothing).
+ */
+const LOADING = { status: 'loading' } as const;
+
 /** An object's related objects, flat (`RelatedObjects`). */
 export type RelatedObjects = components['schemas']['RelatedObjects'];
 
@@ -68,5 +74,5 @@ export function useRelatedObjects(
     return () => controller.abort();
   }, [api, ref, asOf, key]);
   if (key === undefined || !api) return { status: 'idle' };
-  return state.key === key ? state.value : { status: 'loading' };
+  return state.key === key ? state.value : LOADING;
 }

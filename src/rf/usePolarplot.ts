@@ -4,6 +4,12 @@ import { FsError } from '../api/errors';
 import { getPolarplotBlob, NO_ACTIVE_PASS } from './rfApi';
 import { POLARPLOT_REFRESH_MS } from './rfView';
 
+/**
+ * The one value a read returns while loading, so it is the same object on every render (an
+ * effect or memo that lists the result does not run again for nothing).
+ */
+const LOADING = { status: 'loading' } as const;
+
 /** Where a ground station's polar plot stands. */
 export type PolarplotState =
   | { status: 'loading' }
@@ -66,5 +72,5 @@ export function usePolarplot(
     };
   }, [api, sourceId]);
   if (!sourceId) return { status: 'error', message: 'This sensor has no polar plot.' };
-  return state?.key === sourceId ? state.value : { status: 'loading' };
+  return state?.key === sourceId ? state.value : LOADING;
 }

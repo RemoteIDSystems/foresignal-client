@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react';
 import type { ForesignalClient } from '../../api/client';
 import { loadOverlayStyle, type OverlayStyle } from './loadOverlayStyle';
 
+/**
+ * The one value a read returns while loading, so it is the same object on every render (an
+ * effect or memo that lists the result does not run again for nothing).
+ */
+const LOADING = { status: 'loading' } as const;
+
 /** Where loading the overlay style stands. */
 export type OverlayStyleState =
   | { status: 'idle' }
@@ -49,5 +55,5 @@ export function useOverlayStyle(
     };
   }, [api, theme, layerKey, key]);
   if (!api) return { status: 'idle' };
-  return settled?.key === key ? settled.state : { status: 'loading' };
+  return settled?.key === key ? settled.state : LOADING;
 }

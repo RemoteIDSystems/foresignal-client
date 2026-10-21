@@ -29,6 +29,12 @@ import {
 } from './annotationView';
 import styles from './Annotations.module.css';
 
+/**
+ * The one value a read returns while loading, so it is the same object on every render (an
+ * effect or memo that lists the result does not run again for nothing).
+ */
+const LOADING = { status: 'loading' } as const;
+
 /** Props for {@link AnnotationsPanel}. */
 export interface AnnotationsPanelProps {
   api: ForesignalClient | undefined;
@@ -78,7 +84,7 @@ export function AnnotationsPanel({
   // What was read for another object is not shown while this one's is read.
   const current = read?.ref === objectRef ? read : undefined;
   const notes = current?.notes ?? NO_NOTES;
-  const state: Notes = current?.state ?? { status: 'loading' };
+  const state: Notes = current?.state ?? LOADING;
   const authors = useAuthors(api, notes, caller);
 
   useEffect(() => {

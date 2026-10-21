@@ -3,6 +3,12 @@ import type { ForesignalClient } from '../api/client';
 import { getMediaBlob, getMediaThumbnailBlob, getProductImageBlob } from './imageryApi';
 import type { ImageSpec } from './imageryView';
 
+/**
+ * The one value a read returns while loading, so it is the same object on every render (an
+ * effect or memo that lists the result does not run again for nothing).
+ */
+const LOADING = { status: 'loading' } as const;
+
 /** Where fetching a picture stands: its URL to draw, or why there is none. */
 export type ImageUrlState =
   | { status: 'loading' }
@@ -59,5 +65,5 @@ export function useImageUrl(
   }, [api, key, fetched]);
   if (spec.type === 'url') return { status: 'ready', url: spec.url };
   if (!fetched) return { status: 'none' };
-  return state?.key === key ? state.value : { status: 'loading' };
+  return state?.key === key ? state.value : LOADING;
 }

@@ -4,6 +4,12 @@ import { getHypothesisSet, listHypothesisSets, type HypothesisSet } from './hypo
 import type { HypothesisScope } from './hypothesesView';
 import type { Part } from './useEvidence';
 
+/**
+ * The one value a read returns while loading, so it is the same object on every render (an
+ * effect or memo that lists the result does not run again for nothing).
+ */
+const LOADING = { status: 'loading' } as const;
+
 /** The message of a failed read. */
 const messageOf = (error: unknown) => (error instanceof Error ? error.message : 'It did not load.');
 
@@ -58,5 +64,5 @@ export function useRead<T>(
     );
     return () => controller.abort();
   }, [api, key, token, reader]);
-  return state?.token === token ? state.part : { status: 'loading' };
+  return state?.token === token ? state.part : LOADING;
 }

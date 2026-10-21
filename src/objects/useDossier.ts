@@ -2,6 +2,15 @@ import { useEffect, useState } from 'react';
 import type { ForesignalClient } from '../api/client';
 import { dossiersFor, type Dossier } from './objectApi';
 
+/**
+ * The one value a read returns while loading, so it is the same object on every render (an
+ * effect or memo that lists the result does not run again for nothing).
+ */
+const LOADING = { status: 'loading' } as const;
+
+/** The one value returned with nothing to read. */
+const IDLE = { status: 'idle' } as const;
+
 /** A dossier as the panel shows it: loading, loaded, or why it did not load. */
 export type DossierState =
   | { status: 'idle' }
@@ -44,7 +53,7 @@ export function useDossier(
   }, [api, ref, asOf, key, refresh]);
 
   if (!api || ref === undefined || state.key !== key) {
-    return ref === undefined || !api ? { status: 'idle' } : { status: 'loading' };
+    return ref === undefined || !api ? IDLE : LOADING;
   }
   return state.value;
 }

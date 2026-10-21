@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react';
 import type { ForesignalClient } from '../../api/client';
 import { loadProducts, type Product } from './productApi';
 
+/**
+ * The one value a read returns while loading, so it is the same object on every render (an
+ * effect or memo that lists the result does not run again for nothing).
+ */
+const LOADING = { status: 'loading' } as const;
+
 /** Where loading the product catalog stands. */
 export type ProductsState =
   | { status: 'loading' }
@@ -39,5 +45,5 @@ export function useProducts(api: ForesignalClient | undefined): ProductsState {
       clearInterval(timer);
     };
   }, [api]);
-  return state && state.api === api ? state.state : { status: 'loading' };
+  return state && state.api === api ? state.state : LOADING;
 }
