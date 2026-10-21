@@ -41,7 +41,8 @@ export function useHypothesisSets(
 /**
  * Reads one thing by a key (a set id, a scope) and keeps it as a {@link Part}: loading while
  * there is no key or the read is under way, then ready or failed. A new key or `version` reads
- * again; the read itself is taken as given on the first render.
+ * again; a new `version` keeps the last value shown until the new one lands. The read itself is
+ * taken as given on the first render.
  */
 export function useRead<T>(
   api: ForesignalClient | undefined,
@@ -64,5 +65,17 @@ export function useRead<T>(
     );
     return () => controller.abort();
   }, [api, key, token, reader]);
-  return state?.token === token ? state.part : LOADING;
+  if (state?.token === token) return state.part;
+  // Read again for a new version of the same key: what was read stays shown until the new read
+  // lands, so a list that refreshes after a change does not drop back to loading (and unmount what
+  // is open in it).
+  if (
+    state &&
+    key !== undefined &&
+    state.token.startsWith(`${key}#`) &&
+    state.part.status === 'ready'
+  ) {
+    return state.part;
+  }
+  return LOADING;
 }

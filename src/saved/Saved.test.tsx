@@ -194,7 +194,7 @@ describe('the saved-state dialog', () => {
   });
 
   it('flies to a place, shows its weather, and adds one at the map’s center', async () => {
-    const { store, bodies } = renderDialog('places');
+    const { store, bodies, asked } = renderDialog('places');
     const user = userEvent.setup();
     const row = await screen.findByRole('listitem', { name: 'Houston' });
     await user.click(within(row).getByRole('button', { name: 'Weather' }));
@@ -205,13 +205,18 @@ describe('the saved-state dialog', () => {
     await user.type(within(form).getByRole('textbox', { name: 'Name' }), 'Galveston');
     await user.click(within(form).getByRole('button', { name: 'Add place' }));
     expect(await screen.findByText('Created “Galveston”.')).toBeInTheDocument();
-    expect(bodies.at(-1)).toMatchObject({ id: 'galveston', shape: 'point', radiusKm: 20 });
+    // The lists read again after a change, so the create is found by its request, not by order.
+    expect(bodies[asked.indexOf('POST /v1/places')]).toMatchObject({
+      id: 'galveston',
+      shape: 'point',
+      radiusKm: 20,
+    });
     await user.click(within(row).getByRole('button', { name: 'Fly to' }));
     expect(store.get('locate')).toMatchObject({ longitude: -95.36, latitude: 29.76 });
   });
 
   it('lists a watchlist’s items, adds items and offers to track its current state', async () => {
-    const { bodies } = renderDialog('watchlists');
+    const { bodies, asked } = renderDialog('watchlists');
     const user = userEvent.setup();
     const row = await screen.findByRole('listitem', { name: 'Survey aircraft' });
     await user.click(within(row).getByRole('button', { name: 'Open' }));
@@ -222,7 +227,9 @@ describe('the saved-state dialog', () => {
     );
     await user.click(within(row).getByRole('button', { name: 'Add items' }));
     expect(await within(row).findByText('1 added, 0 updated.')).toBeInTheDocument();
-    expect(bodies.at(-1)).toEqual({ items: [{ value: 'D4E5F6', label: 'Survey 2' }] });
+    expect(bodies[asked.indexOf('POST /v1/watchlists/01HVXK/items')]).toEqual({
+      items: [{ value: 'D4E5F6', label: 'Survey 2' }],
+    });
     expect(within(row).getByRole('button', { name: 'Track current state' })).toBeEnabled();
     expect(
       within(row).getByRole('link', { name: 'Create alert for this watchlist' }),
