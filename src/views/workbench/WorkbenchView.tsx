@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react';
 import { ObjectNotes } from '../../annotations/ObjectNotes';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import type { TokenStore } from '../../api/auth';
 import type { ForesignalClient } from '../../api/client';
 import { useToken } from '../../api/useToken';
 import type { ViewGraph } from '../../graph/graphView';
@@ -38,8 +37,6 @@ export interface WorkbenchViewProps {
   store: Store<AppState>;
   /** What the route opens: an investigation or a situation by its `:id`; otherwise `?ref=`. */
   kind?: 'investigation' | 'situation';
-  /** The bearer token: with none set, the investigations listing (token only) is not asked for. */
-  tokens?: TokenStore;
 }
 
 /** The subject and its graph seeds, once read, with an investigation's header facts. */
@@ -57,7 +54,7 @@ interface Opened {
  * selected object and the investigations to open. Selecting a node selects it app-wide (014) and
  * shows it in the side panel.
  */
-export function WorkbenchView({ api, store, kind, tokens }: WorkbenchViewProps) {
+export function WorkbenchView({ api, store, kind }: WorkbenchViewProps) {
   const { id } = useParams();
   const [params] = useSearchParams();
   const refs = params.getAll('ref');
@@ -208,7 +205,7 @@ export function WorkbenchView({ api, store, kind, tokens }: WorkbenchViewProps) 
           </div>
         </header>
         {subject.kind === 'none' ? (
-          <WorkbenchStart api={api} store={store} tokens={tokens} />
+          <WorkbenchStart api={api} store={store} />
         ) : opened.status === 'error' ? (
           <p className={`${analysis.muted} ${styles.pad}`} role="alert">
             {opened.message}
@@ -252,16 +249,14 @@ export function WorkbenchView({ api, store, kind, tokens }: WorkbenchViewProps) 
 function WorkbenchStart({
   api,
   store,
-  tokens,
 }: {
   api: ForesignalClient | undefined;
   store: Store<AppState>;
-  tokens?: TokenStore;
 }) {
   const selection = useStoreKey('selection', store);
   const selectedRef = selectionRef(selection);
   // The listing always needs a token, so with none it is not asked for.
-  const token = useToken(tokens);
+  const token = useToken();
   const read = useRead(
     api,
     token === null ? undefined : `investigations#${token ?? ''}`,

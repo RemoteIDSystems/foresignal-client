@@ -2,6 +2,7 @@ import { expect, test, type BrowserContext, type Page, type Route } from '@playw
 import { me } from '../src/annotations/testing/annotationFixtures';
 import { storedRule, testResult } from '../src/rules/testing/ruleFixtures';
 import { collectProblems } from './support';
+import { standInTestToken } from './standIns';
 
 /**
  * Alert rules and Web Push (030). Writing rules, dry runs and push subscriptions need a token, so
@@ -32,12 +33,7 @@ function record(route: Route) {
 
 async function standIns(page: Page) {
   const saved: ReturnType<typeof storedRule>[] = [];
-  await page.addInitScript(() => localStorage.setItem('foresignal.token', 'fs_e2e_token'));
-  await page.route(/\/v1\//, (route) => {
-    const headers = { ...route.request().headers() };
-    delete headers.authorization;
-    return route.continue({ headers });
-  });
+  await standInTestToken(page);
   await page.route(/\/v1\/tokens\/current\/device$/, (route) => route.fulfill({ json: {} }));
   await page.route(/\/v1\/stream-tickets$/, (route) =>
     route.fulfill({

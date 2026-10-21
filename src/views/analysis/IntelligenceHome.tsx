@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import type { TokenStore } from '../../api/auth';
 import type { ForesignalClient } from '../../api/client';
 import { FsError } from '../../api/errors';
 import { useToken } from '../../api/useToken';
@@ -38,7 +37,7 @@ const STATUSES: readonly SituationSummary['status'][] = ['emerging', 'active', '
  * (`listInvestigations`, which always needs a token, so with none set it is not asked for). Each
  * opens its full-analysis view.
  */
-export function IntelligenceHome({ api, tokens }: { api?: ForesignalClient; tokens?: TokenStore }) {
+export function IntelligenceHome({ api }: { api?: ForesignalClient }) {
   const navigate = useNavigate();
   const [q, setQ] = useState('');
   const [query, setQuery] = useState('');
@@ -67,7 +66,7 @@ export function IntelligenceHome({ api, tokens }: { api?: ForesignalClient; toke
     return () => controller.abort();
   }, [api, query, statuses]);
 
-  const token = useToken(tokens);
+  const token = useToken();
   const investigations: Loaded<Investigation> = token === null ? NO_TOKEN : listed;
   useEffect(() => {
     if (!api || token === null) return;

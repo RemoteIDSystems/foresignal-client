@@ -13,6 +13,7 @@ import { ShortcutsDialog } from '../shortcuts/ShortcutsDialog';
 import { useShortcutListener, useShortcuts, type Shortcut } from '../shortcuts/shortcuts';
 import { WorkspacesDialog } from '../workspace/WorkspacesDialog';
 import { WorkspaceSyncContext } from '../workspace/workspaceSyncContext';
+import { TokenStoreContext } from '../api/useToken';
 import { ErrorBoundary } from './ErrorBoundary';
 import { TopNav } from './TopNav';
 import { VersionBanner } from './VersionBanner';
@@ -81,31 +82,33 @@ export function AppShell({ session }: { session: Session }) {
     return stop;
   }, [workspaces]);
   return (
-    <WorkspaceSyncContext.Provider value={workspaces}>
-      <div className={styles.shell}>
-        <a className={styles.skip} href="#main">
-          Skip to the main content
-        </a>
-        <TopNav session={session} />
-        <div className={styles.banner}>
-          <VersionBanner store={session.capabilities} />
-          <AlertStrip api={api} feed={alerts} canAct={canAct} onOpen={onOpen} />
-          <WelcomeCard store={store} />
+    <TokenStoreContext.Provider value={tokens}>
+      <WorkspaceSyncContext.Provider value={workspaces}>
+        <div className={styles.shell}>
+          <a className={styles.skip} href="#main">
+            Skip to the main content
+          </a>
+          <TopNav session={session} />
+          <div className={styles.banner}>
+            <VersionBanner store={session.capabilities} />
+            <AlertStrip api={api} feed={alerts} canAct={canAct} onOpen={onOpen} />
+            <WelcomeCard store={store} />
+          </div>
+          <main id="main" tabIndex={-1} className={styles.main}>
+            <ErrorBoundary
+              key={location.pathname}
+              label="This view"
+              {...(location.pathname !== '/global' && { onHome: () => void navigate('/global') })}
+            >
+              <Outlet />
+            </ErrorBoundary>
+          </main>
+          <WorkspacesDialog sync={workspaces} store={session.store} />
+          <SavedStateDialog api={api} store={session.store} token={token} onOpen={onOpen} />
+          <ShortcutsDialog store={store} />
+          <AlertToasts api={api} feed={alerts} canAct={canAct} onOpen={onOpen} />
         </div>
-        <main id="main" tabIndex={-1} className={styles.main}>
-          <ErrorBoundary
-            key={location.pathname}
-            label="This view"
-            {...(location.pathname !== '/global' && { onHome: () => void navigate('/global') })}
-          >
-            <Outlet />
-          </ErrorBoundary>
-        </main>
-        <WorkspacesDialog sync={workspaces} store={session.store} />
-        <SavedStateDialog api={api} store={session.store} token={token} onOpen={onOpen} />
-        <ShortcutsDialog store={store} />
-        <AlertToasts api={api} feed={alerts} canAct={canAct} onOpen={onOpen} />
-      </div>
-    </WorkspaceSyncContext.Provider>
+      </WorkspaceSyncContext.Provider>
+    </TokenStoreContext.Provider>
   );
 }

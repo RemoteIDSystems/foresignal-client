@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { situationSummary, SITUATION_ID } from '../../intel/testing/fixtures';
 import { json, standInApi } from '../../intel/testing/standIn';
+import { TokenStoreContext } from '../../api/useToken';
 import { IntelligenceHome } from './IntelligenceHome';
 
 describe('IntelligenceHome', () => {
@@ -39,9 +40,11 @@ describe('IntelligenceHome', () => {
     });
     const tokens = { get: () => null, set() {}, clear() {}, subscribe: () => () => {} };
     render(
-      <MemoryRouter initialEntries={['/intelligence']}>
-        <IntelligenceHome api={api} tokens={tokens} />
-      </MemoryRouter>,
+      <TokenStoreContext.Provider value={tokens}>
+        <MemoryRouter initialEntries={['/intelligence']}>
+          <IntelligenceHome api={api} />
+        </MemoryRouter>
+      </TokenStoreContext.Provider>,
     );
     expect(await screen.findByRole('list', { name: 'Situations' })).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent(

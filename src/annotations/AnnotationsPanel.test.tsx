@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { TokenStoreContext } from '../api/useToken';
 import { json, standInApi, type Answer } from '../intel/testing/standIn';
 import { AnnotationsPanel } from './AnnotationsPanel';
 import {
@@ -177,6 +178,20 @@ describe('the Analysis Notes panel', () => {
     expect(
       await screen.findByText('Notes need an access token. Add one in Settings.'),
     ).toBeInTheDocument();
+  });
+
+  it('does not read the notes or the caller without a token, and asks for one', async () => {
+    const { api, asked } = standInApi({});
+    const tokens = { get: () => null, set() {}, clear() {}, subscribe: () => () => {} };
+    render(
+      <TokenStoreContext.Provider value={tokens}>
+        <AnnotationsPanel api={api} objectRef={NOTED_REF} actions={[ANNOTATE_ACTION]} />
+      </TokenStoreContext.Provider>,
+    );
+    expect(
+      await screen.findByText('Notes need an access token. Add one in Settings.'),
+    ).toBeInTheDocument();
+    expect(asked).toEqual([]);
   });
 
   it('says why a note was not saved, and keeps the form open', async () => {

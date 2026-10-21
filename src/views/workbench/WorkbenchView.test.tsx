@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import type { TokenStore } from '../../api/auth';
 import type { ForesignalClient } from '../../api/client';
+import { TokenStoreContext } from '../../api/useToken';
 import type { RelationGraphProps } from '../../graph/RelationGraph';
 import {
   commonDependencies,
@@ -61,20 +62,19 @@ function renderAt(
   tokens?: TokenStore,
 ) {
   render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route
-          path="/analyst"
-          element={<WorkbenchView api={api} store={store} tokens={tokens} />}
-        />
-        <Route
-          path="/analyst/investigations/:id"
-          element={<WorkbenchView kind="investigation" api={api} store={store} />}
-        />
-        <Route path="/intelligence/investigations/:id" element={<p>Full analysis</p>} />
-        <Route path="/global" element={<p>Global dashboard</p>} />
-      </Routes>
-    </MemoryRouter>,
+    <TokenStoreContext.Provider value={tokens}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/analyst" element={<WorkbenchView api={api} store={store} />} />
+          <Route
+            path="/analyst/investigations/:id"
+            element={<WorkbenchView kind="investigation" api={api} store={store} />}
+          />
+          <Route path="/intelligence/investigations/:id" element={<p>Full analysis</p>} />
+          <Route path="/global" element={<p>Global dashboard</p>} />
+        </Routes>
+      </MemoryRouter>
+    </TokenStoreContext.Provider>,
   );
 }
 

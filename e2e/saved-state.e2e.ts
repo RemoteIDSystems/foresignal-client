@@ -9,6 +9,7 @@ import {
   pixelsNear,
   waitForRecords,
 } from './support';
+import { standInTestToken } from './standIns';
 
 /**
  * Saved state (031). Saving a view writes to the backend, so the views operations are stand-ins
@@ -24,12 +25,7 @@ let posted: Record<string, unknown>[] = [];
 
 async function standIns(page: Page) {
   const views: Record<string, unknown>[] = [];
-  await page.addInitScript(() => localStorage.setItem('foresignal.token', 'fs_e2e_token'));
-  await page.route(/\/v1\//, (route) => {
-    const headers = { ...route.request().headers() };
-    delete headers.authorization;
-    return route.continue({ headers });
-  });
+  await standInTestToken(page);
   await page.route(/\/v1\/me$/, (route) => route.fulfill({ json: me('agent') }));
   await page.route(/\/v1\/views(\?.*)?$/, async (route: Route) => {
     if (route.request().method() === 'GET')

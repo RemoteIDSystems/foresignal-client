@@ -2,6 +2,7 @@ import { expect, test, type Page, type Route } from '@playwright/test';
 import { me } from '../src/annotations/testing/annotationFixtures';
 import { alert, item } from '../src/alerts/testing/alertFixtures';
 import { collectProblems } from './support';
+import { standInTestToken } from './standIns';
 
 /**
  * Alerts and notifications (029). The inbox and the lifecycle calls need a token, and the local
@@ -29,13 +30,7 @@ function events(route: Route, list: { event: string; id?: string; data: unknown 
 async function standIns(page: Page) {
   let unread = 2;
   const FIRED = alert(5, { severity: 'critical', firedAt: new Date().toISOString() });
-  await page.addInitScript(() => localStorage.setItem('foresignal.token', 'fs_e2e_token'));
-  // Everything not stood in below goes to the backend as an open read, without the test token.
-  await page.route(/\/v1\//, (route) => {
-    const headers = { ...route.request().headers() };
-    delete headers.authorization;
-    return route.continue({ headers });
-  });
+  await standInTestToken(page);
   const record = (route: Route) => {
     const request = route.request();
     calls.push({

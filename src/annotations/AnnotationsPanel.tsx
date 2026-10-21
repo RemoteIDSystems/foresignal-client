@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import type { ForesignalClient } from '../api/client';
+import { useToken } from '../api/useToken';
 import { utcText } from '../intel/analysisView';
 import type { ObjectAction } from '../objects/objectApi';
 import { Badge } from '../ui/Badge';
@@ -62,13 +63,17 @@ interface Read {
 /** No notes, shared so an empty list keeps its identity between renders. */
 const NO_NOTES: Annotation[] = [];
 
+/** The notes with no token set: not asked for, since the backend would refuse them. */
+const NO_TOKEN = { status: 'error', message: 'This needs an access token.' } as const;
+
 /**
  * The Analysis Notes panel (026), as the mock draws it: All Notes / My Notes / Shared with counts,
  * `+ Add Note`,
  * and each note with its author's initials, time and text. It lists the notes and verdicts the
  * caller can see on one object (`listObjectAnnotations`); adding a note, recording a verdict and
  * editing or deleting a note are offered only when the envelope's actions and the caller's scopes
- * allow them (a verdict needs agent scope; a note is changed by its author or an admin).
+ * allow them (a verdict needs agent scope; a note is changed by its author or an admin). Both
+ * reads need a token, so with none set it asks for one instead of reading.
  */
 export function AnnotationsPanel({
   api,
@@ -77,18 +82,21 @@ export function AnnotationsPanel({
   heading = 'Analysis Notes',
 }: AnnotationsPanelProps) {
   const [read, setRead] = useState<Read>();
-  const [caller, setCaller] = useState<Me>();
+  const [known, setCaller] = useState<Me>();
   const [scope, setScope] = useState<NoteScope>('all');
   const [adding, setAdding] = useState(false);
   const [problem, setProblem] = useState<string>();
+  // Notes and the caller are read only with a token: the backend refuses both without one.
+  const token = useToken();
   // What was read for another object is not shown while this one's is read.
-  const current = read?.ref === objectRef ? read : undefined;
+  const current = read?.ref === objectRef && token !== null ? read : undefined;
   const notes = current?.notes ?? NO_NOTES;
-  const state: Notes = current?.state ?? LOADING;
+  const state: Notes = token === null ? NO_TOKEN : (current?.state ?? LOADING);
+  const caller = token === null ? undefined : known;
   const authors = useAuthors(api, notes, caller);
 
   useEffect(() => {
-    if (!api) return;
+    if (!api || token === null) return;
     const controller = new AbortController();
     listAnnotations(api, objectRef, controller.signal).then(
       (list) =>
@@ -107,7 +115,7 @@ export function AnnotationsPanel({
       () => undefined,
     );
     return () => controller.abort();
-  }, [api, objectRef]);
+  }, [api, objectRef, token]);
 
   const { canNote, canVerdict } = notePermissions(actions, caller);
   const shown = scopeNotes(notes, scope, caller?.principal.id);
