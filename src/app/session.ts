@@ -21,6 +21,7 @@ import { WorkspaceSync } from '../workspace/WorkspaceSync';
 import { AlertFeed } from '../alerts/AlertFeed';
 import { InboxFeed } from '../alerts/InboxFeed';
 import { WebPush } from '../push/webPush';
+import { SavedViewStream } from '../saved/viewStream';
 
 /** `info.version` of the vendored spec, from `openapi/VERSION`. */
 export const SPEC_VERSION = specVersionRaw.trim();
@@ -47,6 +48,8 @@ export interface Session {
   inbox: InboxFeed;
   /** This browser's Web Push subscription (030). */
   push: WebPush;
+  /** A saved view's own live stream (031), one per view, open while its layer is drawn. */
+  viewStream(viewId: string): SavedViewStream;
   /** Reports this browser's device metadata for the current token; resolves `false` with none. */
   reportDevice(): Promise<boolean>;
 }
@@ -101,6 +104,19 @@ export function createSession(options: SessionOptions = {}): Session {
     tickets,
   });
   const push = new WebPush(api, tokens.get);
+  const viewStreams = new Map<string, SavedViewStream>();
+  const viewStream = (viewId: string) => {
+    let stream = viewStreams.get(viewId);
+    if (!stream) {
+      stream = new SavedViewStream(viewId, {
+        baseUrl: options.baseUrl ?? baseUrl,
+        getToken: tokens.get,
+        tickets,
+      });
+      viewStreams.set(viewId, stream);
+    }
+    return stream;
+  };
 
   const reportDevice = async () => {
     if (!tokens.get()) return false;
@@ -134,6 +150,7 @@ export function createSession(options: SessionOptions = {}): Session {
     alerts,
     inbox,
     push,
+    viewStream,
     reportDevice,
   };
 }

@@ -1,0 +1,142 @@
+/* Saved state (031): the Global rail's section and the saved-state dialog. */
+
+.railSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px 10px 28px;
+  border-top: 1px solid var(--fs-color-border);
+}
+
+.openView {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--fs-color-accent);
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-accent-soft);
+  font-size: var(--fs-font-size-sm);
+}
+
+.inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.input {
+  flex: 1 1 140px;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--fs-color-border-strong);
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-raised);
+  color: var(--fs-color-text);
+  font: inherit;
+  font-size: var(--fs-font-size-sm);
+}
+
+.muted {
+  margin: 0;
+  color: var(--fs-color-text-muted);
+  font-size: var(--fs-font-size-xs);
+}
+
+.entries {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 0;
+  border: 0;
+  background: transparent;
+  color: var(--fs-color-text-secondary);
+  font: inherit;
+  font-size: var(--fs-font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.entry:hover {
+  color: var(--fs-color-text);
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-md);
+  background: var(--fs-color-panel);
+}
+
+.rowHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.rowName {
+  margin-right: auto;
+  font-weight: 600;
+}
+
+.form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-md);
+  background: var(--fs-color-panel-alt);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  color: var(--fs-color-text-muted);
+  font-size: var(--fs-font-size-xs);
+}
+
+.textarea {
+  min-height: 72px;
+  padding: 6px 8px;
+  border: 1px solid var(--fs-color-border-strong);
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-raised);
+  color: var(--fs-color-text);
+  font: inherit;
+  font-size: var(--fs-font-size-sm);
+}

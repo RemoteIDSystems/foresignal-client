@@ -44,6 +44,12 @@ export interface RecordLayersValue {
   selectRef?: (ref: string) => Promise<void>;
   /** Opens the Ask ForeSignal panel (017). */
   openAsk?: () => void;
+  /** The kinds the map draws, to save as a view (031). */
+  drawnKinds?: readonly string[];
+  /** The saved view drawn in place of the kinds (031), by id. */
+  openView?: string;
+  /** Closes the open saved view; the kinds are drawn again. */
+  closeView?: () => void;
 }
 
 /** What the rail reads and changes of the product layers. */

@@ -1,3 +1,4 @@
+import type { SavedTab } from '../../state/store';
 import {
   BarChart3,
   BookOpen,
@@ -81,6 +82,8 @@ export interface RailEntry {
   workbench?: boolean;
   /** Opens the Workspaces dialog (025). */
   workspaces?: boolean;
+  /** Opens the saved-state dialog on this tab (031). */
+  saved?: SavedTab;
 }
 
 /** The ANALYSIS section, in the Conflict mock's order. */
@@ -99,7 +102,7 @@ export const ANALYSIS_ENTRIES: readonly RailEntry[] = [
 export const TOOL_ENTRIES: readonly RailEntry[] = [
   { label: 'Ask ForeSignal', icon: Bot, later: 'the Global dashboard (017)' },
   { label: 'Analysis Builder', icon: BarChart3, workbench: true },
-  { label: 'Saved Views', icon: Save, later: '031' },
+  { label: 'Saved Views', icon: Save, saved: 'views' },
   { label: 'Workspaces', icon: BookOpen, workspaces: true },
 ];
 

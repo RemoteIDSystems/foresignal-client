@@ -27,6 +27,7 @@ import {
   type WorkbenchSubject,
 } from './workbench';
 import analysis from '../analysis/Analysis.module.css';
+import { SAVED_ENTRIES } from '../../saved/savedEntries';
 import styles from './Workbench.module.css';
 
 /** Props for {@link WorkbenchView}. */
@@ -152,6 +153,17 @@ export function WorkbenchView({ api, store, kind }: WorkbenchViewProps) {
           <StickyNote size={15} aria-hidden="true" />
           Notes
         </button>
+        {SAVED_ENTRIES.map(({ tab, label, icon: Icon }) => (
+          <button
+            key={tab}
+            type="button"
+            className={analysis.railItem}
+            onClick={() => store.set('savedOpen', tab)}
+          >
+            <Icon size={15} aria-hidden="true" />
+            {label}
+          </button>
+        ))}
       </nav>
       <main className={analysis.main}>
         <header className={analysis.header}>

@@ -1,3 +1,4 @@
+import { appStore, type AppState, type Store } from '../../state/store';
 import { useWorkspaceSync } from '../../workspace/workspaceSyncContext';
 import { ANALYSIS_ENTRIES, TOOL_ENTRIES, type RailEntry } from './frame';
 import styles from './Analysis.module.css';
@@ -6,8 +7,8 @@ import styles from './Analysis.module.css';
  * The full-analysis left rail (019), as the Conflict mock draws it: ANALYSIS (Situations, Analytic
  * Findings, Hypotheses, Forecasts, Indicators, Base Rates, Comparisons, Reports) and TOOLS. An entry
  * opens its tab of the open analysis, or the list; Analysis Builder opens the analysis in the
- * Analyst Workbench (024) and Workspaces the Workspaces dialog (025). One whose screen is built
- * later is shown disabled, naming the prompt.
+ * Analyst Workbench (024), Workspaces the Workspaces dialog (025) and Saved Views the saved-state
+ * dialog (031). One whose screen is built later is shown disabled, naming the prompt.
  */
 export function AnalysisRail({
   tab,
@@ -15,6 +16,7 @@ export function AnalysisRail({
   onHome,
   onWorkbench,
   atHome,
+  store = appStore,
 }: {
   tab?: string;
   onTab?: (tab: string) => void;
@@ -22,6 +24,8 @@ export function AnalysisRail({
   /** Opens the open analysis in the Analyst Workbench. */
   onWorkbench?: () => void;
   atHome?: boolean;
+  /** The store the saved-state dialog opens through (031); the app's by default. */
+  store?: Store<AppState>;
 }) {
   const workspaces = useWorkspaceSync();
   const item = (entry: RailEntry) => {
@@ -31,7 +35,7 @@ export function AnalysisRail({
       ? !onWorkbench
       : entry.workspaces
         ? !workspaces
-        : !entry.home && (entry.tab === undefined || !onTab);
+        : !entry.home && !entry.saved && (entry.tab === undefined || !onTab);
     return (
       <button
         key={entry.label}
@@ -50,6 +54,7 @@ export function AnalysisRail({
           if (entry.home) onHome();
           else if (entry.workbench) onWorkbench?.();
           else if (entry.workspaces) workspaces?.openDialog();
+          else if (entry.saved) store.set('savedOpen', entry.saved);
           else if (entry.tab) onTab?.(entry.tab);
         }}
       >

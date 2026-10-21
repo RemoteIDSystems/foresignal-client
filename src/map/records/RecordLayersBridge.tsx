@@ -6,7 +6,7 @@ import type { ChangeStream } from '../../api/stream/ChangeStream';
 import { registerEngine } from '../stress/engineProbe';
 import type { OverlayStyle } from '../style/loadOverlayStyle';
 import type { RecordFeature } from './decodeTile';
-import { changedArea, liveArea, type ChangedArea } from './liveChanges';
+import { changedArea, liveArea, type ChangedArea, type LiveAreaSource } from './liveChanges';
 import { MapPointer } from './mapPointer';
 import { RecordLayerSet } from './recordLayerSet';
 import type { RecordLayerStatus } from './recordLayers';
@@ -29,6 +29,8 @@ export interface RecordLayersBridgeProps {
   onSelect?: (hit: RecordHit | undefined) => void;
   /** The live stream: the tiles its changes touch are fetched again and redrawn (011). */
   stream?: ChangeStream;
+  /** Another live source of changed areas: a saved view's own stream (031). */
+  liveAreas?: LiveAreaSource;
   /** The instant the layers are pinned at (013), to the second; undefined for live data. */
   asOf?: string;
   /** A history playback's step, drawn in place of the tiles while one is shown (013). */
@@ -40,7 +42,8 @@ export interface RecordLayersBridgeProps {
  * layers, the hidden sources and the overlay style, and runs the map's pointer ({@link MapPointer}),
  * which picks the set's records on hover and click. With the live stream, the tiles a change or
  * live position touches are fetched again ({@link RecordLayerSet.applyAreas}), and a resync loads
- * every drawn tile again. Pinned at an instant (013), the layers draw that instant's tiles and the
+ * every drawn tile again; a saved view's own stream (`liveAreas`, 031) does the same for its
+ * layer. Pinned at an instant (013), the layers draw that instant's tiles and the
  * stream's changes wait; a history playback's step is drawn in their place. Renders nothing itself: the records are Cesium primitives. In development
  * it registers the engine for the stress harness and the end-to-end checks.
  */
@@ -53,6 +56,7 @@ export function RecordLayersBridge({
   onHover,
   onSelect,
   stream,
+  liveAreas,
   asOf,
   frame,
 }: RecordLayersBridgeProps) {
@@ -94,6 +98,15 @@ export function RecordLayersBridge({
       },
     });
   }, [stream]);
+
+  useEffect(
+    () =>
+      liveAreas?.listen({
+        areas: (areas) => setRef.current?.applyAreas(areas),
+        reload: () => setRef.current?.reload(),
+      }),
+    [liveAreas],
+  );
 
   useEffect(() => {
     if (!viewer) return;

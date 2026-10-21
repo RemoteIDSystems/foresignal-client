@@ -227,6 +227,7 @@ export function AnalysisView({ api, stream, store = appStore, kind }: AnalysisVi
         onTab={setTab}
         onHome={() => void navigate('/intelligence')}
         onWorkbench={() => void navigate(workbenchPath(ref))}
+        store={store}
       />
       <div className={styles.main}>
         {header}

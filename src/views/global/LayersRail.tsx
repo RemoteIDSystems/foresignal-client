@@ -46,6 +46,7 @@ import { Badge } from '../../ui/Badge';
 import { Button } from '../../ui/Button';
 import { Tabs } from '../../ui/Tabs';
 import { useRecordLayers, type RecordLayersValue } from './recordLayersContext';
+import { SavedRailSection } from '../../saved/SavedRailSection';
 import styles from './GlobalDashboard.module.css';
 
 type RailTab = 'layers' | 'entities' | 'filters';
@@ -201,6 +202,7 @@ function LayersTab({
       <div className={styles.railFooter}>
         <Button icon={<Plus size={14} />}>Add Layer</Button>
       </div>
+      <SavedRailSection />
     </>
   );
 }

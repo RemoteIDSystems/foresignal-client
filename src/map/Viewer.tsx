@@ -49,6 +49,7 @@ import { frameFeature } from '../time/history';
 import type { Trail } from '../time/trail';
 import { hitKey } from './records/mapPointer';
 import type { RecordHit } from './records/recordPicking';
+import type { LiveAreaSource } from './records/liveChanges';
 import { createTerrainProvider, TerrainSampler } from './terrain';
 import { MapHud, type CameraState, type GroundPoint, type MapHudProps } from './MapHud';
 import { niceScale } from './readout';
@@ -334,6 +335,8 @@ export interface MapViewerProps {
   onProductStatus?: (key: string, status: ProductLayerStatus) => void;
   /** The live stream, which keeps the records and product frames on the map current (011). */
   stream?: ChangeStream;
+  /** A saved view's own stream, which keeps its layer current (031). */
+  liveAreas?: LiveAreaSource;
   /** The store holding the scene mode (012); the app's by default. */
   store?: Store<AppState>;
   /** Areas outlined over the map, such as a situation's footprint (019). */
@@ -394,6 +397,7 @@ export function MapViewer({
   selected: controlledSelection,
   onSelect,
   stream,
+  liveAreas,
   store = appStore,
   areas,
   scene,
@@ -701,6 +705,7 @@ export function MapViewer({
             onHover={setHovered}
             onSelect={select}
             stream={stream}
+            liveAreas={liveAreas}
             asOf={asOf}
             frame={frame}
           />

@@ -38,7 +38,12 @@ export function App({ session, initialPath }: AppProps) {
         <Route
           path="/global"
           element={
-            <GlobalDashboard api={session.api} stream={session.stream} store={session.store} />
+            <GlobalDashboard
+              api={session.api}
+              stream={session.stream}
+              viewStream={session.viewStream}
+              store={session.store}
+            />
           }
         />
         <Route

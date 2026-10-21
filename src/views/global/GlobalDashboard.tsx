@@ -27,6 +27,8 @@ import { analysisPath } from '../../intel/analysisView';
 import { parseObjectRef } from '../../lib/objectRef';
 import { hitForRef } from '../../objects/selectObject';
 import { useCommittedViewport, viewportOf } from '../../state/viewport';
+import type { LiveAreaSource } from '../../map/records/liveChanges';
+import { viewLayerId } from '../../map/records/viewLayers';
 import { appStore, useStoreKey, type AppState, type Store } from '../../state/store';
 import { ActivityTimelinePanel, InsightsPanel, RecentImageryPanel } from './BottomPanels';
 import { RelatedEntitiesPanel } from './RelatedEntitiesPanel';
@@ -108,16 +110,21 @@ const PANELS: readonly DockPanel[] = [
  * in the committed view, so the map stays current; the time HUD's badge shows its state. The time
  * HUD (013) pins the map at an instant in the last day, or plays its history. The enabled
  * layers, hidden sources, selection and viewport are the store's (012), so they outlast the page. The other
- * panels are skeletons with placeholder data until their prompts.
+ * panels are skeletons with placeholder data until their prompts. A saved view opened from the
+ * rail (031) is drawn in place of the kinds' layers, from its own tiles and its own stream; turning
+ * a kind on or off closes it.
  */
 export function GlobalDashboard({
   api,
   stream,
+  viewStream,
   store = appStore,
 }: {
   api?: ForesignalClient;
   /** The live stream (011): held open while the page shows, narrowed to its layers and view. */
   stream?: ChangeStream;
+  /** A saved view's own live stream (031), for the open view's layer. */
+  viewStream?: (viewId: string) => LiveAreaSource;
   /** The store the page's layers, selection, viewport and scene live in (012); the app's. */
   store?: Store<AppState>;
 }) {
@@ -136,9 +143,10 @@ export function GlobalDashboard({
     () => (layerState.kinds ? new Set(layerState.kinds) : undefined),
     [layerState.kinds],
   );
+  // Choosing kinds closes an open saved view: the map then draws the kinds again.
   const setChosen = useCallback(
     (kinds: ReadonlySet<string> | undefined) =>
-      store.merge('layers', { kinds: kinds && [...kinds].sort() }),
+      store.merge('layers', { kinds: kinds && [...kinds].sort(), view: undefined }),
     [store],
   );
   const enabled = useMemo(
@@ -217,7 +225,16 @@ export function GlobalDashboard({
     [entries, enabledProducts, setProductKeys, productStatuses],
   );
 
-  const clear = useCallback(() => store.merge('layers', { kinds: [], products: [] }), [store]);
+  const clear = useCallback(
+    () => store.merge('layers', { kinds: [], products: [], view: undefined }),
+    [store],
+  );
+  const openView = layerState.view;
+  const closeView = useCallback(() => store.merge('layers', { view: undefined }), [store]);
+  const liveAreas = useMemo(
+    () => (openView && viewStream ? viewStream(openView) : undefined),
+    [openView, viewStream],
+  );
 
   const hiddenSources = useMemo(
     () => new Set(layerState.hiddenSources),
@@ -261,6 +278,11 @@ export function GlobalDashboard({
     if (stress) return catalog.kinds.filter((entry) => enabled.has(entry.id)).map((e) => e.id);
     return drawnLayers(catalog, enabled);
   }, [catalog, enabled, stress]);
+  // An open saved view (031) is one layer drawn from its own tiles, in place of the kinds'.
+  const mapLayers = useMemo(
+    () => (openView ? [viewLayerId(openView)] : recordLayers),
+    [openView, recordLayers],
+  );
   const allKinds = useMemo(() => catalog?.kinds.map((entry) => entry.id) ?? [], [catalog]);
   const restoreKinds = useCallback(() => setChosen(undefined), [setChosen]);
   const allOn = useCallback(() => setChosen(new Set(allKinds)), [allKinds, setChosen]);
@@ -334,6 +356,9 @@ export function GlobalDashboard({
       summary,
       selectRef,
       openAsk,
+      drawnKinds: recordLayers,
+      openView,
+      closeView,
     }),
     [
       railCatalog,
@@ -353,6 +378,9 @@ export function GlobalDashboard({
       summary,
       selectRef,
       openAsk,
+      recordLayers,
+      openView,
+      closeView,
     ],
   );
 
@@ -363,7 +391,8 @@ export function GlobalDashboard({
           <MapViewer
             api={api}
             overlayStyle={overlayStyle}
-            recordLayers={recordLayers}
+            recordLayers={mapLayers}
+            liveAreas={liveAreas}
             hiddenSources={hiddenSources}
             legendScope={legendScope}
             legendEmptyNote={

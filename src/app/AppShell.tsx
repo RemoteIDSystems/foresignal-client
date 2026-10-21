@@ -6,6 +6,7 @@ import { startPresence } from '../alerts/presence';
 import { useCanActOnAlerts } from '../alerts/useAlerts';
 import { useOpenObject } from '../intel/useOpenObject';
 import { useDeepLinks } from '../push/useDeepLinks';
+import { SavedStateDialog } from '../saved/SavedStateDialog';
 import { WorkspacesDialog } from '../workspace/WorkspacesDialog';
 import { WorkspaceSyncContext } from '../workspace/workspaceSyncContext';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -21,7 +22,7 @@ import styles from './AppShell.module.css';
  * cleared, and the Workspaces dialog is available on every screen. It runs the alerts (029): the
  * open alerts and their stream, the top alerts strip and the alert toasts, this device's inbox,
  * and the presence heartbeat. It opens what a link or an activated push notification names
- * (`?open=<ref>`, 030).
+ * (`?open=<ref>`, 030), and holds the saved-state dialog (031).
  */
 export function AppShell({ session }: { session: Session }) {
   const location = useLocation();
@@ -68,6 +69,7 @@ export function AppShell({ session }: { session: Session }) {
           </ErrorBoundary>
         </main>
         <WorkspacesDialog sync={workspaces} store={session.store} />
+        <SavedStateDialog api={api} store={session.store} token={token} onOpen={onOpen} />
         <AlertToasts api={api} feed={alerts} canAct={canAct} onOpen={onOpen} />
       </div>
     </WorkspaceSyncContext.Provider>

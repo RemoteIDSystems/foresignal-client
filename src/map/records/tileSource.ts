@@ -2,6 +2,7 @@ import type { ForesignalClient } from '../../api/client';
 import { decodeTile, type RecordFeature } from './decodeTile';
 import type { GeoRect, TileId } from './tileMath';
 import { parseTileTemplate, type RecordTileTemplate } from './tileTemplate';
+import { viewIdOf } from './viewLayers';
 
 /** A record layer's TileJSON, reduced to what drawing it needs. */
 export interface LayerTiles {
@@ -28,7 +29,8 @@ export type LayerTilesResult =
  * instant, and its template carries the backend's own form of the instant, which the tiles are then
  * asked for with: the client never builds the time string of a tile URL. A TileJSON with no usable
  * template (none, another shape, or a time alias such as `latest`) cannot be drawn and gives a
- * message. Retries on 429/503 are the API client's (002).
+ * message. Retries on 429/503 are the API client's (002). A saved view's layer (`view:<id>`, 031)
+ * reads the view's own TileJSON (`getViewTileJson`).
  */
 export async function loadLayerTiles(
   api: ForesignalClient,
@@ -36,10 +38,14 @@ export async function loadLayerTiles(
   signal?: AbortSignal,
   asOf?: string,
 ): Promise<LayerTilesResult> {
-  const { data, error, response } = await api.GET('/v1/tiles/{layer}.json', {
-    params: { path: { layer }, ...(asOf !== undefined && { query: { asOf } }) },
-    signal,
-  });
+  const viewId = viewIdOf(layer);
+  // A saved view (031) is drawn from its own TileJSON; it has no time machine.
+  const { data, error, response } = viewId
+    ? await api.GET('/v1/views/{viewId}/tiles.json', { params: { path: { viewId } }, signal })
+    : await api.GET('/v1/tiles/{layer}.json', {
+        params: { path: { layer }, ...(asOf !== undefined && { query: { asOf } }) },
+        signal,
+      });
   if (!data) {
     return {
       ok: false,
@@ -97,12 +103,24 @@ export async function fetchTile(
   agg?: TileAggregation,
 ): Promise<TileResult> {
   const query = agg ? { ...template.query, agg } : template.query;
-  const { data, error, response } = await api.GET('/v1/tiles/{layer}/{z}/{x}/{y}.mvt', {
-    params: { path: { layer: template.layer, ...tile }, query },
-    parseAs: 'arrayBuffer',
-    headers: { Accept: 'application/vnd.mapbox-vector-tile' },
-    signal,
-  });
+  const headers = { Accept: 'application/vnd.mapbox-vector-tile' };
+  // A saved view's tiles (031) take only a ticket: they are never aggregated or pinned.
+  const { data, error, response } = template.view
+    ? await api.GET('/v1/views/{viewId}/tiles/{z}/{x}/{y}.mvt', {
+        params: {
+          path: { viewId: template.view, ...tile },
+          ...(template.query.ticket !== undefined && { query: { ticket: template.query.ticket } }),
+        },
+        parseAs: 'arrayBuffer',
+        headers,
+        signal,
+      })
+    : await api.GET('/v1/tiles/{layer}/{z}/{x}/{y}.mvt', {
+        params: { path: { layer: template.layer, ...tile }, query },
+        parseAs: 'arrayBuffer',
+        headers,
+        signal,
+      });
   if (response.status === 404) {
     return { status: 'missing', message: describeError(error, 'The layer is not on the server.') };
   }

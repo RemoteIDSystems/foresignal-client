@@ -13,7 +13,12 @@ export interface LayersState {
   products?: readonly string[];
   /** Sources whose records are hidden (the FILTERS tab), sorted. */
   hiddenSources: readonly string[];
+  /** The saved view drawn in place of the kinds' layers (031), by id; undefined for none. */
+  view?: string;
 }
+
+/** The tabs of the saved-state dialog (031). */
+export type SavedTab = 'views' | 'places' | 'watchlists';
 
 /** The time cursor: following live data, or pinned at an instant (013's time machine). */
 export type TimeCursor = { mode: 'live' } | { mode: 'asOf'; asOf: string };
@@ -71,6 +76,8 @@ export interface AppState {
   workspace: ActiveWorkspace | undefined;
   /** Whether the Workspaces dialog is open (025). */
   workspacesOpen: boolean;
+  /** The saved-state dialog's open tab (031); undefined while it is closed. */
+  savedOpen: SavedTab | undefined;
   /** The dashboard panels the user closed, by id, sorted; kept in a workspace's layout (025). */
   closedPanels: readonly string[];
   [key: `layer:${string}`]: LayerLive | undefined;
@@ -112,6 +119,7 @@ export const INITIAL_STATE: AppState = {
   locate: undefined,
   workspace: undefined,
   workspacesOpen: false,
+  savedOpen: undefined,
   closedPanels: [],
 };
 

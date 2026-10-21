@@ -80,3 +80,17 @@ export function parseTileKey(key: string): TileId {
   const [z, x, y] = key.split('/').map(Number);
   return { z: z!, x: x!, y: y! };
 }
+
+/** Receives changed areas from a live source other than the change stream. */
+export interface LiveAreaHandlers {
+  /** Areas whose tiles are fetched again. */
+  areas(areas: readonly ChangedArea[]): void;
+  /** Every drawn tile is fetched again (the source lost updates). */
+  reload(): void;
+}
+
+/** A live source of changed areas, such as a saved view's own stream (031). */
+export interface LiveAreaSource {
+  /** Starts handing areas to `handlers`; returns the function that stops it. */
+  listen(handlers: LiveAreaHandlers): () => void;
+}
