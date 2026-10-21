@@ -158,7 +158,7 @@ design language, review-gated.)*
 | # | Prompt | What it delivers |
 |---|---|---|
 | 037 | Client-Clustering | Client-side clustering for the 189 kinds the backend doesn't aggregate, so world-zoom-all-on draws cells at 60fps (closes the 035 world-zoom frame-budget gap) |
-| 038 | Basemap-Styles | Map / Satellite basemap selector; NASA Marble overview hands off to CARTO (OSM) or Esri World Imagery as you zoom in — matching Shadowbroker's sources |
+| 038 | Basemap-Styles | Map / Satellite basemap selector; NASA Marble overview hands off to a keyless OSM raster map (CARTO if a key is set) or Esri World Imagery as you zoom in — Shadowbroker's structure, raster-OSM in place of its vector OpenFreeMap |
 
 ---
 
