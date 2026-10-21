@@ -17,6 +17,7 @@ import {
   type SeriesData,
 } from '../../intel/analyticsApi';
 import {
+  corroborationTone,
   EVIDENCE_GROUPS,
   findingRef,
   findingTone,
@@ -228,8 +229,8 @@ export function MetricsPanel({
 
 /**
  * The Evidence panel, as the mock's EVIDENCE: All and a tab per group with its count; each row an
- * icon for its group, the title, when, its source and family tags, and a confidence tag; the
- * first {@link EVIDENCE_ROWS}, then "View all evidence".
+ * icon for its group, the title, when, its source and family tags, and its corroboration as the
+ * backend writes it; the first {@link EVIDENCE_ROWS}, then "View all evidence".
  */
 export function EvidencePanel({
   rows,
@@ -293,15 +294,7 @@ export function EvidencePanel({
                 </span>
               </span>
               {row.confidence && (
-                <Badge
-                  tone={
-                    row.confidence === 'High'
-                      ? 'success'
-                      : row.confidence === 'Medium'
-                        ? 'warning'
-                        : 'danger'
-                  }
-                >
+                <Badge tone={corroborationTone(row.confidence)} uppercase={false}>
                   {row.confidence}
                 </Badge>
               )}

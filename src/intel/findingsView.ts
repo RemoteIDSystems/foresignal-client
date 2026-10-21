@@ -43,7 +43,8 @@ export interface EvidenceRow {
   /** The source, kind and family tags. */
   tags: string[];
   group: EvidenceGroup;
-  confidence: 'High' | 'Medium' | 'Low' | undefined;
+  /** The member's corroboration, as the backend writes it; none for an item. */
+  confidence: SituationMember['corroboration'] | undefined;
   /** The object to open. */
   ref?: string;
 }
@@ -60,21 +61,16 @@ export function evidenceGroup(kind: string | null | undefined, derived: boolean)
   return 'signals';
 }
 
-/**
- * A member's confidence tag from its corroboration: High when corroborated, Low when not, Medium
- * when unknown; none when corroboration does not apply.
- */
+/** A member's confidence tag: its corroboration exactly as the backend writes it. */
 export function memberConfidence(member: SituationMember): EvidenceRow['confidence'] {
-  switch (member.corroboration) {
-    case 'corroborated':
-      return 'High';
-    case 'uncorroborated':
-      return 'Low';
-    case 'unknown':
-      return 'Medium';
-    default:
-      return undefined;
-  }
+  return member.corroboration ?? undefined;
+}
+
+/** A corroboration tag's tone: corroborated green, uncorroborated red, anything else amber. */
+export function corroborationTone(value: string): BadgeTone {
+  if (value === 'corroborated') return 'success';
+  if (value === 'uncorroborated') return 'danger';
+  return 'warning';
 }
 
 /** A situation's members as evidence rows, newest observed first. */

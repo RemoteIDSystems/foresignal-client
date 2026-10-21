@@ -1,5 +1,6 @@
 import { itemRef, itemTitle } from './analysisView';
 import {
+  corroborationTone,
   evidenceGroup,
   findingTone,
   itemEvidence,
@@ -32,10 +33,10 @@ describe('the evidence rows', () => {
   it('lists a situation’s members newest first, with their confidence and object', () => {
     const rows = memberEvidence([member, eventMember]);
     expect(rows.map((row) => row.title)).toEqual([eventMember.title, member.title]);
-    expect(rows[0]).toMatchObject({ group: 'reports', confidence: 'Low' });
+    expect(rows[0]).toMatchObject({ group: 'reports', confidence: 'uncorroborated' });
     expect(rows[1]).toMatchObject({
       group: 'signals',
-      confidence: 'High',
+      confidence: 'corroborated',
       ref: 'record:usgs-earthquakes/nc75095651',
       detail: '2026-10-18 14:12Z',
     });
@@ -46,6 +47,14 @@ describe('the evidence rows', () => {
     const rows = itemEvidence(investigation.items ?? [], itemRef, itemTitle);
     expect(rows).toHaveLength(1);
     expect(rows[0]!.group).toBe('signals');
+  });
+});
+
+describe('the corroboration tag', () => {
+  it('keeps the backend’s word and tones it', () => {
+    expect(corroborationTone('corroborated')).toBe('success');
+    expect(corroborationTone('uncorroborated')).toBe('danger');
+    expect(corroborationTone('unknown')).toBe('warning');
   });
 });
 

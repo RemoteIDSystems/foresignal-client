@@ -118,11 +118,11 @@ describe('the Evidence tab', () => {
     expect(panel).toHaveTextContent('Evidence (2)');
     const list = within(panel).getByRole('list', { name: 'Evidence' });
     expect(within(list).getAllByRole('listitem')).toHaveLength(2);
-    expect(list).toHaveTextContent('High');
+    expect(list).toHaveTextContent('corroborated');
     await userEvent.click(within(panel).getByRole('tab', { name: 'Reports (1)' }));
     expect(within(list).getAllByRole('listitem')).toHaveLength(1);
     expect(list).toHaveTextContent('Power outage near Santa Rosa');
-    expect(list).toHaveTextContent('Low');
+    expect(list).toHaveTextContent('uncorroborated');
     await userEvent.click(within(panel).getByRole('tab', { name: 'Imagery (0)' }));
     expect(panel).toHaveTextContent('No evidence of this type.');
   });
