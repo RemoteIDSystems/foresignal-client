@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useToken } from '../api/useToken';
 import { utcText } from '../intel/analysisView';
 import { useRead } from '../intel/useHypotheses';
 import { useStoreKey, type AppState, type Store } from '../state/store';
@@ -9,6 +10,9 @@ import type { WorkspaceSync } from './WorkspaceSync';
 import { listWorkspaces } from './workspaceApi';
 import { linkUrl } from './workspaceContext';
 import styles from './Workspaces.module.css';
+
+/** The workspaces with no token set: not listed, since the backend would refuse it. */
+const NO_TOKEN = { status: 'error', message: 'Listing workspaces needs a token.' } as const;
 
 /** What the dialog last did, for its status line. */
 type Note = { tone: 'ok' | 'error'; text: string };
@@ -23,16 +27,19 @@ function failure(error: unknown): string {
  * The Workspaces dialog (025): the open workspace (its name, role and context version, with Copy
  * link, Share and Leave), the workspace a deep link came from, the caller's workspaces to open,
  * and a form to create one from what the app shows. Copy link works with no workspace open too.
+ * The list needs a token, so with none set it asks for one instead of reading.
  */
 export function WorkspacesDialog({ sync, store }: { sync: WorkspaceSync; store: Store<AppState> }) {
   const open = useStoreKey('workspacesOpen', store);
   const active = useStoreKey('workspace', store);
   const [version, setVersion] = useState(0);
-  const workspaces = useRead(
+  const token = useToken();
+  const listed = useRead(
     sync.api,
-    open ? `list#${version}` : undefined,
+    open && token !== null ? `list#${version}#${token ?? ''}` : undefined,
     (client, _key, signal) => listWorkspaces(client, signal),
   );
+  const workspaces = token === null ? NO_TOKEN : listed;
   const [name, setName] = useState('');
   const [note, setNote] = useState<Note>();
   const [link, setLink] = useState<string>();

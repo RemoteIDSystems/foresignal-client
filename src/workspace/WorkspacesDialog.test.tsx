@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { TokenStoreContext } from '../api/useToken';
 import { json, standInApi, type Answer } from '../intel/testing/standIn';
 import { createStore, INITIAL_STATE, type AppState } from '../state/store';
 import { quakeDossier, workspace, WORKSPACE_ID } from './testing/workspaceFixtures';
@@ -114,6 +115,24 @@ describe('the Workspaces dialog', () => {
         json({ title: 'Unauthorized', status: 401, detail: 'This operation needs a token.' }, 401),
     });
     expect(await screen.findByText(/Add an access token in Settings\./)).toBeInTheDocument();
+  });
+
+  it('does not list the workspaces without a token, and asks for one', async () => {
+    const stand = standInApi({});
+    const store = createStore<AppState>({ ...INITIAL_STATE, workspacesOpen: true });
+    const tokens = { get: () => null, set() {}, clear() {}, subscribe: () => () => {} };
+    render(
+      <TokenStoreContext.Provider value={tokens}>
+        <WorkspacesDialog
+          sync={new WorkspaceSync(stand.api, store, { debounceMs: 0 })}
+          store={store}
+        />
+      </TokenStoreContext.Provider>,
+    );
+    expect(
+      await screen.findByText('Listing workspaces needs a token. Add an access token in Settings.'),
+    ).toBeInTheDocument();
+    expect(stand.asked).toEqual([]);
   });
 
   it('closes on Escape', async () => {
