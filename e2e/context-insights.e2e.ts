@@ -93,6 +93,15 @@ test('activity and insights rows render as the backend gives them, and a row sel
   const quake = records.items.find((item) => item.geometry?.coordinates)!;
   const [longitude, latitude] = quake.geometry.coordinates;
   const ref = `record:${quake.source}/${encodeURIComponent(quake.externalId)}`;
+  // Its dossier is the backend's own, read here and handed to the page: the page's read can meet
+  // the local backend's limit on anonymous requests while the map loads, and fail after retries.
+  const dossier = (await (
+    await getBackend(request, `/v1/objects/${encodeURIComponent(ref)}/dossier`)
+  ).json()) as unknown;
+  await page.route(
+    (url) => url.pathname === `/v1/objects/${encodeURIComponent(ref)}/dossier`,
+    (route) => route.fulfill({ json: dossier }),
+  );
   const now = Date.now();
   const at = (minutesAgo: number) => new Date(now - minutesAgo * 60_000).toISOString();
   await page.route('**/v1/context/summary', (route) =>
