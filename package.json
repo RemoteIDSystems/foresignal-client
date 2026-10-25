@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "license": "MIT",
-  "author": "RemoteID Systems, LLC",
+  "author": "RemoteID Systems, LLC <info@remoteidsystems.com>",
   "type": "module",
   "engines": {
     "node": ">=22.12.0"
