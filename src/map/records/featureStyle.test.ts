@@ -67,6 +67,55 @@ describe('resolveSymbol', () => {
     );
   });
 
+  it('picks the airport’s chart symbol and its towered color, turned along the runway', () => {
+    const value = (field: string) => ['downcase', ['to-string', ['coalesce', ['get', field], '']]];
+    const airports = parseOverlayStyle({
+      version: 8,
+      sources: {},
+      layers: [
+        {
+          id: 'ourairports--airport--point',
+          type: 'symbol',
+          source: 'ourairports',
+          'source-layer': 'ourairports',
+          filter: ['match', ['geometry-type'], ['Point', 'MultiPoint'], true, false],
+          layout: {
+            'icon-image': [
+              'match',
+              value('chartSymbol'),
+              'hard',
+              'airport-hard',
+              'major',
+              'airport-major',
+              'airport-soft',
+            ],
+            'icon-rotate': ['coalesce', ['to-number', ['get', 'runwayHeading']], 0],
+            'icon-rotation-alignment': 'map',
+          },
+          paint: { 'icon-color': ['match', value('towered'), 'true', '#4F8FE8', '#D04FB4'] },
+        },
+      ],
+      metadata: { foresignal: { layers: [{ id: 'ourairports', kinds: ['airport'] }] } },
+    } as unknown as MapStyle);
+    expect(airports.icons).toEqual(['airport-hard', 'airport-major', 'airport-soft']);
+    const airport = (properties: Record<string, string | number | boolean>) =>
+      resolveSymbol(
+        airports,
+        'ourairports',
+        { source: 'ourairports', kind: 'airport', ...properties },
+        'point',
+        9,
+      );
+    expect(airport({ chartSymbol: 'major', towered: true, runwayHeading: 31 })).toMatchObject({
+      point: { type: 'icon', icon: 'airport-major', color: '#4F8FE8', rotation: 31 },
+    });
+    expect(airport({ chartSymbol: 'hard', towered: false })).toMatchObject({
+      point: { icon: 'airport-hard', color: '#D04FB4' },
+    });
+    expect(airport({ chartSymbol: 'HARD' })).toMatchObject({ point: { icon: 'airport-hard' } });
+    expect(airport({})).toMatchObject({ point: { icon: 'airport-soft', color: '#D04FB4' } });
+  });
+
   it('draws lines and polygons with their widths at the zoom', () => {
     const line = resolveSymbol(model, 'acled', conflict('acled'), 'line', 10);
     expect(line).toMatchObject({ type: 'line', line: { color: '#C92A2A' } });

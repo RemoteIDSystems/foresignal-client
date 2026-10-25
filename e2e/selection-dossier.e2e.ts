@@ -94,7 +94,7 @@ test('clicking a record opens its dossier from the backend, and a 2D-only item k
   expect(problems).toEqual([]);
 });
 
-test('a 3D-applicable item switches to the globe and flies to it; an unavailable section shows its message', async ({
+test('selecting a 3D-applicable item on the 2D map keeps the 2D map; an unavailable section shows its message', async ({
   page,
 }) => {
   // A stand-in storm (it has a storm structure to show, so a 3D view) and a stand-in dossier for it.
@@ -181,24 +181,11 @@ test('a 3D-applicable item switches to the globe and flies to it; an unavailable
   const at = await screenOf(page, -97.5, 33.2);
   await page.mouse.click(at.x, at.y);
   await expect(map).toHaveAttribute('data-selected', 'earthquake|usgs-earthquakes|standin-storm');
-  // Contextual 3D: the scene switches to the globe and the camera flies to look down on it.
-  await expect(map).toHaveAttribute('data-scene-mode', '3d');
-  await expect
-    .poll(() => page.evaluate(() => window.__foresignalEngine?.viewer.scene.mode), {
-      timeout: 10_000,
-    })
-    .toBe(3);
+  // Selecting never changes the scene: the storm has a 3D view, but only the 2D Map / 3D Globe
+  // toggle switches to the globe. Cesium's SceneMode.SCENE2D is 2.
   await page.waitForTimeout(3_000);
-  const view = await page.evaluate(() => {
-    const { camera } = window.__foresignalEngine!.viewer;
-    return { height: camera.positionCartographic.height, pitch: (camera.pitch * 180) / Math.PI };
-  });
-  expect(view.height).toBeGreaterThan(1_000_000);
-  expect(view.height).toBeLessThan(3_000_000);
-  expect(view.pitch).toBeLessThan(-30);
-  const centered = await screenOf(page, -97.5, 33.2);
-  expect(Math.abs(centered.x - (centered.canvas.x + centered.canvas.width / 2))).toBeLessThan(40);
-  expect(Math.abs(centered.y - (centered.canvas.y + centered.canvas.height / 2))).toBeLessThan(40);
+  await expect(map).toHaveAttribute('data-scene-mode', '2d');
+  expect(await page.evaluate(() => window.__foresignalEngine?.viewer.scene.mode)).toBe(2);
 
   // The panel: the envelope's actions; the unavailable imagery's message while the rest render.
   const panel = page.getByTestId('entity-panel');

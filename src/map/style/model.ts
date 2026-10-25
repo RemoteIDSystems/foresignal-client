@@ -64,11 +64,26 @@ interface GeometryStyleBase {
   maxzoom?: number;
 }
 
+/**
+ * An icon chosen by a feature field: `["match", input, value, icon, …, fallback]` over a
+ * `["get", field]` input, as the airports' chart symbols are.
+ */
+export interface IconMatch {
+  /** Feature property the match reads. */
+  field: string;
+  /** True when the style lowercases the value before matching. */
+  caseInsensitive: boolean;
+  /** Values compared with the field, and the icon each selects. */
+  cases: { values: string[]; icon: string }[];
+}
+
 /** A point drawn as an SDF icon from the sprite, tinted by `color`. */
 export interface IconStyle extends GeometryStyleBase {
   type: 'icon';
-  /** Sprite icon name. */
+  /** Sprite icon name; with `iconMatch`, the icon for a value no case names. */
   icon: string;
+  /** The icon by a feature field, when the style chooses it per feature. */
+  iconMatch?: IconMatch;
   color: ColorRule;
   haloColor?: string;
   haloWidth?: number;
@@ -190,6 +205,24 @@ export function colorFor(
   let value = raw === undefined || raw === null ? '' : String(raw);
   if (rule.caseInsensitive) value = value.toLowerCase();
   return rule.cases.find((item) => item.values.includes(value))?.color ?? rule.fallback;
+}
+
+/**
+ * The sprite icon a style draws for a feature with these properties: the matched case, else the
+ * style's own icon. The field is read as a string, as the style's `to-string` does.
+ */
+export function iconFor(style: IconStyle, properties: Record<string, unknown> = {}): string {
+  const match = style.iconMatch;
+  if (!match) return style.icon;
+  const raw = properties[match.field];
+  let value = raw === undefined || raw === null ? '' : String(raw);
+  if (match.caseInsensitive) value = value.toLowerCase();
+  return match.cases.find((item) => item.values.includes(value))?.icon ?? style.icon;
+}
+
+/** Every icon a style can draw: its own and each case's. */
+export function iconsOf(style: IconStyle): string[] {
+  return [style.icon, ...(style.iconMatch?.cases.map((item) => item.icon) ?? [])];
 }
 
 /** The color a rule shows when nothing about the feature is known: the constant, or the fallback. */

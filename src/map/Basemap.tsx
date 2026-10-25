@@ -28,7 +28,7 @@ export interface BasemapProps {
 /**
  * Lives inside the Resium viewer and draws the basemap (038): the self-hosted NASA Blue Marble /
  * Black Marble day/night overview at every zoom, handed off past the overview zoom to the picked
- * style's detailed tiles ({@link BasemapHandOff}): OpenStreetMap, or CARTO with `VITE_CARTO_KEY`,
+ * style's detailed tiles ({@link BasemapHandOff}): Esri Dark Gray, or CARTO with `VITE_CARTO_KEY`,
  * for the map, Esri World Imagery for satellite. Changing style swaps the detailed tiles without a
  * blink. Renders nothing.
  */

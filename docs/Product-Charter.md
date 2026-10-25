@@ -2,7 +2,7 @@
 
 > **Living document, owned by Adam.** It records decisions, not law. When this document and
 > the code disagree, the code is what is true and this is corrected. **Nothing enters scope
-> that is not written here or asked for directly.** Date: 2026-10-18.
+> that is not written here or asked for directly.** Date: 2026-10-21.
 
 ---
 
@@ -57,8 +57,9 @@ build-time only and ships nothing at runtime.
 - Operator interactions the backend exposes: selection, filtering, annotations, workspace
   context and deep links, alert acknowledge/snooze/resolve, saved views/watchlists, and
   on-demand analysis requests.
-- Full **2D map and 3D globe** views (2D default, contextual 3D on selection), scaling to the backend's entire source catalog
-  (~300–500 simultaneous source layers) **without an artificial client-side cap**.
+- Full **2D map and 3D globe** views (2D default; the user switches between them with the 2D Map /
+  3D Globe toggle, and selecting an item never switches them), scaling to the backend's entire
+  source catalog (~300–500 simultaneous source layers) **without an artificial client-side cap**.
 
 ### Out of scope
 
@@ -90,7 +91,7 @@ invented, and not sourced from a prose document.
 - **Vite + React 19 + TypeScript** — the application shell and all non-map UI (panels, charts,
   timelines, entity graph, HUD chrome).
 - **CesiumJS (via Resium)** — the map/globe rendering engine: one component providing **2D map,
-  3D globe** scene modes (2D default; contextual 3D on selection).
+  3D globe** scene modes (2D default; switched only by the user's toggle).
 - **Cesium primitives** (decoded from MVT) — the batched rendering path for record layers (deck.gl
   does not align with a WGS84/terrain Cesium host; it is kept only as a reserved escape hatch,
   Architecture §5.2).

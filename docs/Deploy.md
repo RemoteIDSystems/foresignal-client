@@ -43,13 +43,14 @@ token is entered in Settings and kept in the browser.
 Below the overview zoom the map draws the self-hosted NASA basemap from `basemap/`. Zoomed in, it
 hands off to tiles the browser fetches directly from their providers (038):
 
-- **Map**: OpenStreetMap's raster tiles (`tile.openstreetmap.org`). This is the default, and it
-  needs no key.
+- **Map**: Esri's World Dark Gray Canvas (`server.arcgisonline.com`,
+  `Canvas/World_Dark_Gray_Base`). This is the default, and it needs no key. It has real tiles to
+  level 16, so the map does not zoom past that level.
 - **Satellite**: Esri World Imagery (`server.arcgisonline.com`). It needs no key.
 
 `VITE_CARTO_KEY` is the optional CARTO basemaps key. Set when the bundle is built, it makes the Map
 basemap draw CARTO's dark raster street map (`basemaps.cartocdn.com`, `dark_all`) in place of
-OpenStreetMap. Unset or blank, Map draws OpenStreetMap; CARTO is never asked without a key. The
+Esri Dark Gray. Unset or blank, Map draws Esri Dark Gray; CARTO is never asked without a key. The
 key is a browser-side key: it is compiled into the bundle and sent with every CARTO tile request.
 
 ```sh

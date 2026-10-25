@@ -85,7 +85,7 @@ in this list.
 ### Map — prompts 005–010
 | # | Prompt | What it delivers |
 |---|---|---|
-| 005 | Cesium-Viewer | Resium `<Viewer>`, 2D/3D toggle (2D default; contextual 3D on selection, 014), `CESIUM_BASE_URL`, base imagery, HUD (scale bar, lat/lon/elev, compass, zoom, mini inset) |
+| 005 | Cesium-Viewer | Resium `<Viewer>`, 2D/3D toggle (2D default; only the toggle switches, never a selection), `CESIUM_BASE_URL`, base imagery, HUD (scale bar, lat/lon/elev, compass, zoom, mini inset) |
 | 006 | Map-Overlay-Style | `getMapStyle` + sprites/icons as the per-kind styling source; legend panel |
 | 007 | Record-Layers | Record vector tiles (`listTileLayers`/`getTileJson`/`getTile`) decoded to **batched Cesium primitives**; left LAYERS rail with toggles |
 | 008 | Aggregation-And-Viewport | Hex aggregation below `aggBelowZoom`; viewport bbox+zoom scoping; `summarizeContext` counts |
@@ -158,7 +158,7 @@ design language, review-gated.)*
 | # | Prompt | What it delivers |
 |---|---|---|
 | 037 | Client-Clustering | Client-side clustering for the 189 kinds the backend doesn't aggregate, so world-zoom-all-on draws cells at 60fps (closes the 035 world-zoom frame-budget gap) |
-| 038 | Basemap-Styles | Map / Satellite basemap selector; NASA Marble overview hands off to a keyless OSM raster map (CARTO if a key is set) or Esri World Imagery as you zoom in — Shadowbroker's structure, raster-OSM in place of its vector OpenFreeMap |
+| 038 | Basemap-Styles | Map / Satellite basemap selector; NASA Marble overview hands off to a keyless street map (CARTO if a key is set) or Esri World Imagery as you zoom in — Shadowbroker's structure. 038 shipped OSM raster for Map; it is now Esri World Dark Gray Canvas, to stay dark when zoomed in |
 
 ---
 

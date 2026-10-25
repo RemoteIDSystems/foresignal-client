@@ -11,6 +11,7 @@ import { MapPointer } from './mapPointer';
 import { RecordLayerSet } from './recordLayerSet';
 import type { RecordLayerStatus } from './recordLayers';
 import type { RecordHit } from './recordPicking';
+import type { RecordGrouping } from './recordGrouping';
 
 /** Props for {@link RecordLayersBridge}. */
 export interface RecordLayersBridgeProps {
@@ -35,6 +36,8 @@ export interface RecordLayersBridgeProps {
   asOf?: string;
   /** A history playback's step, drawn in place of the tiles while one is shown (013). */
   frame?: readonly RecordFeature[];
+  /** Hexagon cells zoomed out, or every record on its own; hexagons by default. */
+  grouping?: RecordGrouping;
 }
 
 /**
@@ -59,23 +62,25 @@ export function RecordLayersBridge({
   liveAreas,
   asOf,
   frame,
+  grouping = 'hexagons',
 }: RecordLayersBridgeProps) {
   const { viewer } = useCesium();
   const setRef = useRef<RecordLayerSet>(undefined);
-  const latest = useRef({ overlay, layers, hiddenSources, asOf, frame });
+  const latest = useRef({ overlay, layers, hiddenSources, asOf, frame, grouping });
   const pointerHandlers = useRef({ onHover, onSelect });
   const streamRef = useRef(stream);
 
   // Declared first so it runs first: on the first render the set does not exist yet and picks
   // these up when it is created below.
   useEffect(() => {
-    latest.current = { overlay, layers, hiddenSources, asOf, frame };
+    latest.current = { overlay, layers, hiddenSources, asOf, frame, grouping };
+    setRef.current?.setGrouping(grouping);
     setRef.current?.setStyle(overlay);
     setRef.current?.setHiddenSources(hiddenSources);
     setRef.current?.setAsOf(asOf);
     setRef.current?.setLayers(layers);
     setRef.current?.setFrame(frame);
-  }, [overlay, layers, hiddenSources, asOf, frame]);
+  }, [overlay, layers, hiddenSources, asOf, frame, grouping]);
 
   useEffect(() => {
     pointerHandlers.current = { onHover, onSelect };
@@ -111,6 +116,7 @@ export function RecordLayersBridge({
   useEffect(() => {
     if (!viewer) return;
     const set = new RecordLayerSet(viewer, api, onStatus);
+    set.setGrouping(latest.current.grouping);
     set.setStyle(latest.current.overlay);
     set.setHiddenSources(latest.current.hiddenSources);
     set.setAsOf(latest.current.asOf);

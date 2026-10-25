@@ -15,6 +15,7 @@ import {
   type RecordView,
 } from './recordLayers';
 import { compareHits, type PickQuery, type RecordHit } from './recordPicking';
+import type { RecordGrouping } from './recordGrouping';
 import { SymbolImages } from './symbolImages';
 
 /** How long the camera must rest before the layers fetch tiles for the new view, in ms. */
@@ -123,6 +124,8 @@ export class RecordLayerSet {
   private readonly clusters: ClientCellLayer;
   /** Whether the layers cluster their points now. */
   private clustering = false;
+  /** Whether every record is drawn on its own at every zoom (the grouping toggle). */
+  private individual = false;
 
   /**
    * @param viewer The Cesium viewer to draw into.
@@ -393,6 +396,7 @@ export class RecordLayerSet {
     this.layers.set(id, layer);
     layer.setHiddenSources(this.hiddenSources);
     layer.setClusterAllowed(this.clustering);
+    layer.setIndividual(this.individual);
     layer.update(this.currentView());
   }
 
@@ -424,14 +428,27 @@ export class RecordLayerSet {
   }
 
   /**
+   * Draws every record on its own at every zoom (`grouping` `individual`), or groups dense layers
+   * into hexagon cells zoomed out (`hexagons`, the default).
+   */
+  setGrouping(grouping: RecordGrouping): void {
+    const individual = grouping === 'individual';
+    if (individual === this.individual) return;
+    this.individual = individual;
+    for (const layer of this.layers.values()) layer.setIndividual(individual);
+    this.decideClustering();
+  }
+
+  /**
    * Clusters the layers' points while the view's tiles hold more than the budget across the
-   * layers, and stops once they hold fewer than the release ({@link shouldCluster}).
+   * layers, and stops once they hold fewer than the release ({@link shouldCluster}); never while
+   * every record is drawn on its own.
    */
   private decideClustering(): void {
     if (this.viewer.isDestroyed()) return;
     let points = 0;
     for (const layer of this.layers.values()) points += layer.pointsInView;
-    const next = shouldCluster(points, this.clustering);
+    const next = !this.individual && shouldCluster(points, this.clustering);
     if (next === this.clustering) return;
     this.clustering = next;
     for (const layer of this.layers.values()) layer.setClusterAllowed(next);

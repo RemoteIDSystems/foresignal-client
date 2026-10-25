@@ -39,10 +39,11 @@ export const DATA_CREDITS: readonly DataCredit[] = [
     source: 'https://www.ncei.noaa.gov/products/etopo-global-relief-model',
   },
   {
-    name: 'OpenStreetMap standard tiles (© OpenStreetMap contributors, ODbL)',
+    name: 'World Dark Gray Canvas (Esri, HERE, Garmin, © OpenStreetMap contributors, and the GIS user community)',
     use: 'Map basemap past the overview zoom, without a CARTO key',
-    provider: 'OpenStreetMap Foundation',
-    source: 'https://www.openstreetmap.org/copyright',
+    provider: 'Esri',
+    source:
+      'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer',
   },
   {
     name: 'CARTO Dark Matter raster tiles (© OpenStreetMap contributors, © CARTO)',

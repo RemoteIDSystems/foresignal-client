@@ -3,7 +3,7 @@ import { collectProblems } from './support';
 
 /**
  * Basemap styles (038). The map opens on the NASA Marble overview; zoomed in past the overview
- * zoom it hands off to the picked basemap's detailed tiles: OpenStreetMap for Map (no key in this
+ * zoom it hands off to the picked basemap's detailed tiles: Esri Dark Gray for Map (no key in this
  * build, so CARTO is never asked), Esri World Imagery for Satellite. The credit on the map follows
  * the source drawn, switching source keeps a basemap layer on the globe at every frame, and the
  * pick is remembered across a reload. These checks fetch real tiles from both providers.
@@ -14,7 +14,8 @@ const CITY = { longitude: -122.42, latitude: 37.77, height: 40_000 };
 /** The whole world: the overview. */
 const WORLD = { longitude: -95, latitude: 38, height: 20_000_000 };
 
-const OSM = /^https:\/\/tile\.openstreetmap\.org\//;
+const DARK_GRAY =
+  /^https:\/\/server\.arcgisonline\.com\/ArcGIS\/rest\/services\/Canvas\/World_Dark_Gray_Base\//;
 const ESRI = /^https:\/\/server\.arcgisonline\.com\/ArcGIS\/rest\/services\/World_Imagery\//;
 const CARTO = /basemaps\.cartocdn\.com/;
 
@@ -55,7 +56,7 @@ function recordTiles(page: Page): Response[] {
   const responses: Response[] = [];
   page.on('response', (response) => {
     const url = response.url();
-    if (OSM.test(url) || ESRI.test(url) || CARTO.test(url)) responses.push(response);
+    if (DARK_GRAY.test(url) || ESRI.test(url) || CARTO.test(url)) responses.push(response);
   });
   return responses;
 }
@@ -70,7 +71,9 @@ function imagesFrom(responses: Response[], host: RegExp): Response[] {
   );
 }
 
-test('the map hands off from the NASA overview to OpenStreetMap, with no key', async ({ page }) => {
+test('the map hands off from the NASA overview to Esri Dark Gray, with no key', async ({
+  page,
+}) => {
   const tiles = recordTiles(page);
   await openMap(page);
   const map = page.getByTestId('map-viewer');
@@ -81,9 +84,11 @@ test('the map hands off from the NASA overview to OpenStreetMap, with no key', a
   expect(tiles).toEqual([]);
 
   await moveTo(page, CITY);
-  await expect(map).toHaveAttribute('data-basemap-detail', 'osm');
-  await expect(page.getByTestId('map-attribution')).toContainText('© OpenStreetMap contributors');
-  await expect.poll(() => imagesFrom(tiles, OSM).length, { timeout: 30_000 }).toBeGreaterThan(0);
+  await expect(map).toHaveAttribute('data-basemap-detail', 'esri-dark');
+  await expect(page.getByTestId('map-attribution')).toContainText('Esri, HERE, Garmin');
+  await expect
+    .poll(() => imagesFrom(tiles, DARK_GRAY).length, { timeout: 30_000 })
+    .toBeGreaterThan(0);
   // Without a key CARTO is never asked: its unkeyed tiles are an "API KEY REQUIRED" placeholder.
   expect(tiles.filter((response) => CARTO.test(response.url()))).toEqual([]);
 
@@ -96,7 +101,7 @@ test('Satellite draws Esri World Imagery, without a blink, and is remembered', a
   await openMap(page);
   const map = page.getByTestId('map-viewer');
   await moveTo(page, CITY);
-  await expect(map).toHaveAttribute('data-basemap-detail', 'osm');
+  await expect(map).toHaveAttribute('data-basemap-detail', 'esri-dark');
   await page.evaluate(
     () =>
       new Promise<void>((done) => {
@@ -116,7 +121,7 @@ test('Satellite draws Esri World Imagery, without a blink, and is remembered', a
       for (let i = 0; i < imageryLayers.length; i++) {
         const layer = imageryLayers.get(i);
         const url = (layer.imageryProvider as { url?: string } | undefined)?.url ?? '';
-        if (layer.show && /openstreetmap|arcgisonline/.test(url)) shown++;
+        if (layer.show && /arcgisonline/.test(url)) shown++;
       }
       at.shownLayers.push(shown);
       at.layerFrame = requestAnimationFrame(tick);

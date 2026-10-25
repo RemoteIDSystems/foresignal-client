@@ -1,0 +1,21 @@
+import { chromium } from '@playwright/test';
+const out = process.argv[2];
+const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
+const tiles = [];
+page.on('response', (r) => { if (/arcgisonline|openstreetmap/.test(r.url())) tiles.push(`${r.status()} ${r.url().slice(0, 110)}`); });
+await page.goto('http://localhost:5174/global');
+await page.getByTestId('map-viewer').locator('.cesium-widget canvas').waitFor({ timeout: 60000 });
+await page.waitForFunction(() => Boolean(window.__foresignalEngine), null, { timeout: 60000 });
+await page.evaluate(() => {
+  const { camera, scene } = window.__foresignalEngine.viewer;
+  const here = camera.positionCartographic.clone();
+  here.longitude = (-74.0 * Math.PI) / 180; here.latitude = (40.71 * Math.PI) / 180; here.height = 30000;
+  camera.setView({ destination: scene.globe.ellipsoid.cartographicToCartesian(here) });
+});
+await page.waitForFunction(() => window.__foresignalEngine.viewer.scene.globe.tilesLoaded, null, { timeout: 60000 }).catch(() => {});
+await page.waitForTimeout(4000);
+console.log('detail:', await page.getByTestId('map-viewer').getAttribute('data-basemap-detail'));
+console.log(tiles.slice(0, 4).join('\n'), `\n(${tiles.length} basemap tile responses)`);
+await page.screenshot({ path: out });
+await browser.close();

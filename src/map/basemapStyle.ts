@@ -2,7 +2,6 @@ import {
   ArcGisMapServerImageryProvider,
   Credit,
   ImageryLayer,
-  OpenStreetMapImageryProvider,
   UrlTemplateImageryProvider,
   type ImageryProvider,
 } from 'cesium';
@@ -24,13 +23,17 @@ export const DEFAULT_BASEMAP_STYLE: BasemapStyle = 'map';
 export const BASEMAP_STYLE_KEY = 'foresignal.basemapStyle';
 
 /**
- * The detailed tile source drawn past the hand-off zoom: OpenStreetMap's own raster tiles (the
- * street map with no key), CARTO's dark raster street map (only with a key), or Esri World Imagery.
+ * The detailed tile source drawn past the hand-off zoom: Esri's Dark Gray Canvas (the dark street
+ * map with no key), CARTO's dark raster street map (only with a key), or Esri World Imagery.
  */
-export type DetailSource = 'osm' | 'carto' | 'esri';
+export type DetailSource = 'esri-dark' | 'carto' | 'esri';
 
-/** OpenStreetMap's tile server, as Cesium's OpenStreetMap provider takes it. */
-export const OSM_URL = 'https://tile.openstreetmap.org/';
+/**
+ * Esri's Dark Gray Canvas base tiles, Web Mercator, `{z}/{y}/{x}`. Keyless on the same host as
+ * World Imagery, and dark to match the interface and the Black Marble night side.
+ */
+export const ESRI_DARK_GRAY_TEMPLATE =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
 
 /** CARTO's raster style for the street map: the dark one, to match the dark interface. */
 export const CARTO_STYLE = 'dark_all';
@@ -47,13 +50,15 @@ export const ESRI_WORLD_IMAGERY_URL =
 
 /**
  * The deepest level of each detailed source, as far as it is known before its tiles are asked:
- * - OpenStreetMap's standard tiles stop at 19;
- * - CARTO's are held to the same level, as they draw the same OpenStreetMap data;
+ * - Esri Dark Gray's service lists 24 levels, but its tiles past 16 are a "Map data not yet
+ *   available" placeholder (fetched over New York on 2026-10-21), so it stops at 16 and Cesium
+ *   stretches level 16 beyond;
+ * - CARTO's stop at 19, OpenStreetMap's standard level;
  * - Esri's service listed 24 levels (0–23) when read on 2026-10-21. Once the service's metadata is
  *   read, its own deepest level ({@link describeShown}) takes the place of this one.
  */
 export const DETAIL_MAX_LEVELS: Readonly<Record<DetailSource, number>> = {
-  osm: 19,
+  'esri-dark': 16,
   carto: 19,
   esri: 23,
 };
@@ -73,10 +78,10 @@ export function detailMetersPerPixel(level: number): number {
  * moment before the service answers.
  */
 export const DETAIL_ATTRIBUTIONS: Readonly<Record<DetailSource, Attribution>> = {
-  osm: {
-    text: '© OpenStreetMap contributors',
-    licence: 'ODbL-1.0',
-    url: 'https://www.openstreetmap.org/copyright',
+  'esri-dark': {
+    text: 'Esri, HERE, Garmin, © OpenStreetMap contributors, and the GIS user community',
+    licence: 'Esri-terms',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer',
     requiredDisplay: true,
   },
   carto: {
@@ -122,7 +127,7 @@ export function writeBasemapStyle(style: BasemapStyle): void {
 
 /**
  * This build's CARTO key (`VITE_CARTO_KEY`), trimmed; undefined when unset or blank, which keeps
- * the street map on OpenStreetMap.
+ * the street map on Esri Dark Gray.
  */
 export function cartoKey(
   raw: string | undefined = import.meta.env.VITE_CARTO_KEY,
@@ -132,13 +137,13 @@ export function cartoKey(
 }
 
 /**
- * The detailed source for a basemap: Esri for satellite; for the street map CARTO with a key and
- * OpenStreetMap without one. CARTO answers every request without a key with an "API KEY REQUIRED"
- * tile, so it is never asked unkeyed.
+ * The detailed source for a basemap: Esri World Imagery for satellite; for the street map CARTO
+ * with a key and Esri Dark Gray without one. CARTO answers every request without a key with an
+ * "API KEY REQUIRED" tile, so it is never asked unkeyed.
  */
 export function detailSourceFor(style: BasemapStyle, key: string | undefined): DetailSource {
   if (style === 'satellite') return 'esri';
-  return key ? 'carto' : 'osm';
+  return key ? 'carto' : 'esri-dark';
 }
 
 /**
@@ -174,23 +179,24 @@ export interface DetailOptions {
 }
 
 /**
- * A Cesium imagery provider for a detailed source, Web Mercator tiles. OpenStreetMap and CARTO are
- * made at once and stop at {@link DETAIL_MAX_LEVELS}; Esri is made from its service's metadata, so
- * it comes as a promise and takes the service's own deepest level and credit.
+ * A Cesium imagery provider for a detailed source, Web Mercator tiles. Esri Dark Gray and CARTO
+ * are made at once and stop at {@link DETAIL_MAX_LEVELS}; Esri World Imagery is made from its
+ * service's metadata, so it comes as a promise and takes the service's own deepest level and credit.
  */
 export function createDetailProvider(
   source: DetailSource,
   { key, pixelRatio = 1 }: DetailOptions = {},
 ): ImageryProvider | Promise<ImageryProvider> {
   switch (source) {
-    case 'osm':
-      return new OpenStreetMapImageryProvider({
-        url: OSM_URL,
-        maximumLevel: DETAIL_MAX_LEVELS.osm,
-        credit: new Credit(DETAIL_ATTRIBUTIONS.osm.text),
+    case 'esri-dark':
+      return new UrlTemplateImageryProvider({
+        url: ESRI_DARK_GRAY_TEMPLATE,
+        maximumLevel: DETAIL_MAX_LEVELS['esri-dark'],
+        credit: new Credit(DETAIL_ATTRIBUTIONS['esri-dark'].text),
       });
     case 'carto':
-      if (!key) throw new Error('CARTO tiles need a key; without one the street map is OSM.');
+      if (!key)
+        throw new Error('CARTO tiles need a key; without one the street map is Esri Dark Gray.');
       return new UrlTemplateImageryProvider({
         url: cartoTemplate(key, pixelRatio),
         subdomains: [...CARTO_SUBDOMAINS],

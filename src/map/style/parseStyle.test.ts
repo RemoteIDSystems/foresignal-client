@@ -12,6 +12,7 @@ import {
 } from './model';
 import {
   parseColor,
+  parseIconImage,
   parseFilter,
   parseOverlayStyle,
   parseZoomValue,
@@ -206,6 +207,28 @@ describe('expression readers', () => {
     const raw = ['case', ['has', 'x'], '#000', '#fff'];
     expect(parseColor(raw)).toEqual({ type: 'expression', raw });
     expect(colorFor({ type: 'expression', raw })).toBeUndefined();
+  });
+
+  it('reads an icon chosen by a field, and a constant icon, and refuses anything else', () => {
+    expect(parseIconImage('plane')).toEqual({ icon: 'plane' });
+    expect(
+      parseIconImage([
+        'match',
+        ['downcase', ['get', 'chartSymbol']],
+        'hard',
+        'airport-hard',
+        'airport-soft',
+      ]),
+    ).toEqual({
+      icon: 'airport-soft',
+      iconMatch: {
+        field: 'chartSymbol',
+        caseInsensitive: true,
+        cases: [{ values: ['hard'], icon: 'airport-hard' }],
+      },
+    });
+    expect(parseIconImage(['get', 'icon'])).toBeUndefined();
+    expect(parseIconImage(undefined)).toBeUndefined();
   });
 
   it('reads zoom ramps and rejects data-driven sizes', () => {

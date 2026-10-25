@@ -1,5 +1,6 @@
 import {
   colorFor,
+  iconFor,
   sourceLayer,
   stylesForKind,
   valueAtZoom,
@@ -103,7 +104,7 @@ export function resolveSymbol(
     if (point.type === 'icon') {
       const symbol: PointSymbol = {
         type: 'icon',
-        icon: point.icon,
+        icon: iconFor(point, properties),
         color: color(point.color, properties),
         haloColor: point.haloColor,
         haloWidth: point.haloWidth,

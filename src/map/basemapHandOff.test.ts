@@ -42,7 +42,7 @@ function fakeViewer() {
 }
 
 /** A hand-off over a {@link fakeViewer}, counting the layers it makes. */
-function setUp(source: DetailSource = 'osm') {
+function setUp(source: DetailSource = 'esri-dark') {
   const fake = fakeViewer();
   const made: ImageryLayer[] = [];
   const onShown = vi.fn();
@@ -83,8 +83,8 @@ describe('BasemapHandOff', () => {
     expect(viewer.imageryLayers.indexOf(made[0]!)).toBe(viewer.imageryLayers.indexOf(night) + 1);
     expect(viewer.imageryLayers.indexOf(product)).toBe(3);
     expect(made[0]!.show).toBe(true);
-    expect(handOff.shownSource).toBe('osm');
-    expect(onShown).toHaveBeenLastCalledWith('osm', made[0]);
+    expect(handOff.shownSource).toBe('esri-dark');
+    expect(onShown).toHaveBeenLastCalledWith('esri-dark', made[0]);
   });
 
   it('keeps the overview under the detailed layer and hides the layer when zoomed back out', () => {
@@ -114,7 +114,7 @@ describe('BasemapHandOff', () => {
   });
 
   it('keeps the old source under the new one until the globe has loaded, so it does not blink', () => {
-    const { viewer, made, onShown, handOff, zoomTo } = setUp('osm');
+    const { viewer, made, onShown, handOff, zoomTo } = setUp('esri-dark');
     zoomTo(10);
     const [osm] = made;
     handOff.setSource('esri');
@@ -133,7 +133,7 @@ describe('BasemapHandOff', () => {
 
   it('lets the old source go after the timeout if the new one never finishes', () => {
     vi.useFakeTimers();
-    const { viewer, made, handOff, zoomTo } = setUp('osm');
+    const { viewer, made, handOff, zoomTo } = setUp('esri-dark');
     zoomTo(10);
     handOff.setSource('esri');
     vi.advanceTimersByTime(SWAP_TIMEOUT_MS - 1);
@@ -143,7 +143,7 @@ describe('BasemapHandOff', () => {
   });
 
   it('changes source at once while only the overview shows', () => {
-    const { viewer, made, onShown, handOff, zoomTo } = setUp('osm');
+    const { viewer, made, onShown, handOff, zoomTo } = setUp('esri-dark');
     zoomTo(10);
     zoomTo(2);
     handOff.setSource('esri');
@@ -166,7 +166,7 @@ describe('BasemapHandOff', () => {
   });
 
   it('removes its layers and stops following the camera when destroyed', () => {
-    const { viewer, day, night, made, handOff, zoomTo } = setUp('osm');
+    const { viewer, day, night, made, handOff, zoomTo } = setUp('esri-dark');
     zoomTo(10);
     handOff.setSource('esri');
     handOff.destroy();

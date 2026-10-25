@@ -2,7 +2,6 @@ import {
   ArcGisMapServerImageryProvider,
   Credit,
   ImageryLayer,
-  OpenStreetMapImageryProvider,
   UrlTemplateImageryProvider,
   type ImageryProvider,
 } from 'cesium';
@@ -19,6 +18,7 @@ import {
   detailForZoom,
   detailMetersPerPixel,
   detailSourceFor,
+  ESRI_DARK_GRAY_TEMPLATE,
   ESRI_WORLD_IMAGERY_URL,
   readBasemapStyle,
 } from './basemapStyle';
@@ -30,10 +30,10 @@ afterEach(() => {
 });
 
 describe('detailSourceFor', () => {
-  it('draws OpenStreetMap for the map without a key, and never CARTO unkeyed', () => {
-    expect(detailSourceFor('map', undefined)).toBe('osm');
-    expect(detailSourceFor('map', cartoKey(''))).toBe('osm');
-    expect(detailSourceFor('map', cartoKey('   '))).toBe('osm');
+  it('draws Esri Dark Gray for the map without a key, and never CARTO unkeyed', () => {
+    expect(detailSourceFor('map', undefined)).toBe('esri-dark');
+    expect(detailSourceFor('map', cartoKey(''))).toBe('esri-dark');
+    expect(detailSourceFor('map', cartoKey('   '))).toBe('esri-dark');
   });
 
   it('draws CARTO for the map only with a key', () => {
@@ -62,14 +62,15 @@ describe('cartoTemplate', () => {
 });
 
 describe('createDetailProvider', () => {
-  it('makes the keyless street map from OpenStreetMap', () => {
-    const provider = createDetailProvider('osm') as ImageryProvider;
-    expect(provider).toBeInstanceOf(OpenStreetMapImageryProvider);
-    expect((provider as UrlTemplateImageryProvider).url).toContain(
-      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  it('makes the keyless street map from Esri Dark Gray, stopping where its real tiles stop', () => {
+    const provider = createDetailProvider('esri-dark') as ImageryProvider;
+    expect(provider).toBeInstanceOf(UrlTemplateImageryProvider);
+    expect((provider as UrlTemplateImageryProvider).url).toBe(ESRI_DARK_GRAY_TEMPLATE);
+    expect(ESRI_DARK_GRAY_TEMPLATE).toMatch(
+      /World_Dark_Gray_Base\/MapServer\/tile\/\{z\}\/\{y\}\/\{x\}$/,
     );
-    expect(provider.maximumLevel).toBe(19);
-    expect(provider.credit.html).toBe('© OpenStreetMap contributors');
+    expect(provider.maximumLevel).toBe(16);
+    expect(provider.credit.html).toContain('© OpenStreetMap contributors');
   });
 
   it('makes CARTO with its key and subdomains, and refuses it without a key', () => {
@@ -127,7 +128,7 @@ describe('describeShown', () => {
       attribution: DETAIL_ATTRIBUTIONS.esri,
       maximumLevel: DETAIL_MAX_LEVELS.esri,
     });
-    expect(describeShown('osm').maximumLevel).toBe(19);
+    expect(describeShown('esri-dark').maximumLevel).toBe(16);
   });
 });
 
@@ -146,7 +147,7 @@ describe('DETAIL_ATTRIBUTIONS', () => {
       expect(attribution.url).toMatch(/^https:\/\//);
     }
     expect(DETAIL_ATTRIBUTIONS.carto.text).toContain('© CARTO');
-    expect(DETAIL_ATTRIBUTIONS.osm.text).not.toContain('CARTO');
+    expect(DETAIL_ATTRIBUTIONS['esri-dark'].text).not.toContain('CARTO');
     // The service's credit as read on 2026-10-21, for the About page and until it answers.
     expect(DETAIL_ATTRIBUTIONS.esri.text).toBe(
       'Esri, Vantor, Earthstar Geographics, and the GIS User Community',

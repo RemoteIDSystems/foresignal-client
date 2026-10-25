@@ -2,7 +2,7 @@
 
 > Companion to the [Product Charter](Product-Charter.md). The authoritative backend interface is
 > the ForeSignal repo's **`docs/OpenAPI.json`**; every operation named below is an `operationId`
-> from it. Date: 2026-10-18.
+> from it. Date: 2026-10-21.
 
 ---
 
@@ -121,18 +121,22 @@ Two layers, clearly separated:
 - **UI layer (React).** Everything that is not the map: the top nav, left layer rail, right
   dossier/detail panels, bottom timeline/insights, modals, toasts, search, charts and the entity
   graph. Ordinary DOM/SVG/Canvas — not GPU-bound.
-- **Map engine (Cesium).** One `<Viewer>` (Resium) hosting the map/globe. **The map is 2D by default** (`SceneMode.SCENE2D`). **There is no Split mode.** A manual **2D / 3D**
-  toggle is available, but the primary path into 3D is **contextual**: selecting an item whose kind
-  has an applicable 3D view (an aircraft's altitude track, a satellite's orbit, a storm's structure,
-  …) **switches the scene to `SCENE3D` and flies to the item's location**; selecting an item with no
-  3D view keeps the 2D map and focuses it. Per-kind 3D applicability is declared with each layer
-  (built alongside that layer's data). The same record layers render in 2D and 3D. The 3D globe uses
-  **self-hosted quantized-mesh terrain** (from a public-domain DEM) for raised relief, with base
-  imagery (NASA Blue Marble day + Black Marble night) draped over it; the elevation readout reads
-  terrain height. No Cesium Ion and no account. The low-zoom overview is self-hosted (NASA Marble
-  imagery and the terrain); zooming in hands off to keyless external tile services — OSM raster
-  (Map) and Esri World Imagery (Satellite) — with CARTO as an optional keyed alternative for Map
-  (prompt 038).
+- **Map engine (Cesium).** One `<Viewer>` (Resium) hosting the map/globe. **The map is 2D by
+  default** (`SceneMode.SCENE2D`). **There is no Split mode.** **Only the user switches between the
+  2D map and the 3D globe**, with the HUD's **2D Map / 3D Globe** toggle (or the `M` key).
+  **Selecting an item never changes the scene mode**: the item is selected and brought into view in
+  the mode the user is in (`focusOn`, `src/map/focus.ts`) — centered at the current height unless it
+  is already near the middle of the view. On the 3D globe, an item whose kind has an applicable 3D
+  view (an aircraft's altitude track, a satellite's orbit, a storm's structure, …; `threeDViewOf`,
+  `src/objects/threeD.ts`) is looked down on at an angle instead. The same record layers render in
+  2D and 3D. The 3D globe uses **self-hosted quantized-mesh terrain** (from a public-domain DEM) for
+  raised relief, with base imagery (NASA Blue Marble day + Black Marble night) draped over it; the
+  elevation readout reads terrain height. No Cesium Ion and no account. The low-zoom overview is
+  self-hosted (NASA Marble imagery and the terrain); zooming in hands off to keyless external tile
+  services — Esri World Dark Gray Canvas (Map) and Esri World Imagery (Satellite) — with CARTO's
+  dark street map as an optional keyed alternative for Map (prompt 038; `src/map/basemapStyle.ts`).
+  The HUD stacks its toggles (Map / Satellite, Hexagons / Individual, 2D Map / 3D Globe) down the
+  right edge of the map, above the compass and zoom controls.
 
 ### 5.1 Layer pipeline
 
@@ -164,6 +168,15 @@ This is a first-class requirement (Charter §6.2). The guarantees:
   filtered**. The client sends its current viewport and zoom and renders only the in-view,
   zoom-appropriate slice. `POST /v1/context/summary` [`summarizeContext`] and `GET /v1/glance`
   [`getGlance`] return **aggregates, not raw features**, for counts.
+- **The user chooses hexagons or individual records.** The HUD's **Hexagons / Individual** toggle
+  (`src/map/records/recordGrouping.ts`, remembered in the browser, Hexagons by default) decides how
+  dense point layers draw zoomed out. **Hexagons** is the behavior above: the backend's `agg=hex`
+  cells below `aggBelowZoom`, and the client's own cells (037) while the view holds more points than
+  its budget. **Individual** draws every record on its own at every zoom: record tiles are asked for
+  with `agg=none` at the view's zoom (the backend sends raw features at any zoom, up to its
+  per-tile `foresignal.tiles.max-features`), the client does not cluster, and records are styled at
+  no less than the layer's `aggBelowZoom` — the backend's style starts a layer's records at the zoom
+  where its hexagon layer stops, so without that they would arrive and be hidden.
 - **Raster is the only real ceiling** (blending many translucent rasters is GPU- and legibility-
   bound, for any engine). The UI keeps a small number of active raster overlays; vector layers are
   unconstrained.
@@ -338,9 +351,9 @@ Both are prompt 030. Native APNs/FCM push is for the future Flutter app, not thi
 
 1. **Batched GPU rendering** for all dense layers — **Cesium primitive collections** decoded from the
    MVT tiles. Never per-feature DOM/`Entity`.
-2. **Server-bounded data**: viewport bbox + zoom scoping, hex aggregation below `aggBelowZoom`,
-   aggregate-only summary/glance endpoints. The client renders an in-view slice, never the globe's
-   raw firehose.
+2. **Server-bounded data**: viewport bbox + zoom scoping, hex aggregation below `aggBelowZoom`
+   (unless the user picks Individual, §5.2), aggregate-only summary/glance endpoints. The client
+   renders an in-view slice, never the globe's raw firehose.
 3. **One SSE stream**, re-filtered as the view changes; resume + catch-up, not reconnect-from-zero.
 4. **Content-addressed, immutable tiles** cached for a year; frame swaps on SSE events.
 5. **Retry discipline** on `503 RENDER_BUSY`/`429` per `Retry-After`; `?prefetch=1` for

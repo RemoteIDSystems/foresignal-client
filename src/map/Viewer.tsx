@@ -40,6 +40,7 @@ import { MapLegend } from './style/legend';
 import type { LegendScope } from './style/legendModel';
 import { useOverlayStyle, type OverlayStyleState } from './style/useOverlayStyle';
 import { RecordLayersBridge } from './records/RecordLayersBridge';
+import { recordGroupingStore } from './records/recordGrouping';
 import { ProductLayersBridge } from './products/ProductLayersBridge';
 import { ProductLegends } from './products/ProductLegends';
 import { parseProductLayerKey, type ProductLayerStatus } from './products/productLayers';
@@ -561,6 +562,10 @@ export function MapViewer({
   // the detailed basemap drawn now, for its credit and deepest level; undefined while only the
   // NASA overview shows.
   const basemapStyle = useSyncExternalStore(basemapStyleStore.subscribe, basemapStyleStore.get);
+  const recordGrouping = useSyncExternalStore(
+    recordGroupingStore.subscribe,
+    recordGroupingStore.get,
+  );
   const [basemapShown, setBasemapShown] = useState<ShownBasemap>();
   // Ground per pixel at the picked basemap's deepest level, for `sharpBasemap`: the shown layer's
   // own level once known, else the source's default. Read through a ref by the per-frame limit.
@@ -595,9 +600,9 @@ export function MapViewer({
     [ownMode, onSceneModeChange, store],
   );
 
-  // Contextual 3D (014): a newly selected item with a 3D view switches the map to the globe and
-  // flies to it; any other is brought into view on the 2D map. The selection the map opens with
-  // (restored from the store) does not move it.
+  // A newly selected item is brought into view in the scene mode the user is in: selecting never
+  // switches between the 2D map and the 3D globe. The selection the map opens with (restored from
+  // the store) does not move it.
   const selectionKey = selection ? hitKey(selection) : undefined;
   const latestSelection = useRef(selection);
   useEffect(() => {
@@ -617,8 +622,8 @@ export function MapViewer({
     if (hit.type === 'cell' || !Number.isFinite(hit.longitude) || !Number.isFinite(hit.latitude)) {
       return;
     }
-    return focusOn(viewer, hit, threeDViewOf(hit.id.kind) !== undefined, onSceneMode);
-  }, [viewer, selectionKey, onSceneMode]);
+    focusOn(viewer, hit, threeDViewOf(hit.id.kind) !== undefined);
+  }, [viewer, selectionKey]);
   // A place asked for by search or the find bar (017): the map moves there and clears the request,
   // including one made before the map opened (a search from another screen).
   const locate = useStoreKey('locate', store);
@@ -803,6 +808,7 @@ export function MapViewer({
             liveAreas={liveAreas}
             asOf={asOf}
             frame={frame}
+            grouping={recordGrouping}
           />
         )}
         {areas && areas.length > 0 && (
@@ -836,6 +842,8 @@ export function MapViewer({
         insetOverlay={insetOverlay}
         basemap={basemapStyle}
         onBasemap={basemapStyleStore.set}
+        grouping={recordGrouping}
+        onGrouping={recordGroupingStore.set}
       />
       {legend}
       <MapAttribution

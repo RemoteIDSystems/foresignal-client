@@ -162,6 +162,8 @@ export class RecordLayer {
   private clusterAllowed = false;
   /** Whether this layer's points are drawn as the client's cells now. */
   private clustered = false;
+  /** Whether every record is drawn on its own at every zoom, never as cells (the grouping toggle). */
+  private individual = false;
   /** Points replaced by cells, kept on the map until the cells show, so the switch does not blink. */
   private retiring: Billboard[] = [];
 
@@ -203,6 +205,20 @@ export class RecordLayer {
     this.clusterAllowed = allowed;
     if (this.destroyed) return;
     this.applyMode();
+    this.report();
+  }
+
+  /**
+   * Draws every record on its own at every zoom (`true`), or as cells zoomed out, the backend's
+   * below the layer's `aggBelowZoom` and the client's while the map clusters (`false`). The view's
+   * tiles are planned again in the new shape; the ones drawn stay until their replacements are in.
+   */
+  setIndividual(individual: boolean): void {
+    if (individual === this.individual) return;
+    this.individual = individual;
+    if (this.destroyed) return;
+    this.applyMode();
+    if (this.tiles && this.view) this.plan(this.view);
     this.report();
   }
 
@@ -353,18 +369,34 @@ export class RecordLayer {
     return this.tiles;
   }
 
-  /** True when the view is below the layer's aggregation zoom, where it is drawn as cells. */
+  /**
+   * The zoom a tile's records are styled at. The backend's style starts a layer's records at its
+   * `aggBelowZoom`, where its hexagon layer stops, so with every record drawn on its own they are
+   * styled at no less than that zoom (sized as they are there); any style gated higher still is.
+   */
+  private styleZoom(zoom: number): number {
+    const below = this.tiles?.aggBelowZoom;
+    return this.individual && below !== undefined ? Math.max(zoom, below) : zoom;
+  }
+
+  /**
+   * True when the view is below the layer's aggregation zoom, where it is drawn as cells; never
+   * while every record is drawn on its own.
+   */
   private aggregating(view: RecordView | undefined): boolean {
+    if (this.individual) return false;
     const below = this.tiles?.aggBelowZoom;
     return below !== undefined && view !== undefined && Math.floor(view.zoom) < below;
   }
 
   /**
    * True when the layer's points are to be the client's cells: the map clusters, the backend does
-   * not aggregate this layer, and the view is below {@link CLIENT_CLUSTER_BELOW_ZOOM}.
+   * not aggregate this layer, the view is below {@link CLIENT_CLUSTER_BELOW_ZOOM}, and records are
+   * not drawn on their own.
    */
   private wantsClusters(view: RecordView | undefined): boolean {
     return (
+      !this.individual &&
       this.clusterAllowed &&
       this.tiles !== undefined &&
       this.tiles.aggBelowZoom === undefined &&
@@ -397,8 +429,9 @@ export class RecordLayer {
   /**
    * Works out the tiles a view needs, starts loading the missing ones and tidies up. Below the
    * layer's `aggBelowZoom` these are `agg=hex` tiles of hexagon counts, planned below that zoom;
-   * at or above it, record tiles (`agg=none`), never planned below it. The tiles of the other
-   * mode stay until the new ones are in, so crossing the zoom does not blink.
+   * at or above it, record tiles (`agg=none`), never planned below it. With every record drawn on
+   * its own, record tiles at every zoom. The tiles of the other mode stay until the new ones are
+   * in, so crossing the zoom does not blink.
    */
   private plan(view: RecordView): void {
     const tiles = this.tiles;
@@ -408,7 +441,7 @@ export class RecordLayer {
     const needed = planTiles({
       rect: view.rect,
       zoom: view.zoom,
-      minzoom: hex ? tiles.minzoom : Math.max(tiles.minzoom, below ?? 0),
+      minzoom: hex || this.individual ? tiles.minzoom : Math.max(tiles.minzoom, below ?? 0),
       maxzoom: hex && below !== undefined ? Math.min(tiles.maxzoom, below - 1) : tiles.maxzoom,
       bounds: tiles.bounds,
       maxTiles: MAX_TILES_PER_LAYER,
@@ -537,9 +570,10 @@ export class RecordLayer {
     const clustered: [number, number][] = [];
     let count = 0;
     let points = 0;
+    const styleZoom = this.styleZoom(zoom);
     for (const feature of shownRecords(features, this.hiddenSources)) {
       const { properties, geometry } = feature;
-      const symbol = resolveSymbol(model, feature.layer, properties, geometry.type, zoom);
+      const symbol = resolveSymbol(model, feature.layer, properties, geometry.type, styleZoom);
       if (!symbol) continue;
       // A point record two tiles both carry is drawn by the first only.
       const record = geometry.type === 'point' ? recordId(properties) : undefined;

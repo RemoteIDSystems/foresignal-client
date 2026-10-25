@@ -4,24 +4,32 @@
   background: rgba(6, 12, 20, 0.88);
 }
 
-.toggles {
+/* The toggles stacked down the right edge, then the compass and zoom column under them, so the
+   toggles never reach the bar centered at the top of the map however many there are. */
+.rightRail {
   position: absolute;
   top: 10px;
   right: 14px;
   z-index: 2;
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.toggles {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
 }
 
 .controls {
-  position: absolute;
-  top: 58px;
-  right: 18px;
-  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  margin-right: 4px;
 }
 
 .controls button {

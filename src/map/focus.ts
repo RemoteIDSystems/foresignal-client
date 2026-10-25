@@ -21,46 +21,33 @@ const IN_VIEW_FRACTION = 0.3;
 const MAX_2D_HEIGHT_M = 8_000_000;
 
 /**
- * Brings a selected item into view (014's contextual 3D). An item with a 3D view switches the map
- * to the 3D globe (through `setScene`, so the store holds it) and, once there, flies to look down on
- * it at an angle. Any other item keeps the map as it is and is centered, at the current height,
- * unless it is already near the middle of the view: picking a record on the map does not move it.
- * Returns a function that cancels a flight still waiting for the switch.
+ * Brings a selected item into view without changing the scene mode: switching between the 2D map
+ * and the 3D globe is the user's, through the toggle. On the 3D globe an item with a 3D view is
+ * looked down on at an angle; any other item, and every item on the 2D map, is centered at the
+ * current height, unless it is already near the middle of the view: picking a record on the map
+ * does not move it.
  */
 export function focusOn(
   viewer: Viewer,
   at: { longitude: number; latitude: number },
   threeD: boolean,
-  setScene: (mode: '3d') => void,
-): () => void {
+): void {
+  if (viewer.isDestroyed()) return;
   const { camera, scene } = viewer;
   const target = Cartesian3.fromDegrees(at.longitude, at.latitude);
-  const fly = () => {
-    if (viewer.isDestroyed()) return;
-    if (threeD) {
-      camera.flyToBoundingSphere(new BoundingSphere(target, 10_000), {
-        offset: new HeadingPitchRange(0, CesiumMath.toRadians(-50), THREE_D_RANGE_M),
-        duration: motionSeconds(1.5),
-      });
-      return;
-    }
-    if (inView(viewer, target)) return;
-    const height = Math.min(camera.positionCartographic.height, MAX_2D_HEIGHT_M);
-    camera.flyTo({
-      destination: Cartesian3.fromDegrees(at.longitude, at.latitude, height),
-      duration: motionSeconds(1),
+  if (threeD && scene.mode === SceneMode.SCENE3D) {
+    camera.flyToBoundingSphere(new BoundingSphere(target, 10_000), {
+      offset: new HeadingPitchRange(0, CesiumMath.toRadians(-50), THREE_D_RANGE_M),
+      duration: motionSeconds(1.5),
     });
-  };
-  if (threeD && scene.mode !== SceneMode.SCENE3D) {
-    const remove = scene.morphComplete.addEventListener(() => {
-      remove();
-      fly();
-    });
-    setScene('3d');
-    return remove;
+    return;
   }
-  fly();
-  return () => {};
+  if (inView(viewer, target)) return;
+  const height = Math.min(camera.positionCartographic.height, MAX_2D_HEIGHT_M);
+  camera.flyTo({
+    destination: Cartesian3.fromDegrees(at.longitude, at.latitude, height),
+    duration: motionSeconds(1),
+  });
 }
 
 /**

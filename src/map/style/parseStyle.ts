@@ -14,6 +14,7 @@ import type {
   StyleModel,
   ZoomValue,
 } from './model';
+import { iconsOf } from './model';
 
 /** The overlay style document `getMapStyle` returns. */
 export type MapStyle = components['schemas']['MapStyle'];
@@ -90,7 +91,7 @@ export function parseOverlayStyle(style: MapStyle): StyleModel {
 
   const kinds = [...new Set(styles.map((item) => item.kind))].sort();
   const icons = [
-    ...new Set(styles.flatMap((item) => (item.point?.type === 'icon' ? [item.point.icon] : []))),
+    ...new Set(styles.flatMap((item) => (item.point?.type === 'icon' ? iconsOf(item.point) : []))),
   ].sort();
   const model: StyleModel = {
     generatedAt: meta?.generatedAt ?? '',
@@ -114,13 +115,15 @@ function placeGeometryStyle(target: KindStyle, layer: StyleLayer, filter: Featur
   const polygonOnly = filter.geometry.length > 0 && filter.geometry.every((g) => g === 'polygon');
   switch (layer.type) {
     case 'symbol': {
-      if (typeof layout['icon-image'] !== 'string') return false;
+      const image = parseIconImage(layout['icon-image']);
+      if (!image) return false;
       const point: IconStyle = {
         ...base,
         type: 'icon',
-        icon: layout['icon-image'],
+        icon: image.icon,
         color: parseColor(paint['icon-color']),
       };
+      if (image.iconMatch) point.iconMatch = image.iconMatch;
       if (typeof paint['icon-halo-color'] === 'string') point.haloColor = paint['icon-halo-color'];
       if (typeof paint['icon-halo-width'] === 'number') point.haloWidth = paint['icon-halo-width'];
       const rotateField = firstField(layout['icon-rotate']);
@@ -269,6 +272,25 @@ export function parseColor(raw: unknown): ColorRule {
     }
   }
   return { type: 'expression', raw };
+}
+
+/**
+ * Reads an `icon-image`: a string is the icon; `["match", input, values, icon, …, fallback]` over
+ * a `["get", field]` input chooses the icon by that field, with the fallback as the icon. Undefined
+ * for anything else, which this model does not draw.
+ */
+export function parseIconImage(raw: unknown): Pick<IconStyle, 'icon' | 'iconMatch'> | undefined {
+  if (typeof raw === 'string') return { icon: raw };
+  const rule = parseColor(raw);
+  if (rule.type !== 'match') return undefined;
+  return {
+    icon: rule.fallback,
+    iconMatch: {
+      field: rule.field,
+      caseInsensitive: rule.caseInsensitive,
+      cases: rule.cases.map((item) => ({ values: item.values, icon: item.color })),
+    },
+  };
 }
 
 /**
