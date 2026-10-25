@@ -71,3 +71,7 @@ and no frontend process.
 | `src/views/`          | Screen compositions                                                    |
 | `src/ui/`             | Design-system primitives                                               |
 | `src/lib/`            | Shared helpers and configuration                                       |
+
+## License
+
+MIT © RemoteID Systems, LLC. See [LICENSE](LICENSE).
