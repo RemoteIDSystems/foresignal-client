@@ -21,8 +21,17 @@ export type GraphNode = GraphResult['nodes'][number];
 /** A time- and provenance-aware edge between two objects (`Relation`). */
 export type Relation = components['schemas']['Relation'];
 
-/** A relation's type, as the backend names it (`member-of`, `evidence-for`, …). */
-export type RelationType = Relation['type'];
+/**
+ * A relation's type, as the backend names it (`member-of`, `evidence-for`, …).
+ *
+ * In 2.0.0 the backend marked `Relation.type` `x-extensible-enum`, which `openapi-typescript`
+ * renders as a bare `string` — so this is no longer derived from `Relation['type']` (that is now
+ * `string` and would lose the closed union `RELATION_TYPES`, `edgeFamily` and the graph filter
+ * depend on). It is instead the still-closed filter enum `GraphRequest.types` carries (the 20
+ * values a `POST /v1/graph` query may ask for). Gracefully handling an unlisted wire relation type
+ * that the server may now return is R2-011's job.
+ */
+export type RelationType = NonNullable<GraphRequest['types']>[number];
 
 /** Facilities and infrastructure that objects share (`CommonDependencies`). */
 export type CommonDependencies = components['schemas']['CommonDependencies'];

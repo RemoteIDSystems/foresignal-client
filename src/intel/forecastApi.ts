@@ -109,10 +109,19 @@ export function getForecastScorecard(
   return unwrap(api.GET('/v1/forecasts/scorecard', { signal }));
 }
 
-/** The ledger's calibration across forecasters and categories (`getForecastCalibration`). */
+/**
+ * The ledger's calibration across forecasters and categories (`getForecastCalibration`).
+ *
+ * In 2.0.0 this response widened from `ForecastCalibration` to
+ * `oneOf [ForecastCalibration, ForecastNumericCalibration]`. The client still reads only the
+ * reliability-bin member, so the widened result is narrowed to `ForecastCalibration` here — a
+ * documented cast that keeps today's behavior. Discriminating the `ForecastNumericCalibration`
+ * variant (`type: "numeric"`, quantile reliability and PIT) belongs to R2-010, which owns the
+ * calibration view.
+ */
 export function getForecastCalibration(
   api: ForesignalClient,
   signal?: AbortSignal,
 ): Promise<ForecastCalibration> {
-  return unwrap(api.GET('/v1/forecasts/calibration', { signal }));
+  return unwrap(api.GET('/v1/forecasts/calibration', { signal })) as Promise<ForecastCalibration>;
 }

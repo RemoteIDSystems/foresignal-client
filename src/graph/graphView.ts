@@ -214,7 +214,9 @@ export function toViewGraph(
       id: edge.id,
       from: edge.fromRef,
       to: edge.toRef,
-      type: edge.type,
+      // 2.0.0 made the wire relation type `x-extensible-enum` (now `string`); narrow to the
+      // closed `RelationType` to keep today's behavior. Tolerating an unlisted type is R2-011's.
+      type: edge.type as RelationType,
       label: edge.label,
       confidence: edge.confidence,
       projected: edge.projected,
@@ -272,7 +274,8 @@ export function commonViewGraph(
             id,
             from,
             to,
-            ...(type && { type }),
+            // Narrow the now-`string` wire relation type to the closed `RelationType` (see above).
+            ...(type && { type: type as RelationType }),
             label: path.weakestEdgeLabel,
           });
         }
