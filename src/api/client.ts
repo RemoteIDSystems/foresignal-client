@@ -16,6 +16,12 @@ export interface ForesignalClientOptions {
   retry?: RetryOptions | false;
   /** Returns this browser's device id, sent as `Foresignal-Device-Id` on the operations that take it. */
   getDeviceId?: () => string;
+  /**
+   * Called with the originating request whenever the backend answers `401`. The session layer uses
+   * it to drop a session whose bearer was rejected (R2-002); the request's `Authorization` header
+   * says which credential was sent.
+   */
+  onUnauthorized?: (request: Request) => void;
   /** The underlying fetch; defaults to `globalThis.fetch`. */
   fetch?: (request: Request) => Promise<Response>;
 }
@@ -66,6 +72,12 @@ export function createForesignalClient(options: ForesignalClientOptions): Foresi
         request.headers.set('Foresignal-Device-Id', options.getDeviceId());
       }
       return request;
+    },
+    onResponse({ request, response }) {
+      if (response.status === 401) {
+        options.onUnauthorized?.(request);
+      }
+      return response;
     },
   };
   client.use(headers);

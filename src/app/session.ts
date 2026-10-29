@@ -4,7 +4,13 @@ import {
   type ForesignalClient,
   type ForesignalClientOptions,
 } from '../api/client';
-import { createTokenStore, type TokenStore } from '../api/auth';
+import {
+  createSessionStore,
+  createTokenStore,
+  type SessionStore,
+  type TokenStore,
+} from '../api/auth';
+import { createPrincipalStore, type PrincipalStore } from '../api/me';
 import { createTicketSource, type TicketSource } from '../api/tickets';
 import { ChangeStream } from '../api/stream/ChangeStream';
 import { connectStreamToStore } from '../state/liveDeltas';
@@ -28,8 +34,12 @@ export const SPEC_VERSION = specVersionRaw.trim();
 
 /** Everything the app needs to talk to the backend, built once. */
 export interface Session {
-  /** The persisted bearer token. */
+  /** The persisted pasted API bearer token (`fsr_`/`fsa_`). */
   tokens: TokenStore;
+  /** The signed-in session credential (`fss_`), held separately from {@link Session.tokens}. */
+  sessions: SessionStore;
+  /** The signed-in principal from `getMe`, or `null` when anonymous; read with `useMe()`. */
+  principal: PrincipalStore;
   /** The typed API client; sends the token and device id as each operation requires. */
   api: ForesignalClient;
   /** `?ticket=` credentials for streams and tiles. */
@@ -73,19 +83,32 @@ export interface SessionOptions {
  */
 export function createSession(options: SessionOptions = {}): Session {
   const tokens = createTokenStore();
+  const sessions = createSessionStore();
+  const principal = createPrincipalStore();
+  // The bearer every call carries: a signed-in session is preferred over a pasted API token.
+  const getBearer = () => sessions.get()?.token ?? tokens.get();
+  // A 401 on a request that carried the current session's bearer drops the app to anonymous,
+  // without touching a separately-pasted API token.
+  const onUnauthorized = (request: Request) => {
+    const current = sessions.get();
+    if (current && request.headers.get('Authorization') === `Bearer ${current.token}`) {
+      sessions.clear();
+    }
+  };
   const api = createForesignalClient({
     baseUrl: options.baseUrl ?? baseUrl,
-    getToken: tokens.get,
+    getToken: getBearer,
     getDeviceId,
+    onUnauthorized,
     retry: options.retry,
   });
   const capabilities = options.isolated ? createCapabilitiesStore() : capabilitiesStore;
   const store = options.isolated ? createStore<AppState>(INITIAL_STATE) : appStore;
-  const tickets = createTicketSource(api, { getToken: tokens.get });
+  const tickets = createTicketSource(api, { getToken: getBearer });
   const stream = new ChangeStream({
     api,
     baseUrl: options.baseUrl ?? baseUrl,
-    getToken: tokens.get,
+    getToken: getBearer,
     tickets,
   });
   connectStreamToStore(stream, store);
@@ -93,17 +116,17 @@ export function createSession(options: SessionOptions = {}): Session {
   const alerts = new AlertFeed({
     api,
     baseUrl: options.baseUrl ?? baseUrl,
-    getToken: tokens.get,
+    getToken: getBearer,
     tickets,
   });
   const inbox = new InboxFeed({
     api,
     baseUrl: options.baseUrl ?? baseUrl,
-    getToken: tokens.get,
+    getToken: getBearer,
     getDeviceId,
     tickets,
   });
-  const push = new WebPush(api, tokens.get);
+  const push = new WebPush(api, getBearer);
   const viewStreams = new Map<string, SavedViewStream>();
   const viewStream = (viewId: string) => {
     let stream = viewStreams.get(viewId);
@@ -124,23 +147,34 @@ export function createSession(options: SessionOptions = {}): Session {
     return true;
   };
 
+  // Rehydrate the signed-in principal from `getMe` while a session is present; otherwise anonymous.
+  const refreshPrincipal = () => {
+    if (sessions.get()) void principal.load(api);
+    else principal.clear();
+  };
+
   const refresh = () => {
     tickets.invalidate();
-    // A new token may see other data: the stream reconnects with a ticket for it.
+    // A new credential may see other data: the stream reconnects with a ticket for it.
     stream.reconnectNow();
-    // Alerts of private sources, and the inbox, depend on the token.
+    // Alerts of private sources, and the inbox, depend on the credential.
     alerts.restart();
     inbox.restart();
     void capabilities.load(api, SPEC_VERSION);
+    refreshPrincipal();
     reportDevice().catch((error: unknown) => {
       console.warn('ForeSignal: could not report device metadata for this token.', error);
     });
   };
+  // Either credential changing (sign-in/out, paste, or a 401 clearing the session) refreshes all.
   tokens.subscribe(refresh);
+  sessions.subscribe(refresh);
   refresh();
 
   return {
     tokens,
+    sessions,
+    principal,
     api,
     tickets,
     capabilities,
