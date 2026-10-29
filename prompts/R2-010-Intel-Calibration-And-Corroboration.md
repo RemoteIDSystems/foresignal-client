@@ -11,15 +11,24 @@ Backend contract: `openapi/OpenAPI.json`.
 - `GET /v1/intel/calibration/{scope}` [`getIntelCalibrationScope`] → `IntelCalibration`
   (`ForecastNumericCalibration`) — calibration for one scope.
 - `GET /v1/intel/corroboration` [`getIntelCorroboration`] → `IntelCorroboration`.
-- All read-only here and gated `intel.read`. **Not** `PUT /v1/intel/corroboration`
-  [`updateIntelCorroboration`] — that is `system.settings`, an operator setting in
-  `foresignal-admin`, out of scope for this client.
+- `GET /v1/forecasts/calibration` [`getForecastCalibration`] →
+  `ForecastCalibration | ForecastNumericCalibration` — already consumed by the forecasts view
+  (prompt 022); R2-001 narrowed it to the probability member to compile. Discriminate the union
+  here, since this prompt introduces `ForecastNumericCalibration` (the same schema the intel scope
+  calibration returns).
+- The intel endpoints are read-only here and gated `intel.read`. **Not**
+  `PUT /v1/intel/corroboration` [`updateIntelCorroboration`] — that is `system.settings`, an
+  operator setting in `foresignal-admin`, out of scope for this client.
 
 **Build.**
 - A calibration panel in the forecasts/assessment views: reliability by scope from
   `getIntelCalibration`/`getIntelCalibrationScope`, shown alongside the forecasts it qualifies.
 - A corroboration display where evidence is presented (`getIntelCorroboration`), read-only.
-- Gate both on `intel.read`; hide cleanly for a principal without it.
+- Replace R2-001's narrow shim in `src/intel/forecastApi.ts`: have `getForecastCalibration` return
+  and discriminate `ForecastCalibration | ForecastNumericCalibration`, and update the forecasts view
+  (prompt 022) to render whichever variant it gets. Model `ForecastNumericCalibration` once and
+  reuse it for the intel scope calibration above.
+- Gate the intel calibration/corroboration on `intel.read`; hide cleanly for a principal without it.
 
 **Done when.** Calibration and corroboration render in the analyst views from the real
 operationIds, read-only, gated on `intel.read`. Compile-only; tests written not run.

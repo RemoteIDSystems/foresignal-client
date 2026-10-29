@@ -20,6 +20,11 @@ Backend contract: `openapi/OpenAPI.json`.
   `ReferenceAreaOutline` (`getReferenceArea`) on the map for scoping and labeling, reusing the
   existing map overlay plumbing.
 - Gate both on `data.read`.
+- `Relation.type` is `x-extensible-enum` in 2.0.0 (R2-001 kept the client's `RelationType` a closed
+  union over the known 20, which now include the ownership edges `owns`, `controls`, `officer-of`,
+  `beneficial-owner`, `affiliated-with`): surface those ownership edges in the graph's relation
+  filter and legend, and render any *unlisted* wire relation type as a generic edge
+  (`edgeFamily`'s default) rather than dropping it.
 
 **Done when.** The ownership chain renders in the graph and a selected reference area's outline
 draws on the map, both from the real operationIds and gated on `data.read`. Compile-only; tests
