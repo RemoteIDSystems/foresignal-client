@@ -56,3 +56,21 @@ export function me(
     notificationPreferences: [],
   };
 }
+
+/** A minimal valid `login` result (`SessionToken`); override `token`/`mfaRequired`/expiry per test. */
+export function sessionToken(
+  overrides: Partial<components['schemas']['SessionToken']> = {},
+): components['schemas']['SessionToken'] {
+  return {
+    token: 'fss_live',
+    tokenPrefix: 'fss_',
+    userId: '00000000-0000-4000-8000-0000000000aa',
+    issuedAt: '2026-10-29T00:00:00Z',
+    expiresAt: '2026-11-01T00:00:00Z',
+    idleExpiresAt: null,
+    mfaRequired: false,
+    scopes: ['read'],
+    permissions: [],
+    ...overrides,
+  };
+}

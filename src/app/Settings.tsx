@@ -1,6 +1,9 @@
 import { useState, useSyncExternalStore, type FormEvent } from 'react';
+import { Link } from 'react-router';
 import { unwrap } from '../api/client';
 import { FsError } from '../api/errors';
+import { useMe } from '../api/useMe';
+import { signOut } from '../auth/auth';
 import { describeDevice } from '../lib/deviceId';
 import { baseUrl } from '../lib/config';
 import { useCapabilities } from '../state/capabilities';
@@ -20,6 +23,7 @@ function describeError(error: unknown): string {
  */
 export function Settings({ session }: { session: Session }) {
   const token = useSyncExternalStore(session.tokens.subscribe, session.tokens.get);
+  const me = useMe();
   const capabilities = useCapabilities(session.capabilities);
   const [draft, setDraft] = useState('');
   const [code, setCode] = useState('');
@@ -52,6 +56,24 @@ export function Settings({ session }: { session: Session }) {
   return (
     <section aria-labelledby="settings-heading">
       <h2 id="settings-heading">Settings</h2>
+
+      <h3>Account</h3>
+      {me ? (
+        <div data-testid="account">
+          <p data-testid="account-identity">
+            Signed in as <strong>{me.user?.email ?? me.principal.displayName}</strong>
+            {me.user?.fullName ? ` (${me.user.fullName})` : ''}.
+          </p>
+          <button type="button" onClick={() => void signOut(session)}>
+            Sign out
+          </button>
+        </div>
+      ) : (
+        <p data-testid="account-anonymous">
+          You are browsing anonymously (read-only). <Link to="/signin">Sign in</Link> for your
+          per-user view.
+        </p>
+      )}
 
       <h3>Backend</h3>
       <dl>

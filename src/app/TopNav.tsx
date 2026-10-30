@@ -1,7 +1,9 @@
 import { useSyncExternalStore } from 'react';
 import { NavLink, useNavigate } from 'react-router';
-import { BookOpen, ChevronDown, Keyboard, Settings, User } from 'lucide-react';
+import { BookOpen, ChevronDown, Keyboard, LogOut, Settings, User } from 'lucide-react';
 import { NotificationBell } from '../alerts/NotificationBell';
+import { signOut } from '../auth/auth';
+import { useMe } from '../api/useMe';
 import { useOpenObject } from '../intel/useOpenObject';
 import { useStoreKey } from '../state/store';
 import { IconButton } from '../ui/Button';
@@ -19,8 +21,16 @@ import styles from './TopNav.module.css';
 export function TopNav({ session }: { session: Session }) {
   const navigate = useNavigate();
   const token = useSyncExternalStore(session.tokens.subscribe, session.tokens.get);
+  const me = useMe();
   const workspace = useStoreKey('workspace', session.store);
   const openObject = useOpenObject(session.api, session.store);
+
+  // The access affordance reflects, in order: a signed-in session, a pasted API token, anonymous.
+  const identity = me
+    ? { name: me.user?.email ?? me.principal.displayName, detail: 'Signed in', to: '/settings' }
+    : token
+      ? { name: 'Token access', detail: `${token.slice(0, 8)}…`, to: '/settings' }
+      : { name: 'Sign in', detail: 'Read-only', to: '/signin' };
 
   return (
     <nav className={styles.nav} aria-label="Primary">
@@ -80,20 +90,25 @@ export function TopNav({ session }: { session: Session }) {
         <button
           type="button"
           className={styles.user}
-          onClick={() => navigate('/settings')}
-          aria-label="Access settings"
+          onClick={() => navigate(identity.to)}
+          aria-label={me ? `Signed in as ${identity.name}` : 'Access settings'}
         >
           <span className={styles.avatar}>
             <User size={15} aria-hidden="true" />
           </span>
           <span className={styles.userText}>
-            <span className={styles.userName}>{token ? 'Token access' : 'Open access'}</span>
-            <span className={styles.userDetail}>
-              {token ? `${token.slice(0, 8)}…` : 'No token'}
-            </span>
+            <span className={styles.userName}>{identity.name}</span>
+            <span className={styles.userDetail}>{identity.detail}</span>
           </span>
           <ChevronDown size={14} aria-hidden="true" />
         </button>
+        {me && (
+          <IconButton
+            label="Sign out"
+            icon={<LogOut size={17} strokeWidth={1.75} />}
+            onClick={() => void signOut(session)}
+          />
+        )}
       </div>
     </nav>
   );
