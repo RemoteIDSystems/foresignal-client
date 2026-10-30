@@ -23,6 +23,7 @@ rather than vendoring a stale spec.
 |---|---|---|
 | NP-001 | Resync to OpenAPI 2.1.0 | Re-vendor the 2.1.0 spec, regenerate types, compile clean (hard-stops if backend not 2.1.0) |
 | NP-002 | Edition view & player | A signed-in user reads the written edition, plays the spoken one, sees provenance/corroboration badges, copies a share link |
+| NP-003 | My editions (self-service) | Re-vendor 2.1.1; a `self.editions` user creates/edits/runs/deletes their own edition |
 
 ## Standing rules (same as the R2 client campaign)
 
