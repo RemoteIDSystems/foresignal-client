@@ -132,6 +132,83 @@ export function apiTokenCreated(
   return { ...apiToken(), token: 'fsr_AbC1secretvalue', ...overrides };
 }
 
+/** A minimal valid `UserSourceView`; pass the per-source prefs to show. */
+export function userSourceView(
+  sources: components['schemas']['UserSourcePref'][] = [
+    { sourceId: 'usgs-earthquakes', enabled: true, displayName: null, color: null },
+    { sourceId: 'nws-alerts', enabled: true, displayName: null, color: null },
+  ],
+): components['schemas']['UserSourceView'] {
+  return { sources };
+}
+
+/** A minimal valid `QuotaUsage`; override quota or usage per test. */
+export function quotaUsage(
+  overrides: Partial<components['schemas']['QuotaUsage']> = {},
+): components['schemas']['QuotaUsage'] {
+  return {
+    quota: {
+      maxAlerts: 10,
+      maxChannels: 5,
+      maxSavedViews: 20,
+      maxStorageBytes: null,
+      ...overrides.quota,
+    },
+    usage: { alerts: 3, channels: 1, savedViews: 4, storageBytes: 2048, ...overrides.usage },
+  };
+}
+
+/** A minimal valid `MeLlmBudget`; override per test. */
+export function meLlmBudget(
+  overrides: Partial<components['schemas']['MeLlmBudget']> = {},
+): components['schemas']['MeLlmBudget'] {
+  return {
+    providers: [
+      {
+        providerId: 'shared-1',
+        name: 'Shared GPT',
+        shared: true,
+        capUsd: null,
+        spentUsd: 1.25,
+        remainingUsd: null,
+      },
+    ],
+    totalSpentUsd: 1.25,
+    asOf: '2026-10-29T00:00:00Z',
+    ...overrides,
+  };
+}
+
+/** A minimal valid `SourceRelevanceAnalysis`; override per test. */
+export function sourceRelevanceAnalysis(
+  overrides: Partial<components['schemas']['SourceRelevanceAnalysis']> = {},
+): components['schemas']['SourceRelevanceAnalysis'] {
+  return {
+    advisory: true,
+    summary: 'These sources watch earthquakes and severe weather.',
+    sources: [
+      {
+        sourceId: 'usgs-earthquakes',
+        name: 'USGS Earthquakes',
+        kinds: ['earthquake'],
+        verdict: 'relevant',
+        reason: 'Core seismic feed for the set.',
+      },
+      {
+        sourceId: 'nws-alerts',
+        name: 'NWS Alerts',
+        kinds: ['weather-alert'],
+        verdict: 'marginal',
+        reason: 'Related hazards but a different domain.',
+      },
+    ],
+    shared: { kinds: [], entityTypes: [] },
+    model: 'test-model',
+    template: { templateId: 'source-relevance-system', version: '1.0.0' },
+    ...overrides,
+  };
+}
+
 /** A minimal valid `NotificationPreference` row; override any field per test. */
 export function notificationPreference(
   overrides: Partial<components['schemas']['NotificationPreference']> = {},

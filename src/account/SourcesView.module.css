@@ -1,0 +1,77 @@
+/* The Account sources screen (R2-009): source view, quota, budget and relevance. */
+
+.sources {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.source {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-panel-alt);
+}
+
+.sourceId {
+  font-family: var(--fs-font-mono);
+  font-size: var(--fs-font-size-sm);
+}
+
+.nameInput {
+  min-width: 0;
+  padding: 5px 7px;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-panel);
+  color: var(--fs-color-text);
+  font: inherit;
+}
+
+.colorField {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.providers,
+.verdicts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.provider,
+.verdict {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-panel-alt);
+}
+
+.providerName,
+.verdictHead {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.relevance {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

@@ -15,6 +15,7 @@ import { WorkspacesDialog } from '../workspace/WorkspacesDialog';
 import { WorkspaceSyncContext } from '../workspace/workspaceSyncContext';
 import { TokenStoreContext } from '../api/useToken';
 import { PrincipalStoreContext } from '../api/useMe';
+import { UserSourcesContext } from '../account/sources';
 import { MfaGateModal } from '../auth/MfaGateModal';
 import { useCan } from '../auth/permissions';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -90,33 +91,37 @@ export function AppShell({ session }: { session: Session }) {
   return (
     <TokenStoreContext.Provider value={tokens}>
       <PrincipalStoreContext.Provider value={session.principal}>
-        <WorkspaceSyncContext.Provider value={workspaces}>
-          <div className={styles.shell}>
-            <a className={styles.skip} href="#main">
-              Skip to the main content
-            </a>
-            <TopNav session={session} />
-            <div className={styles.banner}>
-              <VersionBanner store={session.capabilities} />
-              <AlertStrip api={api} feed={alerts} canAct={canAct} onOpen={onOpen} />
-              <WelcomeCard store={store} />
+        <UserSourcesContext.Provider value={session.userSources}>
+          <WorkspaceSyncContext.Provider value={workspaces}>
+            <div className={styles.shell}>
+              <a className={styles.skip} href="#main">
+                Skip to the main content
+              </a>
+              <TopNav session={session} />
+              <div className={styles.banner}>
+                <VersionBanner store={session.capabilities} />
+                <AlertStrip api={api} feed={alerts} canAct={canAct} onOpen={onOpen} />
+                <WelcomeCard store={store} />
+              </div>
+              <main id="main" tabIndex={-1} className={styles.main}>
+                <ErrorBoundary
+                  key={location.pathname}
+                  label="This view"
+                  {...(location.pathname !== '/global' && {
+                    onHome: () => void navigate('/global'),
+                  })}
+                >
+                  <Outlet />
+                </ErrorBoundary>
+              </main>
+              <WorkspacesDialog sync={workspaces} store={session.store} />
+              <SavedStateDialog api={api} store={session.store} token={token} onOpen={onOpen} />
+              <ShortcutsDialog store={store} />
+              <AlertToasts api={api} feed={alerts} canAct={canAct} onOpen={onOpen} />
+              <MfaGateModal session={session} />
             </div>
-            <main id="main" tabIndex={-1} className={styles.main}>
-              <ErrorBoundary
-                key={location.pathname}
-                label="This view"
-                {...(location.pathname !== '/global' && { onHome: () => void navigate('/global') })}
-              >
-                <Outlet />
-              </ErrorBoundary>
-            </main>
-            <WorkspacesDialog sync={workspaces} store={session.store} />
-            <SavedStateDialog api={api} store={session.store} token={token} onOpen={onOpen} />
-            <ShortcutsDialog store={store} />
-            <AlertToasts api={api} feed={alerts} canAct={canAct} onOpen={onOpen} />
-            <MfaGateModal session={session} />
-          </div>
-        </WorkspaceSyncContext.Provider>
+          </WorkspaceSyncContext.Provider>
+        </UserSourcesContext.Provider>
       </PrincipalStoreContext.Provider>
     </TokenStoreContext.Provider>
   );

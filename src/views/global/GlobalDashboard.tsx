@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router';
 import { Bell } from 'lucide-react';
 import type { ForesignalClient } from '../../api/client';
 import { RASTER_FRAME_KIND, type ChangeStream } from '../../api/stream/ChangeStream';
+import { useDisabledSources } from '../../account/sources';
 import { DashboardLayout, type DockPanel } from '../../app/DashboardLayout';
 import { useTheme } from '../../app/theme';
 import {
@@ -258,9 +259,11 @@ export function GlobalDashboard({
     [openView, viewStream],
   );
 
+  // Hide both the FILTERS tab's sources and the ones the signed-in user turned off (R2-009).
+  const disabledByUser = useDisabledSources();
   const hiddenSources = useMemo(
-    () => new Set(layerState.hiddenSources),
-    [layerState.hiddenSources],
+    () => new Set([...layerState.hiddenSources, ...disabledByUser]),
+    [layerState.hiddenSources, disabledByUser],
   );
   const toggleSource = useCallback(
     (source: string) =>

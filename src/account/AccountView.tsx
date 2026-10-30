@@ -79,6 +79,7 @@ export function AccountView({ session }: { session: Session }) {
         <div className={styles.head}>
           <h1 className={styles.title}>Account</h1>
           <div className={styles.actions}>
+            <Link to="/account/sources">My sources</Link>
             <Link to="/account/security">Sessions &amp; API tokens</Link>
             <Button type="button" onClick={() => void signOut(session)}>
               Sign out

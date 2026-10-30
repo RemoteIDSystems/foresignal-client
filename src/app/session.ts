@@ -12,6 +12,7 @@ import {
 } from '../api/auth';
 import { createPrincipalStore, type PrincipalStore } from '../api/me';
 import { createPreferencesStore, type PreferencesStore } from '../account/preferences';
+import { createUserSourcesStore, type UserSourcesStore } from '../account/sources';
 import { createMfaGate, type MfaGate } from '../auth/mfa';
 import { createTicketSource, type TicketSource } from '../api/tickets';
 import { ChangeStream } from '../api/stream/ChangeStream';
@@ -44,6 +45,8 @@ export interface Session {
   principal: PrincipalStore;
   /** The signed-in user's preferences (theme, timezone, locale, …); drives the app theme/clock. */
   preferences: PreferencesStore;
+  /** The signed-in user's per-user source view; the map hides the sources it disables (R2-009). */
+  userSources: UserSourcesStore;
   /** Raised when the backend requires MFA enrollment (`403 MFA_ENROLLMENT_REQUIRED`); R2-005. */
   mfaGate: MfaGate;
   /** The typed API client; sends the token and device id as each operation requires. */
@@ -92,6 +95,7 @@ export function createSession(options: SessionOptions = {}): Session {
   const sessions = createSessionStore();
   const principal = createPrincipalStore();
   const preferences = createPreferencesStore();
+  const userSources = createUserSourcesStore();
   const mfaGate = createMfaGate();
   // The bearer every call carries: a signed-in session is preferred over a pasted API token.
   const getBearer = () => sessions.get()?.token ?? tokens.get();
@@ -170,9 +174,11 @@ export function createSession(options: SessionOptions = {}): Session {
     if (sessions.get()) {
       void principal.load(api);
       void preferences.load(api);
+      void userSources.load(api);
     } else {
       principal.clear();
       preferences.clear();
+      userSources.clear();
     }
   };
 
@@ -199,6 +205,7 @@ export function createSession(options: SessionOptions = {}): Session {
     sessions,
     principal,
     preferences,
+    userSources,
     mfaGate,
     api,
     tickets,

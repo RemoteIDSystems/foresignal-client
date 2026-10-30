@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import type { ForesignalClient } from '../../api/client';
 import type { ChangeStream } from '../../api/stream/ChangeStream';
+import { useDisabledSources } from '../../account/sources';
 import { useTheme } from '../../app/theme';
 import { defaultEnabled, drawnLayers, enabledKinds } from '../../map/records/catalog';
 import type { RecordHit } from '../../map/records/recordPicking';
@@ -37,9 +38,11 @@ export function MapView({ api, stream, store = appStore }: MapViewProps) {
     () => new Set(layerState.kinds ?? (catalog ? defaultEnabled(catalog) : [])),
     [layerState.kinds, catalog],
   );
+  // Hide both the FILTERS tab's sources and the ones the signed-in user turned off (R2-009).
+  const disabledByUser = useDisabledSources();
   const hiddenSources = useMemo(
-    () => new Set(layerState.hiddenSources),
-    [layerState.hiddenSources],
+    () => new Set([...layerState.hiddenSources, ...disabledByUser]),
+    [layerState.hiddenSources, disabledByUser],
   );
   const layers = useMemo(() => (catalog ? drawnLayers(catalog, enabled) : []), [catalog, enabled]);
   const legendScope = useMemo(
