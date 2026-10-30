@@ -3,6 +3,7 @@ import { BrowserRouter, MemoryRouter, Navigate, Route, Routes } from 'react-rout
 import { resolveTheme, ThemeProvider, usePrefersDark } from './theme';
 import { setClock } from './format/clock';
 import { AccountView } from '../account/AccountView';
+import { SecurityView } from '../account/SecurityView';
 import { ToastHost } from '../ui/ToastHost';
 import {
   AlertsView,
@@ -105,6 +106,7 @@ export function App({ session, initialPath }: AppProps) {
         <Route path="/activate" element={<Activate session={session} />} />
         <Route path="/reset" element={<ResetPassword session={session} />} />
         <Route path="/account" element={<AccountView session={session} />} />
+        <Route path="/account/security" element={<SecurityView session={session} />} />
         <Route path="/settings" element={<SettingsView session={session} />} />
         <Route path="/about" element={<AboutView api={session.api} />} />
         <Route path="*" element={<Navigate to={DEFAULT_ROUTE} replace />} />

@@ -90,6 +90,48 @@ export function userPreferences(
   };
 }
 
+/** A minimal valid active `Session` (`listSessions` item); override any field per test. */
+export function userSession(
+  overrides: Partial<components['schemas']['Session']> = {},
+): components['schemas']['Session'] {
+  return {
+    id: '00000000-0000-4000-8000-0000000000e1',
+    tokenPrefix: 'fss_',
+    createdAt: '2026-10-28T00:00:00Z',
+    lastSeenAt: '2026-10-29T00:00:00Z',
+    expiresAt: '2026-11-04T00:00:00Z',
+    idleExpiresAt: null,
+    userAgent: 'Test Browser',
+    ipAddress: '203.0.113.7',
+    current: false,
+    ...overrides,
+  };
+}
+
+/** A minimal valid `ApiToken` (no secret); override any field per test. */
+export function apiToken(
+  overrides: Partial<components['schemas']['ApiToken']> = {},
+): components['schemas']['ApiToken'] {
+  return {
+    id: '00000000-0000-4000-8000-0000000000f1',
+    name: 'Laptop CLI',
+    scope: 'read',
+    tokenPrefix: 'fsr_AbC1',
+    createdAt: '2026-10-20T00:00:00Z',
+    lastUsedAt: null,
+    expiresAt: null,
+    revokedAt: null,
+    ...overrides,
+  };
+}
+
+/** A freshly minted token (`createMyToken` → `ApiTokenCreated`) carrying its one-time secret. */
+export function apiTokenCreated(
+  overrides: Partial<components['schemas']['ApiTokenCreated']> = {},
+): components['schemas']['ApiTokenCreated'] {
+  return { ...apiToken(), token: 'fsr_AbC1secretvalue', ...overrides };
+}
+
 /** A minimal valid `NotificationPreference` row; override any field per test. */
 export function notificationPreference(
   overrides: Partial<components['schemas']['NotificationPreference']> = {},

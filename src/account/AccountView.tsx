@@ -78,9 +78,12 @@ export function AccountView({ session }: { session: Session }) {
       <section className={styles.card} aria-label="Profile">
         <div className={styles.head}>
           <h1 className={styles.title}>Account</h1>
-          <Button type="button" onClick={() => void signOut(session)}>
-            Sign out
-          </Button>
+          <div className={styles.actions}>
+            <Link to="/account/security">Sessions &amp; API tokens</Link>
+            <Button type="button" onClick={() => void signOut(session)}>
+              Sign out
+            </Button>
+          </div>
         </div>
         <dl className={styles.profile}>
           <dt>Email</dt>

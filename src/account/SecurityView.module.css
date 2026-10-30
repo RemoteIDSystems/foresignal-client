@@ -1,0 +1,76 @@
+/* The Account security screen (R2-008): sessions and personal tokens. */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-panel-alt);
+}
+
+.rowMain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rowTitle {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.createForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.secret {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--fs-color-accent);
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-accent-soft);
+}
+
+.secretWarn {
+  margin: 0;
+  color: var(--fs-color-text);
+  font-size: var(--fs-font-size-sm);
+}
+
+.secretRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.secretInput {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-panel);
+  color: var(--fs-color-text);
+  font-family: var(--fs-font-mono);
+  font-size: var(--fs-font-size-sm);
+}
