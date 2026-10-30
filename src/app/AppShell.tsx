@@ -16,6 +16,7 @@ import { WorkspaceSyncContext } from '../workspace/workspaceSyncContext';
 import { TokenStoreContext } from '../api/useToken';
 import { PrincipalStoreContext } from '../api/useMe';
 import { MfaGateModal } from '../auth/MfaGateModal';
+import { useCan } from '../auth/permissions';
 import { ErrorBoundary } from './ErrorBoundary';
 import { TopNav } from './TopNav';
 import { VersionBanner } from './VersionBanner';
@@ -37,7 +38,10 @@ export function AppShell({ session }: { session: Session }) {
   const location = useLocation();
   const { workspaces, alerts, inbox, api, tokens } = session;
   const token = useSyncExternalStore(tokens.subscribe, tokens.get);
-  const canAct = useCanActOnAlerts(api, token);
+  const can = useCan();
+  // A token with the agent/admin scope may act (the long-standing path); a signed-in principal with
+  // the self.alerts permission may too (R2-006 RBAC). Either grants; neither regresses the other.
+  const canAct = useCanActOnAlerts(api, token) || can('self.alerts');
   const openObject = useOpenObject(api, session.store);
   const onOpen = (ref: string) => void openObject(ref);
   useDeepLinks(onOpen);

@@ -66,6 +66,49 @@ export function isProblem(body: unknown): body is Problem {
 }
 
 /**
+ * A refusal classified for the UI: whether the user should sign in, lacks permission, or needs a
+ * broader token scope. Used to turn a `401`/`403` into a recoverable notice instead of a dead end.
+ */
+export interface AccessRefusal {
+  /** `sign-in` (401), `permission` (403 PERMISSION_DENIED), `scope` (403 INSUFFICIENT_SCOPE). */
+  kind: 'sign-in' | 'permission' | 'scope';
+  /** A clear, user-facing message. */
+  message: string;
+  /** The token scope the operation needs (`INSUFFICIENT_SCOPE` only). */
+  requiredScope?: string;
+}
+
+/**
+ * Classifies an authentication/authorization refusal for the UI, or returns `null` for anything
+ * else. A `401` asks the user to sign in; a `403 PERMISSION_DENIED` reports missing access (the
+ * backend's `detail` when it sent one); a `403 INSUFFICIENT_SCOPE` names the `requiredScope`. The
+ * contract carries no machine `requiredPermission`, so a permission refusal uses `detail`/`title`.
+ */
+export function accessRefusal(error: unknown): AccessRefusal | null {
+  if (!(error instanceof FsError)) return null;
+  if (error.status === 401) {
+    return { kind: 'sign-in', message: 'Sign in to do that.' };
+  }
+  if (error.status === 403) {
+    if (error.code === 'INSUFFICIENT_SCOPE') {
+      const scope = error.problem?.requiredScope ?? undefined;
+      return {
+        kind: 'scope',
+        message: scope
+          ? `This needs a token with the “${scope}” scope.`
+          : 'This needs a token with a broader scope.',
+        ...(scope ? { requiredScope: scope } : {}),
+      };
+    }
+    return {
+      kind: 'permission',
+      message: error.detail ?? error.title ?? 'You do not have access to do that.',
+    };
+  }
+  return null;
+}
+
+/**
  * Maps a failed response and its parsed body to an {@link FsError}.
  *
  * A problem body supplies `code`, `title` and `detail`; the response status is authoritative for

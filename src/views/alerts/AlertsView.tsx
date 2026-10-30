@@ -6,6 +6,7 @@ import { alertRef, alertTitle } from '../../alerts/alertView';
 import { useAlertFeed, useCanActOnAlerts } from '../../alerts/useAlerts';
 import alertStyles from '../../alerts/Alerts.module.css';
 import type { Session } from '../../app/session';
+import { useCan } from '../../auth/permissions';
 import { utcText } from '../../intel/analysisView';
 import { getSituation } from '../../intel/situationApi';
 import { useRead } from '../../intel/useHypotheses';
@@ -74,7 +75,9 @@ export function AlertsView({ session }: { session: Session }) {
       ? requested
       : 'open';
   const token = useSyncExternalStore(tokens.subscribe, tokens.get);
-  const canWrite = useCanActOnAlerts(api, token);
+  const can = useCan();
+  // Either the agent/admin token scope or the self.alerts permission (R2-006) grants alert actions.
+  const canWrite = useCanActOnAlerts(api, token) || can('self.alerts');
   const viewport = useStoreKey('viewport', store);
   const openObject = useOpenObject(api, store);
   const { open } = useAlertFeed(alerts);
