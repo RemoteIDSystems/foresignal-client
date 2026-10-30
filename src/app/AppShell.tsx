@@ -15,6 +15,7 @@ import { WorkspacesDialog } from '../workspace/WorkspacesDialog';
 import { WorkspaceSyncContext } from '../workspace/workspaceSyncContext';
 import { TokenStoreContext } from '../api/useToken';
 import { PrincipalStoreContext } from '../api/useMe';
+import { MfaGateModal } from '../auth/MfaGateModal';
 import { ErrorBoundary } from './ErrorBoundary';
 import { TopNav } from './TopNav';
 import { VersionBanner } from './VersionBanner';
@@ -109,6 +110,7 @@ export function AppShell({ session }: { session: Session }) {
             <SavedStateDialog api={api} store={session.store} token={token} onOpen={onOpen} />
             <ShortcutsDialog store={store} />
             <AlertToasts api={api} feed={alerts} canAct={canAct} onOpen={onOpen} />
+            <MfaGateModal session={session} />
           </div>
         </WorkspaceSyncContext.Provider>
       </PrincipalStoreContext.Provider>

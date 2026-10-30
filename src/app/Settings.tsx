@@ -4,6 +4,7 @@ import { unwrap } from '../api/client';
 import { FsError } from '../api/errors';
 import { useMe } from '../api/useMe';
 import { signOut } from '../auth/auth';
+import { MfaSection } from '../auth/MfaSection';
 import { describeDevice } from '../lib/deviceId';
 import { baseUrl } from '../lib/config';
 import { useCapabilities } from '../state/capabilities';
@@ -67,6 +68,7 @@ export function Settings({ session }: { session: Session }) {
           <button type="button" onClick={() => void signOut(session)}>
             Sign out
           </button>
+          <MfaSection session={session} />
         </div>
       ) : (
         <p data-testid="account-anonymous">

@@ -11,6 +11,7 @@ import {
   type TokenStore,
 } from '../api/auth';
 import { createPrincipalStore, type PrincipalStore } from '../api/me';
+import { createMfaGate, type MfaGate } from '../auth/mfa';
 import { createTicketSource, type TicketSource } from '../api/tickets';
 import { ChangeStream } from '../api/stream/ChangeStream';
 import { connectStreamToStore } from '../state/liveDeltas';
@@ -40,6 +41,8 @@ export interface Session {
   sessions: SessionStore;
   /** The signed-in principal from `getMe`, or `null` when anonymous; read with `useMe()`. */
   principal: PrincipalStore;
+  /** Raised when the backend requires MFA enrollment (`403 MFA_ENROLLMENT_REQUIRED`); R2-005. */
+  mfaGate: MfaGate;
   /** The typed API client; sends the token and device id as each operation requires. */
   api: ForesignalClient;
   /** `?ticket=` credentials for streams and tiles. */
@@ -85,6 +88,7 @@ export function createSession(options: SessionOptions = {}): Session {
   const tokens = createTokenStore();
   const sessions = createSessionStore();
   const principal = createPrincipalStore();
+  const mfaGate = createMfaGate();
   // The bearer every call carries: a signed-in session is preferred over a pasted API token.
   const getBearer = () => sessions.get()?.token ?? tokens.get();
   // A 401 on a request that carried the current session's bearer drops the app to anonymous,
@@ -95,11 +99,20 @@ export function createSession(options: SessionOptions = {}): Session {
       sessions.clear();
     }
   };
+  // A role that mandates MFA refuses writes with MFA_ENROLLMENT_REQUIRED; raise the enrollment gate
+  // instead of surfacing a raw error, and lower it once the principal shows MFA enabled.
+  const onForbidden = (code: string | undefined) => {
+    if (code === 'MFA_ENROLLMENT_REQUIRED') mfaGate.set(true);
+  };
+  principal.subscribe(() => {
+    if (principal.get()?.user?.mfaEnabled) mfaGate.set(false);
+  });
   const api = createForesignalClient({
     baseUrl: options.baseUrl ?? baseUrl,
     getToken: getBearer,
     getDeviceId,
     onUnauthorized,
+    onForbidden,
     retry: options.retry,
   });
   const capabilities = options.isolated ? createCapabilitiesStore() : capabilitiesStore;
@@ -175,6 +188,7 @@ export function createSession(options: SessionOptions = {}): Session {
     tokens,
     sessions,
     principal,
+    mfaGate,
     api,
     tickets,
     capabilities,

@@ -22,6 +22,13 @@ export interface ForesignalClientOptions {
    * says which credential was sent.
    */
   onUnauthorized?: (request: Request) => void;
+  /**
+   * Called with the problem `code` (when the body carried one) whenever the backend answers `403`.
+   * The session layer uses it to raise the MFA-enrollment gate on `MFA_ENROLLMENT_REQUIRED` (R2-005)
+   * instead of surfacing a raw error. The response body is read from a clone, so the caller still
+   * sees the original response.
+   */
+  onForbidden?: (code: string | undefined, request: Request) => void;
   /** The underlying fetch; defaults to `globalThis.fetch`. */
   fetch?: (request: Request) => Promise<Response>;
 }
@@ -76,6 +83,22 @@ export function createForesignalClient(options: ForesignalClientOptions): Foresi
     onResponse({ request, response }) {
       if (response.status === 401) {
         options.onUnauthorized?.(request);
+      }
+      if (response.status === 403 && options.onForbidden) {
+        // Read the problem code from a clone so the original response stays intact for the caller.
+        void response
+          .clone()
+          .text()
+          .then((text) => {
+            let code: string | undefined;
+            try {
+              const body = JSON.parse(text) as { code?: unknown };
+              if (typeof body.code === 'string') code = body.code;
+            } catch {
+              // Not a JSON problem body (e.g. an HTML page from a proxy): no code to report.
+            }
+            options.onForbidden?.(code, request);
+          });
       }
       return response;
     },
