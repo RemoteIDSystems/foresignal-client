@@ -1,9 +1,9 @@
 import type { components } from '../generated/schema';
 
 /** A minimal valid `getSystem` body reporting the given API version. */
-export function systemInfo(apiVersion = '2.1.0'): components['schemas']['SystemInfo'] {
+export function systemInfo(apiVersion = '2.1.1'): components['schemas']['SystemInfo'] {
   return {
-    version: '2.1.0',
+    version: '2.1.1',
     apiVersion,
     startedAt: '2026-10-19T00:00:00Z',
     status: 'ok',

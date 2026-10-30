@@ -17369,7 +17369,63 @@ export interface paths {
          */
         get: operations["listMyEditions"];
         put?: never;
+        /**
+         * Create my edition
+         * @description Creates an edition the calling user owns, without needing agent scope (2.1.1). The body is a `BriefingInput`; `ownerUserId` is ignored and forced to the caller. The edition is then listed by `listMyEditions` and managed through the other `/v1/me/editions` operations. Any signed-in user holding `self.editions`; an API token is 401.
+         *
+         *     **Scope:** `read`.
+         */
+        post: operations["createMyEdition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/editions/{briefingId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update my edition
+         * @description Updates an edition the calling user owns (2.1.1). The body is a `BriefingInput`; `ownerUserId` is forced to the caller. 404 unless the edition exists and the caller owns it. Any signed-in user holding `self.editions`.
+         *
+         *     **Scope:** `read`.
+         */
+        put: operations["updateMyEdition"];
         post?: never;
+        /**
+         * Delete my edition
+         * @description Deletes an edition the calling user owns (2.1.1). 404 unless the edition exists and the caller owns it. Any signed-in user holding `self.editions`.
+         *
+         *     **Scope:** `read`.
+         */
+        delete: operations["deleteMyEdition"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/editions/{briefingId}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run my edition now
+         * @description Runs an edition the calling user owns on demand (2.1.1), producing a run delivered to the edition's targets. 404 unless the edition exists and the caller owns it. Any signed-in user holding `self.editions`.
+         *
+         *     **Scope:** `read`.
+         */
+        post: operations["runMyEdition"];
         delete?: never;
         options?: never;
         head?: never;
@@ -20046,6 +20102,11 @@ export interface components {
             includeAlertQuality: boolean;
         };
         BriefingInput: {
+            /**
+             * Format: uuid
+             * @description The v2.0 user who owns the edition (2.1.1). On the self-service `/v1/me/editions` operations it is ignored and forced to the caller. On `createBriefing`/`updateBriefing` it defaults to the creating user; only a caller holding `users.manage` may set it to another user, to assign an edition on their behalf. Null for a briefing created with an API token.
+             */
+            ownerUserId?: string | null;
             name: string;
             /** @default true */
             enabled: boolean;
@@ -98425,6 +98486,251 @@ export interface operations {
             };
             /** @description Caller lacks the required permission */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate limited (RATE_LIMITED) */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createMyEdition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BriefingInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Briefing"];
+                };
+            };
+            /** @description Invalid request body (VALIDATION_FAILED) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Caller lacks the self.editions permission (PERMISSION_DENIED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate limited (RATE_LIMITED) */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateMyEdition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                briefingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BriefingInput"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Briefing"];
+                };
+            };
+            /** @description Invalid request body (VALIDATION_FAILED) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Caller lacks the self.editions permission (PERMISSION_DENIED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such edition owned by the caller */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate limited (RATE_LIMITED) */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteMyEdition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                briefingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Caller lacks the self.editions permission (PERMISSION_DENIED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such edition owned by the caller */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate limited (RATE_LIMITED) */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    runMyEdition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                briefingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Run started */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BriefingRun"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Caller lacks the self.editions permission (PERMISSION_DENIED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such edition owned by the caller */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

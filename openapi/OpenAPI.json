@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Foresignal API",
-    "version": "2.1.0",
+    "version": "2.1.1",
     "summary": "Headless intelligence broker: ingest, version and re-serve public telemetry.",
     "description": "All configuration is done through this API. The MCP server is at `/mcp` (MCP streamable HTTP, protocol versions 2024-11-05 to 2025-11-25) and is not an OpenAPI operation; it exposes the same data, the alert lifecycle and watch management as MCP tools, resources (`foresignal://sources`, `foresignal://kinds`) and the `situation-report` prompt (025, docs/Agent-Guide.md), plus the cost-bearing `search` tool (027) and the briefing tools `list_briefings`, `get_briefing_run`, `get_digest` (read), `create_briefing` and the cost-bearing `run_briefing` (agent) (029). It takes the same bearer tokens: `/mcp/**` needs `read` (open while `openReads` is on), tools are listed by the caller's scope and each checks its own (`read` tools; `agent` for writes such as `create_watch` and `set_alert_status`; cost-bearing tools always need a token), a session is bound to the token that opened it, and every tool call is audited (argument names only). The older HTTP+SSE transport (protocol 2024-11-05) is served at `/mcp/sse` with messages at `/mcp/message` only when `foresignal.mcp.legacy-sse.enabled=true`, for older clients. `GET /v1/system` reports its state under `mcp`. Reads of data are open on the local network; all writes and settings reads require the admin bearer token printed on first start. Errors are RFC 9457 problem+json. Timestamps are ISO-8601 UTC. `/v1` is additive-only once released.\n\n**Key-in-path carriers.** Header-less clients use keys in the path: feed keys (`fsf_`, 035) as `/v1/k/{key}/<any allowed GET/HEAD path>`, tile keys (`fsk_`, 050) as `/v1/k/{key}/products/...`, `/v1/k/{key}/tiles/...`, `/v1/k/{key}/map/...` and `/v1/k/{key}/changes/stream` for map clients (MapLibre, maplibre_gl, Cesium, `EventSource`), share links (`fss_`, 112) as `/v1/k/{key}`. These are transports for the documented operations, not separate operations. A feed key reaches only `GET`/`HEAD` of `read` operations that are not always-authenticated, under the key's path prefixes, with the key's mandatory read restriction (unknown key 401 INVALID_FEED_KEY, expired or revoked 410 FEED_KEY_GONE, another method 405, a path outside the prefixes 403 RESTRICTED). A tile key reaches the same operations under its prefixes (a subset of `/v1/products/`, `/v1/styles`, `/v1/media/`, `/v1/tiles/`, `/v1/maps/static`, `/v1/sample`, `/v1/ground-stations/`, `/v1/changes/stream`, `/v1/events/stream`, `/v1/map/`), with its optional restriction and never private sources (unknown, expired or revoked key 401 INVALID_TILE_KEY, another method 405, a path outside the prefixes 403 INSUFFICIENT_SCOPE). Responses carry `Referrer-Policy: no-referrer` and `X-Robots-Tag: noindex`; `Cache-Control` defaults to `private`, and a tile-key response takes the canonical path's own rule (`public` only while `openReads` covers it). Logs show only the key's first eight characters; the key is never echoed except by `createFeedKey` and `createTileKey`, and in the follow-up URLs of documents requested through it (058: the MapLibre style's sources and sprite, KML NetworkLink and icon hrefs, a feed's own `rel=\"self\"` / `feed_url`), which are then always `Cache-Control: private`. CORS exposes `Foresignal-Frame-Time`, `Foresignal-Image-Bounds`, `Foresignal-Frame-Expired`, `Retry-After`, `Link` and `ETag`, allows `Authorization`, `If-None-Match` and `Foresignal-Prefetch`, and caches preflights for a day; `?prefetch=1` marks a render prefetch without the preflight the header causes.\n\n**Restrictions and limits (035).** Restricted tokens, feed keys and the anonymous profile (`security.anonymous`, applied to tokenless reads while `openReads` is on) see only records and alerts inside their `ReadRestriction` on every read path (records, history, versions, changes, kinds, tiles, streams, search, alerts, the inbox, the digest, briefings, MCP tools and Ask): request filters are intersected with the restriction, and a single record or alert outside it is 404. Every client is rate-limited per class (`RateLimitSettings`); over a limit, or after repeated failed credentials from one address, the answer is 429 RATE_LIMITED with `Retry-After`. Device ingest URLs (039) and signed action links (033) use their own documented paths.\n\n**Permissions (R2-004).** An operation a signed-in user needs a permission for carries `x-foresignal-permission`, a key of the `GET /v1/permissions` catalog (`users.manage`, `data.read`, `audit.read`…). A session bearer (`fss_`) is gated by that permission alone, in place of the scope: a user whose roles lack it gets 403 PERMISSION_DENIED with `requiredPermission`. An operation may list `x-foresignal-permission-alternatives`, further keys any one of which satisfies it as well (R2-009: the channel operations take `self.channels` or `channels.global`). An operation without one is gated on the session's derived scope. API tokens are gated by `x-foresignal-scope` only, as before: machines are not permission-scoped, so an `admin` token satisfies every permission and a lower token gets 403 INSUFFICIENT_SCOPE.\n\n**Status annotations.** Every operation has `x-foresignal-prompt` (the build prompt that implements it), optional `x-foresignal-extended-by`, and `x-foresignal-status` (`planned` until implemented). Clients can mock the whole API from this document and filter by status.\n\n**Outside this document:** the MCP server (`/mcp`, plus the legacy SSE transport when enabled), Actuator endpoints (`/actuator/**`), and sink listeners on their own ports (110).",
     "license": {
@@ -724,6 +724,11 @@
         "version": "2.1.0",
         "date": "2026-10-29",
         "note": "API 2.1.0 (Automated Newspaper). The contract was authored by NP-001 with every new operation x-foresignal-status `planned`; NP-002 to NP-006 implemented them and NP-007 activated them, so every operation of the feature is now `implemented`. Extends the briefing engine into per-user editions rather than adding a parallel subsystem. New operations: news translation settings (getTranslationSettings, updateTranslationSettings: GET/PUT /v1/settings/translation, admin); the caller's news subscriptions (getMyNewsSubscriptions, updateMyNewsSubscriptions: GET/PUT /v1/me/news-subscriptions, read, self.sources); the caller's editions (listMyEditions: GET /v1/me/editions, read); and the hosted edition site (getEditionSite: GET /v1/editions/{briefingId}/site, read, open while openReads is on, reachable by feed key and share link). Added while implementing (NP-004 to NP-006): BriefingRun.deliveryResults, the read-only outcome of each delivery target (NP-004); openEditionSiteShareLink (GET /v1/k/{key}/site, open: the hosted edition site through its share link) and the share-link target type `edition-site` (NP-005); and BriefingRun.breaking, the read-only alert that fired a breaking-news run (NP-006). New schemas: TranslationSettings, TranslationSettingsInput, NewsSubscription, NewsSubscriptionView, NewsSubscriptionUpdate, EditionSummary, EditionSite, DeliveryTarget, BreakingNewsConfig. Additive, optional fields: BriefingInput gains outputLanguage (NP-003), deliveryTargets (NP-004), site (NP-005), breakingNews (NP-006), includeProvenance and includeCorroboration (NP-007); Briefing gains the read-only ownerUserId (NP-003); AskCitation gains provenance and corroboration, set only on briefing-run citations of a briefing with the matching flag (NP-007); NewsArticle and NewsStory gain targetLanguage, translatedTitle, translatedExcerpt and translationProvenance beside the untouched originals (NP-002). No operation or schema was renamed or removed; a 2.0.0 client stays valid."
+      },
+      {
+        "version": "2.1.1",
+        "date": "2026-10-30",
+        "note": "API 2.1.1 (newspaper editions: ownership + self-service). Additive. BriefingInput gains the writable ownerUserId: on createBriefing/updateBriefing it defaults to the creating user and only a caller holding users.manage may set it to another user, to assign an edition on their behalf; Briefing.ownerUserId stays read-only in responses. New self-service edition operations under /v1/me/editions let a signed-in user holding the new self.editions permission own and manage an edition without agent scope: createMyEdition (POST /v1/me/editions), updateMyEdition (PUT /v1/me/editions/{briefingId}), deleteMyEdition (DELETE /v1/me/editions/{briefingId}) and runMyEdition (POST /v1/me/editions/{briefingId}/run); ownerUserId is forced to the caller on these. No operation or schema was renamed or removed; a 2.1.0 client stays valid. Authored contract-first; implemented and activated by NP-008."
       }
     ]
   },
@@ -94928,6 +94933,346 @@
         "x-foresignal-prompt": "NP-001",
         "x-foresignal-always-authenticated": true,
         "x-foresignal-status": "implemented"
+      },
+      "post": {
+        "tags": [
+          "Briefings"
+        ],
+        "operationId": "createMyEdition",
+        "summary": "Create my edition",
+        "description": "Creates an edition the calling user owns, without needing agent scope (2.1.1). The body is a `BriefingInput`; `ownerUserId` is ignored and forced to the caller. The edition is then listed by `listMyEditions` and managed through the other `/v1/me/editions` operations. Any signed-in user holding `self.editions`; an API token is 401.\n\n**Scope:** `read`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BriefingInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Briefing"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body (VALIDATION_FAILED)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the self.editions permission (PERMISSION_DENIED)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (RATE_LIMITED)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-foresignal-scope": "read",
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ],
+        "x-foresignal-permission": "self.editions",
+        "x-foresignal-prompt": "NP-008",
+        "x-foresignal-always-authenticated": true,
+        "x-foresignal-status": "planned"
+      }
+    },
+    "/v1/me/editions/{briefingId}": {
+      "put": {
+        "tags": [
+          "Briefings"
+        ],
+        "operationId": "updateMyEdition",
+        "summary": "Update my edition",
+        "description": "Updates an edition the calling user owns (2.1.1). The body is a `BriefingInput`; `ownerUserId` is forced to the caller. 404 unless the edition exists and the caller owns it. Any signed-in user holding `self.editions`.\n\n**Scope:** `read`.",
+        "parameters": [
+          {
+            "name": "briefingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BriefingInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Briefing"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body (VALIDATION_FAILED)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the self.editions permission (PERMISSION_DENIED)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such edition owned by the caller",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (RATE_LIMITED)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-foresignal-scope": "read",
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ],
+        "x-foresignal-permission": "self.editions",
+        "x-foresignal-prompt": "NP-008",
+        "x-foresignal-always-authenticated": true,
+        "x-foresignal-status": "planned"
+      },
+      "delete": {
+        "tags": [
+          "Briefings"
+        ],
+        "operationId": "deleteMyEdition",
+        "summary": "Delete my edition",
+        "description": "Deletes an edition the calling user owns (2.1.1). 404 unless the edition exists and the caller owns it. Any signed-in user holding `self.editions`.\n\n**Scope:** `read`.",
+        "parameters": [
+          {
+            "name": "briefingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the self.editions permission (PERMISSION_DENIED)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such edition owned by the caller",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (RATE_LIMITED)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-foresignal-scope": "read",
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ],
+        "x-foresignal-permission": "self.editions",
+        "x-foresignal-prompt": "NP-008",
+        "x-foresignal-always-authenticated": true,
+        "x-foresignal-status": "planned"
+      }
+    },
+    "/v1/me/editions/{briefingId}/run": {
+      "post": {
+        "tags": [
+          "Briefings"
+        ],
+        "operationId": "runMyEdition",
+        "summary": "Run my edition now",
+        "description": "Runs an edition the calling user owns on demand (2.1.1), producing a run delivered to the edition's targets. 404 unless the edition exists and the caller owns it. Any signed-in user holding `self.editions`.\n\n**Scope:** `read`.",
+        "parameters": [
+          {
+            "name": "briefingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Run started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BriefingRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the self.editions permission (PERMISSION_DENIED)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such edition owned by the caller",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (RATE_LIMITED)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-foresignal-scope": "read",
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ],
+        "x-foresignal-permission": "self.editions",
+        "x-foresignal-prompt": "NP-008",
+        "x-foresignal-always-authenticated": true,
+        "x-foresignal-status": "planned"
       }
     },
     "/v1/editions/{briefingId}/site": {
@@ -107502,6 +107847,15 @@
       "BriefingInput": {
         "type": "object",
         "properties": {
+          "ownerUserId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The v2.0 user who owns the edition (2.1.1). On the self-service `/v1/me/editions` operations it is ignored and forced to the caller. On `createBriefing`/`updateBriefing` it defaults to the creating user; only a caller holding `users.manage` may set it to another user, to assign an edition on their behalf. Null for a briefing created with an API token.",
+            "x-foresignal-prompt": "NP-008"
+          },
           "name": {
             "type": "string",
             "minLength": 1,

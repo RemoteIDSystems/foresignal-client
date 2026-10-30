@@ -104,3 +104,36 @@
   font-family: var(--fs-font-mono);
   font-size: var(--fs-font-size-sm);
 }
+
+/* The self-service editor (NP-003): the create/edit form and its delivery-target rows. */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.targets {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.target {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The per-row actions on an edition in the list: edit, run now, delete. */
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 10px;
+}

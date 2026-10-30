@@ -19,6 +19,7 @@ import { AnalysisView, IntelligenceHome } from '../views/analysis';
 import { WorkbenchView } from '../views/workbench';
 import { EditionsView } from '../editions/EditionsView';
 import { EditionView } from '../editions/EditionView';
+import { EditionEditor } from '../editions/EditionEditor';
 import { Activate } from '../auth/Activate';
 import { ResetPassword } from '../auth/ResetPassword';
 import { SignIn } from '../auth/SignIn';
@@ -82,6 +83,11 @@ export function App({ session, initialPath }: AppProps) {
         />
         <Route path="/intelligence" element={<IntelligenceHome api={session.api} />} />
         <Route path="/editions" element={<EditionsView session={session} />} />
+        <Route path="/editions/new" element={<EditionEditor session={session} mode="create" />} />
+        <Route
+          path="/editions/:briefingId/edit"
+          element={<EditionEditor session={session} mode="edit" />}
+        />
         <Route path="/editions/:briefingId" element={<EditionView session={session} />} />
         <Route path="/alerts" element={<AlertsView session={session} />} />
         <Route

@@ -13,6 +13,7 @@ export const END_USER_PERMISSIONS = [
   'self.sources',
   'self.alerts',
   'self.llm',
+  'self.editions',
 ] as const;
 
 /** One of the client's gated permission keys. */
