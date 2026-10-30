@@ -1,11 +1,11 @@
-# R2-012 — Resync to OpenAPI 2.1.0
+# NP-001 — Resync to OpenAPI 2.1.0
 
 **Goal.** Bring the client onto the backend's **2.1.0** contract (the automated-newspaper surface —
 editions, hosted site, provenance) by re-vendoring the spec and regenerating the typed surface, so
-the edition view (R2-013) compiles against the real contract. Mirrors R2-001.
+the edition view (NP-002) compiles against the real contract. Mirrors R2-001.
 
 **Prerequisite (hard stop).** This prompt vendors the backend's **2.1.0** spec, which the backend
-Automated Newspaper set (`foresignal` `R2-028`…`R2-034`) produces. Before doing anything, check
+Automated Newspaper set (`foresignal` `NP-001`…`NP-007`) produces. Before doing anything, check
 `../foresignal/docs/OpenAPI.json` `info.version`: if it is **not** `2.1.0`, that set is not merged
 yet — **stop immediately**, write `completion-reports/RUN-STATUS.md` recording that the backend 2.1.0
 dependency is unmet, and do **not** vendor the older spec or bump `VERSION`. Only proceed when the
@@ -13,7 +13,7 @@ vendored source reads `2.1.0`.
 
 **Read first.** R2-001-CR (the 2.0.0 resync and its compile shims); README §"OpenAPI is the only
 backend reference". Backend contract: `../foresignal/docs/OpenAPI.json` (`info.version` 2.1.0, ops
-active after backend R2-034), vendored to `openapi/OpenAPI.json`.
+active after backend NP-007), vendored to `openapi/OpenAPI.json`.
 
 **Backend (OpenAPI only).**
 - `GET /v1/system` [`getSystem`], `GET /v1/contract` [`getContract`] — the live version the client
@@ -33,5 +33,5 @@ active after backend R2-034), vendored to `openapi/OpenAPI.json`.
 **Done when.** `openapi/VERSION` is `2.1.0`; `npm run generate` clean; `npm run typecheck`/`lint`/
 `build` pass; the version banner reads 2.1.0 ↔ 2.1.0; the version tests are written (not run).
 
-**Commit.** `R2-012: Resync To OpenAPI 2.1.0`;
-`completion-reports/R2-012-CR-Resync-OpenAPI-2.1.0.md` (hash + owner questions).
+**Commit.** `NP-001: Resync To OpenAPI 2.1.0`;
+`completion-reports/NP-001-CR-Resync-OpenAPI-2.1.0.md` (hash + owner questions).
