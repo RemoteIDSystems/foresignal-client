@@ -124,6 +124,7 @@ describe('App routing', () => {
       Satellites: 'Satellite Operations',
       'RF / Sensors': 'RF / Sensors',
       Intelligence: 'Intelligence',
+      Editions: 'Editions',
       Alerts: 'Alerts',
       Operations: 'Operations',
     };

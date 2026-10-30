@@ -17,6 +17,8 @@ import {
 } from '../views';
 import { AnalysisView, IntelligenceHome } from '../views/analysis';
 import { WorkbenchView } from '../views/workbench';
+import { EditionsView } from '../editions/EditionsView';
+import { EditionView } from '../editions/EditionView';
 import { Activate } from '../auth/Activate';
 import { ResetPassword } from '../auth/ResetPassword';
 import { SignIn } from '../auth/SignIn';
@@ -79,6 +81,8 @@ export function App({ session, initialPath }: AppProps) {
           element={<RfSensorsView api={session.api} store={session.store} />}
         />
         <Route path="/intelligence" element={<IntelligenceHome api={session.api} />} />
+        <Route path="/editions" element={<EditionsView session={session} />} />
+        <Route path="/editions/:briefingId" element={<EditionView session={session} />} />
         <Route path="/alerts" element={<AlertsView session={session} />} />
         <Route
           path="/intelligence/situations/:id"

@@ -1,0 +1,106 @@
+/* The Editions area (NP-002): the edition list, the reader, the spoken player and share. */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-panel-alt);
+}
+
+.rowLink {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.rowLink:hover {
+  background: var(--fs-color-panel);
+}
+
+.rowHead {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.rowName {
+  font-weight: 600;
+}
+
+.editionHead {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.player {
+  width: 100%;
+  margin-top: 6px;
+}
+
+.citations {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.citation {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-panel-alt);
+}
+
+.citationHead {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.shareRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.shareInput {
+  flex: 1 1 260px;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-panel);
+  color: var(--fs-color-text);
+  font-family: var(--fs-font-mono);
+  font-size: var(--fs-font-size-sm);
+}

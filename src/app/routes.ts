@@ -5,6 +5,7 @@ import {
   Image,
   Lightbulb,
   Map,
+  Newspaper,
   RadioTower,
   Satellite,
   Workflow,
@@ -30,6 +31,7 @@ export const NAV_TABS: readonly NavTab[] = [
   { path: '/satellites', label: 'Satellites', icon: Satellite },
   { path: '/rf-sensors', label: 'RF / Sensors', icon: RadioTower },
   { path: '/intelligence', label: 'Intelligence', icon: Lightbulb },
+  { path: '/editions', label: 'Editions', icon: Newspaper },
   { path: '/alerts', label: 'Alerts', icon: Bell },
   { path: '/operations', label: 'Operations', icon: Workflow },
 ];
