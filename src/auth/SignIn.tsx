@@ -5,6 +5,7 @@ import { DEFAULT_ROUTE } from '../app/routes';
 import type { Session } from '../app/session';
 import { Logo } from '../app/Logo';
 import { signIn } from './auth';
+import { requestPasswordReset } from './password';
 import styles from './SignIn.module.css';
 
 /** Location state a protected route may set so sign-in returns the analyst where they were going. */
@@ -27,6 +28,7 @@ export function SignIn({ session }: { session: Session }) {
   const [mfaCode, setMfaCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const mfaRef = useRef<HTMLInputElement>(null);
 
   const from = (location.state as SignInLocationState | null)?.from ?? DEFAULT_ROUTE;
@@ -59,6 +61,18 @@ export function SignIn({ session }: { session: Session }) {
     } else {
       setError(result.message);
     }
+  };
+
+  // Forgot password: post the request and always show the same neutral confirmation, so the
+  // presence or absence of an account is never disclosed.
+  const forgotPassword = async () => {
+    if (!email.trim()) {
+      setError('Enter your email above first, then select "Forgot password".');
+      return;
+    }
+    setError(null);
+    await requestPasswordReset(session, email);
+    setResetSent(true);
   };
 
   return (
@@ -121,6 +135,12 @@ export function SignIn({ session }: { session: Session }) {
           </p>
         )}
 
+        {resetSent && (
+          <p className={styles.sub} role="status" data-testid="reset-sent">
+            If an account exists for that email, a password-reset link is on its way.
+          </p>
+        )}
+
         <button
           type="submit"
           className={styles.submit}
@@ -128,6 +148,17 @@ export function SignIn({ session }: { session: Session }) {
         >
           {busy ? 'Signing in…' : mfaStep ? 'Verify and sign in' : 'Sign in'}
         </button>
+
+        {!mfaStep && (
+          <button
+            type="button"
+            className={styles.anon}
+            onClick={() => void forgotPassword()}
+            data-testid="forgot-password"
+          >
+            Forgot password?
+          </button>
+        )}
 
         <button
           type="button"

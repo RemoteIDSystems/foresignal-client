@@ -34,3 +34,60 @@ export function describeAuthError(error: unknown, context: AuthErrorContext = {}
   }
   return 'Sign-in failed. Please try again.';
 }
+
+/** A mapped password-flow failure and whether the user can recover it from the same screen. */
+export interface PasswordErrorResult {
+  /** The user-facing message. */
+  message: string;
+  /** True when the user can retry/ask for a new link here, rather than hitting a dead end. */
+  recoverable: boolean;
+}
+
+/**
+ * Maps a failed `activateAccount`/`resetPassword` call to a clear message. An expired, used or
+ * unknown token (`410 ACTIVATION_TOKEN_GONE`/`RESET_TOKEN_GONE`) is recoverable — the screen points
+ * the user to a fresh link — never a dead end. A `VALIDATION_FAILED` (weak password) prefers the
+ * backend's own `detail`, since the exact policy is the backend's.
+ */
+export function describePasswordError(
+  error: unknown,
+  flow: 'activate' | 'reset',
+): PasswordErrorResult {
+  if (error instanceof FsError) {
+    switch (error.code) {
+      case 'ACTIVATION_TOKEN_GONE':
+        return {
+          message:
+            'This activation link has expired or has already been used. Ask your administrator for a new invitation.',
+          recoverable: false,
+        };
+      case 'RESET_TOKEN_GONE':
+        return {
+          message:
+            'This reset link has expired or has already been used. Request a new one from the sign-in screen.',
+          recoverable: true,
+        };
+      case 'VALIDATION_FAILED':
+        return {
+          message:
+            error.detail ?? 'That password does not meet the requirements. Try a stronger one.',
+          recoverable: true,
+        };
+      default:
+        return {
+          message:
+            error.detail ??
+            error.title ??
+            (flow === 'activate'
+              ? 'Could not activate the account.'
+              : 'Could not reset the password.'),
+          recoverable: true,
+        };
+    }
+  }
+  return {
+    message:
+      flow === 'activate' ? 'Could not activate the account.' : 'Could not reset the password.',
+    recoverable: true,
+  };
+}

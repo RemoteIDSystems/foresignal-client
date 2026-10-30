@@ -13,6 +13,8 @@ import {
 } from '../views';
 import { AnalysisView, IntelligenceHome } from '../views/analysis';
 import { WorkbenchView } from '../views/workbench';
+import { Activate } from '../auth/Activate';
+import { ResetPassword } from '../auth/ResetPassword';
 import { SignIn } from '../auth/SignIn';
 import { AboutView } from './AboutView';
 import { AppShell } from './AppShell';
@@ -98,6 +100,8 @@ export function App({ session, initialPath }: AppProps) {
         />
         <Route path="/operations" element={<OperationsView session={session} />} />
         <Route path="/signin" element={<SignIn session={session} />} />
+        <Route path="/activate" element={<Activate session={session} />} />
+        <Route path="/reset" element={<ResetPassword session={session} />} />
         <Route path="/settings" element={<SettingsView session={session} />} />
         <Route path="/about" element={<AboutView api={session.api} />} />
         <Route path="*" element={<Navigate to={DEFAULT_ROUTE} replace />} />

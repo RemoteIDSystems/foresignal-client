@@ -99,4 +99,22 @@ describe('SignIn', () => {
     expect(session.sessions.get()).toBeNull();
     expect(screen.queryByText('GLOBAL')).not.toBeInTheDocument();
   });
+
+  it('shows the same neutral confirmation when "Forgot password" is used', async () => {
+    let posted: Record<string, unknown> | undefined;
+    server.use(
+      mswHttp.post(`${MOCK_BASE_URL}/v1/auth/password/reset-request`, async ({ request }) => {
+        posted = (await request.json()) as Record<string, unknown>;
+        return new HttpResponse(null, { status: 202 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderSignIn(fakeSession());
+    await user.type(screen.getByLabelText('Email'), 'a@b.test');
+    await user.click(screen.getByTestId('forgot-password'));
+    expect(await screen.findByTestId('reset-sent')).toHaveTextContent(
+      'If an account exists for that email, a password-reset link is on its way.',
+    );
+    expect(posted).toEqual({ email: 'a@b.test' });
+  });
 });
