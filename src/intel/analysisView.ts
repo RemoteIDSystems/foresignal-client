@@ -1,4 +1,5 @@
 import type { components } from '../api/generated/schema';
+import { formatDay, formatInstant } from '../app/format/clock';
 import { categoryOf, KIND_CATEGORIES, type CategoryId } from '../lib/kindCategories';
 import { parseObjectRef, recordRef } from '../lib/objectRef';
 import type { BadgeTone } from '../ui/Badge';
@@ -243,21 +244,20 @@ export function envelopeAllows(
   return (actions ?? []).some((action) => action.method === method && path.test(action.href));
 }
 
-/** A UTC instant as the mock's rows write it: "2025-09-18 14:32Z". */
+/**
+ * An instant as the mock's rows write it. Defaults to UTC ("2025-09-18 14:32Z"); once a signed-in
+ * user picks a timezone (R2-007) it renders in that zone, through the one app clock.
+ */
 export function utcText(iso: string | null | undefined): string {
-  if (!iso) return '—';
-  const at = new Date(iso);
-  if (Number.isNaN(at.getTime())) return '—';
-  return `${at.toISOString().slice(0, 16).replace('T', ' ')}Z`;
+  return formatInstant(iso);
 }
 
-/** A UTC day as the timeline writes it: "SEP 18". */
+/**
+ * A day as the timeline writes it ("SEP 18"). Defaults to UTC; honors the user's chosen timezone
+ * and locale through the one app clock (R2-007).
+ */
 export function dayText(iso: string): string {
-  const at = new Date(iso);
-  if (Number.isNaN(at.getTime())) return '';
-  return at
-    .toLocaleDateString('en-US', { month: 'short', day: '2-digit', timeZone: 'UTC' })
-    .toUpperCase();
+  return formatDay(iso);
 }
 
 /** A GeoJSON geometry (`Geometry`). */

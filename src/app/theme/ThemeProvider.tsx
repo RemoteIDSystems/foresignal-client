@@ -20,7 +20,7 @@ export function ThemeProvider({
       root.style.setProperty(name, value);
     }
     root.dataset.theme = theme.name;
-    root.style.colorScheme = 'dark';
+    root.style.colorScheme = theme.name;
   }, [theme]);
   return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>;
 }

@@ -75,8 +75,69 @@ export const darkTokens = {
   },
 } as const;
 
-/** The shape every theme's tokens share. */
-export type ThemeTokens = typeof darkTokens;
+/**
+ * Design tokens for the light theme. Same shape as {@link darkTokens}; colors are chosen so each
+ * text/surface pair clears its WCAG 2.x minimum (checked with `theme/contrast.ts`), and the
+ * non-color groups (font, space, radius) are shared with dark. Selected when a user's theme
+ * preference is `light`, or `system` under a light OS setting (R2-007).
+ */
+export const lightTokens: ThemeTokens = {
+  color: {
+    page: '#eef2f7',
+    nav: '#ffffff',
+    panel: '#ffffff',
+    panelAlt: '#f3f6fa',
+    raised: '#e7edf4',
+    raisedHover: '#dce4ee',
+    selected: '#cbd8e8',
+    border: '#d3dde8',
+    borderStrong: '#b7c5d4',
+    accent: '#0f6ad2',
+    accentStrong: '#0a4f9e',
+    accentSoft: '#dcebfb',
+    text: '#0b1722',
+    textSecondary: '#3c4a59',
+    textMuted: '#5a6a79',
+    live: '#0a7a50',
+    liveSoft: '#dcf1e6',
+    danger: '#c62828',
+    warning: '#8a5200',
+    success: '#0a7a50',
+  },
+  tone: {
+    neutralBg: '#e2e8ef',
+    neutralFg: '#2f3d4c',
+    infoBg: '#d8e8fb',
+    infoFg: '#0f5091',
+    successBg: '#d3efe0',
+    successFg: '#08623f',
+    warningBg: '#f4e6cd',
+    warningFg: '#7e4a00',
+    dangerBg: '#f6dcdc',
+    dangerFg: '#962020',
+    tealBg: '#d0ece9',
+    tealFg: '#0a6259',
+    violetBg: '#e4dcfb',
+    violetFg: '#53338f',
+    orangeBg: '#f4e0cd',
+    orangeFg: '#7f4410',
+  },
+  font: darkTokens.font,
+  space: darkTokens.space,
+  radius: darkTokens.radius,
+  shadow: {
+    panel: '0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 6px 18px rgba(16, 34, 58, 0.1)',
+    overlay: '0 12px 40px rgba(16, 34, 58, 0.22)',
+  },
+};
+
+/**
+ * The shape every theme's tokens share: the groups and keys of {@link darkTokens}, each value
+ * widened to `string` so a second theme (light) can supply its own values.
+ */
+export type ThemeTokens = {
+  [Group in keyof typeof darkTokens]: Record<keyof (typeof darkTokens)[Group], string>;
+};
 
 /** Converts a camelCase token name to the kebab-case used in CSS custom properties. */
 function kebab(name: string): string {

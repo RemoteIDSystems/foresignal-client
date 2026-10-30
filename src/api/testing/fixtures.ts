@@ -30,6 +30,7 @@ export function me(
   overrides: {
     permissions?: string[];
     scopes?: components['schemas']['Me']['scopes'];
+    roles?: components['schemas']['RoleRef'][];
   } = {},
 ): components['schemas']['Me'] {
   return {
@@ -46,7 +47,7 @@ export function me(
       email: 'analyst@example.test',
       fullName: 'Test Analyst',
       status: 'active',
-      roles: [],
+      roles: overrides.roles ?? [],
       mfaEnabled: false,
     },
     token: { id: '00000000-0000-4000-8000-0000000000bb', name: 'session', scope: 'read' },
@@ -71,6 +72,34 @@ export function sessionToken(
     mfaRequired: false,
     scopes: ['read'],
     permissions: [],
+    ...overrides,
+  };
+}
+
+/** A minimal valid `UserPreferences` body; override any field per test. */
+export function userPreferences(
+  overrides: Partial<components['schemas']['UserPreferences']> = {},
+): components['schemas']['UserPreferences'] {
+  return {
+    timezone: null,
+    locale: null,
+    theme: 'system',
+    notifications: { emailEnabled: true, pushEnabled: true, quietHours: null },
+    ui: {},
+    ...overrides,
+  };
+}
+
+/** A minimal valid `NotificationPreference` row; override any field per test. */
+export function notificationPreference(
+  overrides: Partial<components['schemas']['NotificationPreference']> = {},
+): components['schemas']['NotificationPreference'] {
+  return {
+    id: '01J0000000000000000000000N',
+    eventTypes: ['mention'],
+    channel: { type: 'email' },
+    quietHours: null,
+    enabled: true,
     ...overrides,
   };
 }

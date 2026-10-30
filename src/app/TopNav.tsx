@@ -27,7 +27,7 @@ export function TopNav({ session }: { session: Session }) {
 
   // The access affordance reflects, in order: a signed-in session, a pasted API token, anonymous.
   const identity = me
-    ? { name: me.user?.email ?? me.principal.displayName, detail: 'Signed in', to: '/settings' }
+    ? { name: me.user?.email ?? me.principal.displayName, detail: 'Signed in', to: '/account' }
     : token
       ? { name: 'Token access', detail: `${token.slice(0, 8)}…`, to: '/settings' }
       : { name: 'Sign in', detail: 'Read-only', to: '/signin' };
