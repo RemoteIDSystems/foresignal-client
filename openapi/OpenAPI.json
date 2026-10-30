@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Foresignal API",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "summary": "Headless intelligence broker: ingest, version and re-serve public telemetry.",
     "description": "All configuration is done through this API. The MCP server is at `/mcp` (MCP streamable HTTP, protocol versions 2024-11-05 to 2025-11-25) and is not an OpenAPI operation; it exposes the same data, the alert lifecycle and watch management as MCP tools, resources (`foresignal://sources`, `foresignal://kinds`) and the `situation-report` prompt (025, docs/Agent-Guide.md), plus the cost-bearing `search` tool (027) and the briefing tools `list_briefings`, `get_briefing_run`, `get_digest` (read), `create_briefing` and the cost-bearing `run_briefing` (agent) (029). It takes the same bearer tokens: `/mcp/**` needs `read` (open while `openReads` is on), tools are listed by the caller's scope and each checks its own (`read` tools; `agent` for writes such as `create_watch` and `set_alert_status`; cost-bearing tools always need a token), a session is bound to the token that opened it, and every tool call is audited (argument names only). The older HTTP+SSE transport (protocol 2024-11-05) is served at `/mcp/sse` with messages at `/mcp/message` only when `foresignal.mcp.legacy-sse.enabled=true`, for older clients. `GET /v1/system` reports its state under `mcp`. Reads of data are open on the local network; all writes and settings reads require the admin bearer token printed on first start. Errors are RFC 9457 problem+json. Timestamps are ISO-8601 UTC. `/v1` is additive-only once released.\n\n**Key-in-path carriers.** Header-less clients use keys in the path: feed keys (`fsf_`, 035) as `/v1/k/{key}/<any allowed GET/HEAD path>`, tile keys (`fsk_`, 050) as `/v1/k/{key}/products/...`, `/v1/k/{key}/tiles/...`, `/v1/k/{key}/map/...` and `/v1/k/{key}/changes/stream` for map clients (MapLibre, maplibre_gl, Cesium, `EventSource`), share links (`fss_`, 112) as `/v1/k/{key}`. These are transports for the documented operations, not separate operations. A feed key reaches only `GET`/`HEAD` of `read` operations that are not always-authenticated, under the key's path prefixes, with the key's mandatory read restriction (unknown key 401 INVALID_FEED_KEY, expired or revoked 410 FEED_KEY_GONE, another method 405, a path outside the prefixes 403 RESTRICTED). A tile key reaches the same operations under its prefixes (a subset of `/v1/products/`, `/v1/styles`, `/v1/media/`, `/v1/tiles/`, `/v1/maps/static`, `/v1/sample`, `/v1/ground-stations/`, `/v1/changes/stream`, `/v1/events/stream`, `/v1/map/`), with its optional restriction and never private sources (unknown, expired or revoked key 401 INVALID_TILE_KEY, another method 405, a path outside the prefixes 403 INSUFFICIENT_SCOPE). Responses carry `Referrer-Policy: no-referrer` and `X-Robots-Tag: noindex`; `Cache-Control` defaults to `private`, and a tile-key response takes the canonical path's own rule (`public` only while `openReads` covers it). Logs show only the key's first eight characters; the key is never echoed except by `createFeedKey` and `createTileKey`, and in the follow-up URLs of documents requested through it (058: the MapLibre style's sources and sprite, KML NetworkLink and icon hrefs, a feed's own `rel=\"self\"` / `feed_url`), which are then always `Cache-Control: private`. CORS exposes `Foresignal-Frame-Time`, `Foresignal-Image-Bounds`, `Foresignal-Frame-Expired`, `Retry-After`, `Link` and `ETag`, allows `Authorization`, `If-None-Match` and `Foresignal-Prefetch`, and caches preflights for a day; `?prefetch=1` marks a render prefetch without the preflight the header causes.\n\n**Restrictions and limits (035).** Restricted tokens, feed keys and the anonymous profile (`security.anonymous`, applied to tokenless reads while `openReads` is on) see only records and alerts inside their `ReadRestriction` on every read path (records, history, versions, changes, kinds, tiles, streams, search, alerts, the inbox, the digest, briefings, MCP tools and Ask): request filters are intersected with the restriction, and a single record or alert outside it is 404. Every client is rate-limited per class (`RateLimitSettings`); over a limit, or after repeated failed credentials from one address, the answer is 429 RATE_LIMITED with `Retry-After`. Device ingest URLs (039) and signed action links (033) use their own documented paths.\n\n**Permissions (R2-004).** An operation a signed-in user needs a permission for carries `x-foresignal-permission`, a key of the `GET /v1/permissions` catalog (`users.manage`, `data.read`, `audit.read`…). A session bearer (`fss_`) is gated by that permission alone, in place of the scope: a user whose roles lack it gets 403 PERMISSION_DENIED with `requiredPermission`. An operation may list `x-foresignal-permission-alternatives`, further keys any one of which satisfies it as well (R2-009: the channel operations take `self.channels` or `channels.global`). An operation without one is gated on the session's derived scope. API tokens are gated by `x-foresignal-scope` only, as before: machines are not permission-scoped, so an `admin` token satisfies every permission and a lower token gets 403 INSUFFICIENT_SCOPE.\n\n**Status annotations.** Every operation has `x-foresignal-prompt` (the build prompt that implements it), optional `x-foresignal-extended-by`, and `x-foresignal-status` (`planned` until implemented). Clients can mock the whole API from this document and filter by status.\n\n**Outside this document:** the MCP server (`/mcp`, plus the legacy SSE transport when enabled), Actuator endpoints (`/actuator/**`), and sink listeners on their own ports (110).",
     "license": {
@@ -719,6 +719,11 @@
         "version": "2.0.0",
         "date": "2026-10-26",
         "note": "API 2.0.0 (Release-2 platform contract, authored before implementation; every new operation is x-foresignal-status `planned` and tagged with its R2 implementation prompt R2-003..R2-027). Turns ForeSignal from a single-operator instance into a multi-user RBAC platform. New operations: email/password auth and sessions (/v1/auth/login|logout|password/reset-request|password/reset|activate, GET /v1/auth/sessions, DELETE /v1/auth/sessions and /v1/auth/sessions/{id}); user management (/v1/users CRUD plus roles, suspend, unsuspend, resend-invite, password-reset); roles and the permission catalog (/v1/roles CRUD, GET /v1/permissions); SMTP settings and test (/v1/settings/smtp, /v1/settings/smtp/test); per-user source views and the instance collection set (/v1/me/sources, /v1/sources/collection); the caller's LLM budget (/v1/me/llm/budget); preferences (/v1/me/preferences); host resource monitoring and thresholds (/v1/system/resources, /v1/settings/thresholds); a retention preview (/v1/settings/retention/preview); the cold-storage archival tier (/v1/archives, /v1/archives/run, /v1/archives/{id}/restore); backup and restore (/v1/settings/backup, /v1/backups, /v1/backups/run, /v1/backups/{id}/restore); egress routing and IP rotation (/v1/egress CRUD, test, health, /v1/settings/egress, PUT /v1/sources/{sourceId}/egress); first-party aggregators (/v1/aggregators, /v1/aggregators/{domain}, test); MFA (/v1/me/mfa/enroll|verify|disable, recovery-codes); user-owned API tokens (/v1/me/tokens); per-user quotas (/v1/users/{id}/quota, /v1/me/quota); and first-run onboarding (/v1/system/first-run, /v1/setup). Semantic change (no shape change): existing per-operator config becomes per-user owned (owner_user_id) — triggers, channels, personal LLM providers and saved views are the caller's own (an operator also manages shared/global entries), and a source's enablement/display is the caller's per-user view over the shared collection; the collection is still pulled once by the paced collector (the union of users' views). GET /v1/me additionally reflects the authenticated user and effective permissions. The move to 2.0.0 is the version at which these per-user semantics apply; the wire shapes of the affected operations are unchanged, so the additive-only check against the frozen v1.0.0 contract still passes. The GET/PUT /v1/settings/archive and /v1/settings/retention operations already existed (prompts 111 and 019) and are reused; /v1/archives is the new archival-tier inventory, distinct from the compliance cold-archive catalog (/v1/archive/catalog)."
+      },
+      {
+        "version": "2.1.0",
+        "date": "2026-10-29",
+        "note": "API 2.1.0 (Automated Newspaper). The contract was authored by NP-001 with every new operation x-foresignal-status `planned`; NP-002 to NP-006 implemented them and NP-007 activated them, so every operation of the feature is now `implemented`. Extends the briefing engine into per-user editions rather than adding a parallel subsystem. New operations: news translation settings (getTranslationSettings, updateTranslationSettings: GET/PUT /v1/settings/translation, admin); the caller's news subscriptions (getMyNewsSubscriptions, updateMyNewsSubscriptions: GET/PUT /v1/me/news-subscriptions, read, self.sources); the caller's editions (listMyEditions: GET /v1/me/editions, read); and the hosted edition site (getEditionSite: GET /v1/editions/{briefingId}/site, read, open while openReads is on, reachable by feed key and share link). Added while implementing (NP-004 to NP-006): BriefingRun.deliveryResults, the read-only outcome of each delivery target (NP-004); openEditionSiteShareLink (GET /v1/k/{key}/site, open: the hosted edition site through its share link) and the share-link target type `edition-site` (NP-005); and BriefingRun.breaking, the read-only alert that fired a breaking-news run (NP-006). New schemas: TranslationSettings, TranslationSettingsInput, NewsSubscription, NewsSubscriptionView, NewsSubscriptionUpdate, EditionSummary, EditionSite, DeliveryTarget, BreakingNewsConfig. Additive, optional fields: BriefingInput gains outputLanguage (NP-003), deliveryTargets (NP-004), site (NP-005), breakingNews (NP-006), includeProvenance and includeCorroboration (NP-007); Briefing gains the read-only ownerUserId (NP-003); AskCitation gains provenance and corroboration, set only on briefing-run citations of a briefing with the matching flag (NP-007); NewsArticle and NewsStory gain targetLanguage, translatedTitle, translatedExcerpt and translationProvenance beside the untouched originals (NP-002). No operation or schema was renamed or removed; a 2.0.0 client stays valid."
       }
     ]
   },
@@ -80100,6 +80105,112 @@
         "x-foresignal-status": "implemented"
       }
     },
+    "/v1/k/{key}/site": {
+      "get": {
+        "tags": [
+          "Briefings"
+        ],
+        "operationId": "openEditionSiteShareLink",
+        "summary": "Open a shared edition site",
+        "description": "The hosted site of an edition (NP-005, `getEditionSite`) behind its share link: the latest successful run as a standalone HTML page, read-only. The share key grants this page only, never writes, other editions or records. A run citing private or non-redistributable sources is not served. `401` for an unknown key and `410 SHARE_EXPIRED` when the link is revoked, expired or exhausted; `404` when the link is to another target type, the edition was deleted, its site is off, or it has no successful run yet. Strong ETag and `Last-Modified`; 304 on a match.\n\n**Scope:** `open` (share key in the path; `/v1/k/{key}/…`).",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "description": "Share key (`fss_…`)",
+            "schema": {
+              "type": "string",
+              "pattern": "^fss_[A-Za-z0-9_-]+$"
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "description": "A previous ETag",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The site",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "description": "Strong validator",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "When the shown run finished",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified"
+          },
+          "401": {
+            "description": "Invalid key (INVALID_SHARE_KEY)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Link expired or revoked (SHARE_EXPIRED)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (RATE_LIMITED)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-foresignal-scope": "open",
+        "x-foresignal-prompt": "NP-005",
+        "x-foresignal-status": "implemented"
+      }
+    },
     "/v1/exchange/packages": {
       "post": {
         "tags": [
@@ -94445,6 +94556,531 @@
         "x-foresignal-prompt": "R2-027",
         "x-foresignal-status": "implemented"
       }
+    },
+    "/v1/settings/translation": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "operationId": "getTranslationSettings",
+        "summary": "Get news translation settings",
+        "description": "Target languages, translated fields, engine, budget cap and source-language confidence for translating foreign-language news at ingest (NP-002), with the current translation spend.\n\n**Scope:** `admin`.",
+        "responses": {
+          "200": {
+            "description": "Translation settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid token",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the required scope",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-foresignal-scope": "admin",
+        "x-foresignal-permission": "system.settings",
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ],
+        "x-foresignal-prompt": "NP-001",
+        "x-foresignal-status": "implemented"
+      },
+      "put": {
+        "tags": [
+          "Settings"
+        ],
+        "operationId": "updateTranslationSettings",
+        "summary": "Set news translation settings",
+        "description": "Replaces the settings. Takes effect for news ingested afterwards; an already-translated article is not translated again unless its source text changes.\n\n**Scope:** `admin`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranslationSettingsInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid token",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the required scope",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-foresignal-scope": "admin",
+        "x-foresignal-permission": "system.settings",
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ],
+        "x-foresignal-prompt": "NP-001",
+        "x-foresignal-status": "implemented"
+      }
+    },
+    "/v1/me/news-subscriptions": {
+      "get": {
+        "tags": [
+          "News"
+        ],
+        "operationId": "getMyNewsSubscriptions",
+        "summary": "Get my news subscriptions",
+        "description": "The outlets and languages the caller follows, which scope the caller's editions (NP-003). A caller who never set any has none, which is no restriction. Subscriptions belong to a signed-in user, so an API token gets `401`. Requires `self.sources`.\n\n**Scope:** `read`.",
+        "responses": {
+          "200": {
+            "description": "The caller's news subscriptions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewsSubscriptionView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required permission",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (RATE_LIMITED)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-foresignal-scope": "read",
+        "x-foresignal-permission": "self.sources",
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ],
+        "x-foresignal-prompt": "NP-001",
+        "x-foresignal-always-authenticated": true,
+        "x-foresignal-status": "implemented"
+      },
+      "put": {
+        "tags": [
+          "News"
+        ],
+        "operationId": "updateMyNewsSubscriptions",
+        "summary": "Update my news subscriptions",
+        "description": "Replaces the caller's news subscriptions; an empty list removes every restriction. An unknown outlet id or a malformed language tag is a 400. An API token gets `401`. Requires `self.sources`.\n\n**Scope:** `read`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewsSubscriptionUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewsSubscriptionView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body (VALIDATION_FAILED)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required permission",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (RATE_LIMITED)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-foresignal-scope": "read",
+        "x-foresignal-permission": "self.sources",
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ],
+        "x-foresignal-prompt": "NP-001",
+        "x-foresignal-always-authenticated": true,
+        "x-foresignal-status": "implemented"
+      }
+    },
+    "/v1/me/editions": {
+      "get": {
+        "tags": [
+          "Briefings"
+        ],
+        "operationId": "listMyEditions",
+        "summary": "List my editions",
+        "description": "The caller's editions: the briefings the calling user owns (`Briefing.ownerUserId`, NP-003), newest first. An edition is created, changed, run and deleted through the briefing operations. Any signed-in user; an API token gets `401`.\n\n**Scope:** `read`.",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque pagination cursor from a previous response's nextCursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Page size",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The caller's editions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EditionSummary"
+                      }
+                    },
+                    "nextCursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid cursor or limit (VALIDATION_FAILED)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required permission",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (RATE_LIMITED)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-foresignal-scope": "read",
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ],
+        "x-foresignal-prompt": "NP-001",
+        "x-foresignal-always-authenticated": true,
+        "x-foresignal-status": "implemented"
+      }
+    },
+    "/v1/editions/{briefingId}/site": {
+      "get": {
+        "tags": [
+          "Briefings"
+        ],
+        "operationId": "getEditionSite",
+        "summary": "Edition site",
+        "description": "The edition's latest successful run as a complete, standalone HTML page (NP-005): a stable, always-current newspaper site. `Accept: application/json` or `?format=json` returns the `EditionSite` (canonical, feed-key and share URLs) instead. Feed keys work through `/v1/k/{key}/editions/{briefingId}/site`, with asset URLs carrying the same key; a share link to the site grants it and its assets only, read-only and revocable. Same visibility as the podcast feed: 404 unless the edition is visible to the caller (its owner, its feed key or its share link for an owned edition), runs citing private sources only behind the private gate, and 404 while the site is off or before the first successful run. Strong ETag and `Last-Modified`; 304 on a match.\n\n**Scope:** `read` (open while `security.openReads` is on).",
+        "parameters": [
+          {
+            "name": "briefingId",
+            "in": "path",
+            "required": true,
+            "description": "Briefing id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "description": "Alternative to the Accept header",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "html",
+                "json"
+              ]
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "description": "ETag from a previous response; 304 when unchanged",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The site",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditionSite"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "description": "Strong validator",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "When the shown run finished",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified"
+          },
+          "400": {
+            "description": "Invalid `format`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid token",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Endpoint outside the token's, feed key's or anonymous profile's restriction (RESTRICTED, ENDPOINT_NOT_ALLOWED)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown or invisible edition, site off, or no successful run yet",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (RATE_LIMITED); honor Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "x-foresignal-scope": "read",
+        "x-foresignal-permission": "intel.read",
+        "security": [
+          {},
+          {
+            "bearerToken": []
+          }
+        ],
+        "x-foresignal-prompt": "NP-001",
+        "x-foresignal-status": "implemented"
+      }
     }
   },
   "components": {
@@ -106391,6 +107027,85 @@
               "number",
               "null"
             ]
+          },
+          "provenance": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": false,
+            "description": "Briefing-run citations of a briefing with `includeProvenance` only: why the item is in the edition (NP-007); absent elsewhere",
+            "properties": {
+              "refs": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ObjectRef"
+                },
+                "description": "The cross-linked evidence and objects that put the item in scope"
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "A one-line \"why included\""
+              }
+            },
+            "required": [
+              "refs"
+            ]
+          },
+          "corroboration": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": false,
+            "description": "Briefing-run citations of a briefing with `includeCorroboration` only: how well-supported the item is (NP-007), from the 154 corroboration policy; absent elsewhere",
+            "properties": {
+              "evidenceQuality": {
+                "type": "string",
+                "enum": [
+                  "strong",
+                  "moderate",
+                  "weak",
+                  "insufficient"
+                ]
+              },
+              "independentSources": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "credibility": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 1,
+                "maximum": 6,
+                "description": "Admiralty information credibility; 6 means unknown"
+              },
+              "reliability": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "A",
+                  "B",
+                  "C",
+                  "D",
+                  "E",
+                  "F",
+                  null
+                ],
+                "description": "Source reliability (109); F means unknown"
+              }
+            },
+            "required": [
+              "evidenceQuality",
+              "independentSources"
+            ]
           }
         },
         "required": [
@@ -106398,8 +107113,13 @@
           "title"
         ],
         "x-foresignal-extended-by": [
-          "056"
-        ]
+          "056",
+          "NP-007"
+        ],
+        "x-foresignal-property-prompts": {
+          "provenance": "NP-007",
+          "corroboration": "NP-007"
+        }
       },
       "AskAction": {
         "type": "object",
@@ -106870,6 +107590,67 @@
                 "type": "null"
               }
             ]
+          },
+          "outputLanguage": {
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 35,
+                "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$",
+                "description": "BCP 47 language tag, for example `en`, `es` or `pt-BR`",
+                "example": "en"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The language the edition is written and spoken in (NP-003); null for the owner's `UserPreferences.locale`, or the source language for a briefing without an owner"
+          },
+          "deliveryTargets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeliveryTarget"
+            },
+            "description": "Where each run goes (NP-004). Empty or absent: every channel in `channelIds`, as before"
+          },
+          "site": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "The hosted edition site (NP-005)",
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "default": false,
+                "description": "Serve the latest successful run at `getEditionSite`"
+              },
+              "shareable": {
+                "type": "boolean",
+                "default": false,
+                "description": "Keep a read-only, revocable share link to the site"
+              }
+            }
+          },
+          "breakingNews": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/BreakingNewsConfig"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Breaking-news special editions (NP-006); null for none"
+          },
+          "includeProvenance": {
+            "type": "boolean",
+            "default": false,
+            "description": "Each item carries the cross-linked evidence that put it in the edition (`provenance` on the run's citations, NP-007)"
+          },
+          "includeCorroboration": {
+            "type": "boolean",
+            "default": false,
+            "description": "Each item carries its corroboration signal (`corroboration` on the run's citations, NP-007)"
           }
         },
         "required": [
@@ -106877,8 +107658,21 @@
           "schedule"
         ],
         "x-foresignal-extended-by": [
-          "141"
-        ]
+          "141",
+          "NP-003",
+          "NP-004",
+          "NP-005",
+          "NP-006",
+          "NP-007"
+        ],
+        "x-foresignal-property-prompts": {
+          "outputLanguage": "NP-003",
+          "deliveryTargets": "NP-004",
+          "site": "NP-005",
+          "breakingNews": "NP-006",
+          "includeProvenance": "NP-007",
+          "includeCorroboration": "NP-007"
+        }
       },
       "Briefing": {
         "allOf": [
@@ -106926,6 +107720,15 @@
                   "type": "string"
                 },
                 "description": "Non-fatal validation warnings, e.g. a channel not subscribed to `briefing`"
+              },
+              "ownerUserId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "readOnly": true,
+                "description": "The v2.0 user who owns the edition: the creating user for a signed-in session, null for a briefing created with an API token (NP-003)"
               }
             },
             "required": [
@@ -106936,8 +107739,12 @@
         ],
         "x-foresignal-extended-by": [
           "029",
-          "141"
-        ]
+          "141",
+          "NP-003"
+        ],
+        "x-foresignal-property-prompts": {
+          "ownerUserId": "NP-003"
+        }
       },
       "BriefingRun": {
         "type": "object",
@@ -107128,6 +107935,133 @@
                 "type": "null"
               }
             ]
+          },
+          "deliveryResults": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "readOnly": true,
+            "description": "The outcome of each of the briefing's `deliveryTargets` for this run (NP-004), in target order; null for a briefing without targets, which delivers to its channels as before",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "channel",
+                    "website",
+                    "podcast"
+                  ]
+                },
+                "channelId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "format": {
+                  "type": "string",
+                  "enum": [
+                    "email",
+                    "push",
+                    "alert",
+                    "html",
+                    "audio"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "queued",
+                    "available",
+                    "skipped",
+                    "failed"
+                  ],
+                  "description": "`queued` handed to the channel (its own delivery is in the notification's deliveries); `available` a pulled target (`website`, `podcast`) the run can be read at; `skipped` not attempted (`error` says why: a missing, disabled or foreign channel, no audio); `failed` the send failed (`error`). One target's failure never stops the others"
+                },
+                "notificationId": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int64",
+                  "description": "The notification published to the channel"
+                },
+                "url": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uri",
+                  "description": "Where a pulled target is available"
+                },
+                "error": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "format",
+                "status"
+              ]
+            }
+          },
+          "breaking": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "readOnly": true,
+            "description": "The alert that fired this run as a breaking-news special edition (NP-006); null for a scheduled, manual or preview run. A breaking run is otherwise an ordinary run of the edition: same scope, output, delivery targets and site",
+            "properties": {
+              "alertId": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "ruleId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "ruleName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "info",
+                  "warning",
+                  "critical"
+                ]
+              },
+              "firedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "alertId",
+              "severity"
+            ]
           }
         },
         "required": [
@@ -107140,7 +108074,9 @@
         "x-foresignal-extended-by": [
           "029",
           "109",
-          "141"
+          "141",
+          "NP-004",
+          "NP-006"
         ]
       },
       "BriefingRunPage": {
@@ -136802,7 +137738,8 @@
               "briefing-run",
               "export",
               "workspace",
-              "report"
+              "report",
+              "edition-site"
             ]
           },
           "targetRef": {
@@ -167755,6 +168692,67 @@
           "sourceId": {
             "type": "string",
             "description": "`gdelt-articles` or a `news-feed-*` source"
+          },
+          "targetLanguage": {
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 35,
+                "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$",
+                "description": "BCP 47 language tag, for example `en`, `es` or `pt-BR`",
+                "example": "en"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The language of the translated fields, or null when untranslated"
+          },
+          "translatedTitle": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`title` in `targetLanguage`; the original fields are never overwritten (NP-002)"
+          },
+          "translatedExcerpt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 1000,
+            "description": "The excerpt (an article's `summary`) in `targetLanguage`; the original fields are never overwritten (NP-002)"
+          },
+          "translationProvenance": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": false,
+            "description": "How the translation was made",
+            "properties": {
+              "engine": {
+                "type": "string",
+                "x-extensible-enum": [
+                  "llm"
+                ]
+              },
+              "model": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "engine",
+              "at"
+            ]
           }
         },
         "required": [
@@ -167765,7 +168763,16 @@
           "domain",
           "seenAt",
           "sourceId"
-        ]
+        ],
+        "x-foresignal-extended-by": [
+          "NP-002"
+        ],
+        "x-foresignal-property-prompts": {
+          "targetLanguage": "NP-002",
+          "translatedTitle": "NP-002",
+          "translatedExcerpt": "NP-002",
+          "translationProvenance": "NP-002"
+        }
       },
       "NewsArticlePage": {
         "type": "object",
@@ -167900,6 +168907,67 @@
               "$ref": "#/components/schemas/ObjectEnvelope"
             },
             "description": "Detail view"
+          },
+          "targetLanguage": {
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 35,
+                "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$",
+                "description": "BCP 47 language tag, for example `en`, `es` or `pt-BR`",
+                "example": "en"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The language of the translated fields, or null when untranslated"
+          },
+          "translatedTitle": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`title` in `targetLanguage`; the original fields are never overwritten (NP-002)"
+          },
+          "translatedExcerpt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 1000,
+            "description": "The excerpt (an article's `summary`) in `targetLanguage`; the original fields are never overwritten (NP-002)"
+          },
+          "translationProvenance": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": false,
+            "description": "How the translation was made",
+            "properties": {
+              "engine": {
+                "type": "string",
+                "x-extensible-enum": [
+                  "llm"
+                ]
+              },
+              "model": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "engine",
+              "at"
+            ]
           }
         },
         "required": [
@@ -167913,7 +168981,16 @@
           "evidenceGroupCount",
           "coverage",
           "corroborated"
-        ]
+        ],
+        "x-foresignal-extended-by": [
+          "NP-002"
+        ],
+        "x-foresignal-property-prompts": {
+          "targetLanguage": "NP-002",
+          "translatedTitle": "NP-002",
+          "translatedExcerpt": "NP-002",
+          "translationProvenance": "NP-002"
+        }
       },
       "NewsStoryPage": {
         "type": "object",
@@ -180090,6 +181167,458 @@
           }
         },
         "additionalProperties": false
+      },
+      "TranslationSettingsInput": {
+        "type": "object",
+        "description": "News translation settings (settings key `translation`, NP-002). Replaces the settings: an omitted member takes its default; the read-only `spend` of a GET may be sent back and is ignored.",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "default": false,
+            "description": "Master switch: off, no article or story is translated and reads carry the originals only"
+          },
+          "targetLanguages": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 35,
+              "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$",
+              "description": "BCP 47 language tag, for example `en`, `es` or `pt-BR`",
+              "example": "en"
+            },
+            "maxItems": 10,
+            "uniqueItems": true,
+            "description": "Languages foreign news is translated into; an article already in a target language is not translated into it"
+          },
+          "fields": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "x-extensible-enum": [
+                "title",
+                "excerpt"
+              ]
+            },
+            "default": [
+              "title",
+              "excerpt"
+            ],
+            "description": "Which fields are translated: `title` (the article or story title) and `excerpt` (the article's feed summary). Expected to grow (`x-extensible-enum`)."
+          },
+          "engine": {
+            "type": "string",
+            "x-extensible-enum": [
+              "llm"
+            ],
+            "default": "llm",
+            "description": "The translation engine: `llm` uses the 026 LLM layer under the `translation` feature, budget-governed. Expected to grow (`x-extensible-enum`)."
+          },
+          "budget": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "A spend cap for translation alone, inside the provider's own caps (162)",
+            "properties": {
+              "window": {
+                "type": "string",
+                "enum": [
+                  "hour",
+                  "day",
+                  "month"
+                ],
+                "default": "day",
+                "description": "The UTC window the cap applies to"
+              },
+              "capUsd": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "description": "USD translation may spend per window, or null for no separate cap; once spent, articles are left untranslated (and recorded as skipped) until the window resets"
+              }
+            }
+          },
+          "minSourceLanguageConfidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.8,
+            "description": "The least confidence in the detected source language at which an article is translated; below it the article is left as is"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "TranslationSettings": {
+        "type": "object",
+        "description": "News translation at ingest (NP-002): foreign-language news is translated into the target languages and stored beside the untouched original, with provenance.",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "default": false,
+            "description": "Master switch: off, no article or story is translated and reads carry the originals only"
+          },
+          "targetLanguages": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 35,
+              "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$",
+              "description": "BCP 47 language tag, for example `en`, `es` or `pt-BR`",
+              "example": "en"
+            },
+            "maxItems": 10,
+            "uniqueItems": true,
+            "description": "Languages foreign news is translated into; an article already in a target language is not translated into it"
+          },
+          "fields": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "x-extensible-enum": [
+                "title",
+                "excerpt"
+              ]
+            },
+            "default": [
+              "title",
+              "excerpt"
+            ],
+            "description": "Which fields are translated: `title` (the article or story title) and `excerpt` (the article's feed summary). Expected to grow (`x-extensible-enum`)."
+          },
+          "engine": {
+            "type": "string",
+            "x-extensible-enum": [
+              "llm"
+            ],
+            "default": "llm",
+            "description": "The translation engine: `llm` uses the 026 LLM layer under the `translation` feature, budget-governed. Expected to grow (`x-extensible-enum`)."
+          },
+          "budget": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "A spend cap for translation alone, inside the provider's own caps (162)",
+            "properties": {
+              "window": {
+                "type": "string",
+                "enum": [
+                  "hour",
+                  "day",
+                  "month"
+                ],
+                "default": "day",
+                "description": "The UTC window the cap applies to"
+              },
+              "capUsd": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "description": "USD translation may spend per window, or null for no separate cap; once spent, articles are left untranslated (and recorded as skipped) until the window resets"
+              }
+            }
+          },
+          "minSourceLanguageConfidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.8,
+            "description": "The least confidence in the detected source language at which an article is translated; below it the article is left as is"
+          },
+          "spend": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/LlmSpendWindow"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "description": "Translation spend in the current `budget.window`, or null when no translation has been priced yet"
+          }
+        },
+        "required": [
+          "enabled",
+          "targetLanguages",
+          "fields",
+          "engine"
+        ]
+      },
+      "NewsSubscription": {
+        "type": "object",
+        "description": "One entry of the caller's news subscriptions: an outlet (133) or a language the caller follows",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "outlet",
+              "language"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "A media outlet id (`listMediaOutlets`) for `outlet`; a BCP 47 language tag for `language`"
+          }
+        },
+        "required": [
+          "type",
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "NewsSubscriptionView": {
+        "type": "object",
+        "description": "The caller's news subscriptions (NP-003). With no entry of a type there is no restriction of that type; with at least one, the caller's editions keep only news matching one of them (an outlet entry matches its outlet, a language entry an article in that language or translated into it, NP-002).",
+        "properties": {
+          "subscriptions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NewsSubscription"
+            }
+          },
+          "updatedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When the caller last replaced the subscriptions, or null when never"
+          }
+        },
+        "required": [
+          "subscriptions"
+        ]
+      },
+      "NewsSubscriptionUpdate": {
+        "type": "object",
+        "description": "Replace the caller's news subscriptions. With no entry of a type there is no restriction of that type; with at least one, the caller's editions keep only news matching one of them (an outlet entry matches its outlet, a language entry an article in that language or translated into it, NP-002).",
+        "properties": {
+          "subscriptions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NewsSubscription"
+            },
+            "maxItems": 500
+          }
+        },
+        "required": [
+          "subscriptions"
+        ]
+      },
+      "DeliveryTarget": {
+        "type": "object",
+        "description": "Where an edition run goes and in what shape (NP-004). `channel` sends through a 018 notify channel; `website` is the hosted edition site (`getEditionSite`, NP-005); `podcast` is the briefing podcast feed (`getBriefingPodcast`, 141).",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "channel",
+              "website",
+              "podcast"
+            ]
+          },
+          "channelId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The notify channel (`listChannels`); required for `channel`, null otherwise"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "email",
+              "push",
+              "alert",
+              "html",
+              "audio"
+            ],
+            "description": "The payload shape: `email` the HTML edition with the audio attached and a link to the site; `push` a headline, summary and link to the site, never the full body; `alert` the alert-notification shape; `html` the standalone page (`website`); `audio` the synthesized edition (`podcast`)"
+          },
+          "options": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Per-kind options, passed to the channel's renderer as they are"
+          }
+        },
+        "required": [
+          "kind",
+          "format"
+        ]
+      },
+      "BreakingNewsConfig": {
+        "type": "object",
+        "description": "Off-schedule breaking-news editions (NP-006): an alert of one of `ruleIds` at or above `minSeverity` runs the edition at once, besides its schedule, at most once per `cooldownMinutes` (a burst coalesces into one run).",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "default": false
+          },
+          "ruleIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Trigger rules whose alerts fire a breaking edition"
+          },
+          "minSeverity": {
+            "$ref": "#/components/schemas/Severity"
+          },
+          "cooldownMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10080,
+            "default": 60,
+            "description": "The least time between two breaking runs of the edition"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "EditionSummary": {
+        "type": "object",
+        "description": "One of the caller's editions: a briefing the caller owns (NP-003)",
+        "properties": {
+          "briefingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "outputLanguage": {
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 35,
+                "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$",
+                "description": "BCP 47 language tag, for example `en`, `es` or `pt-BR`",
+                "example": "en"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The language the edition is written and spoken in"
+          },
+          "schedule": {
+            "type": "string",
+            "description": "5-field cron"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "nextRunAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "lastRunAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "lastRunStatus": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "latestRunId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The latest completed run, or null before the first"
+          },
+          "siteUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri",
+            "description": "The edition site (`getEditionSite`), or null when hosting is off"
+          }
+        },
+        "required": [
+          "briefingId",
+          "name",
+          "enabled",
+          "schedule",
+          "timezone"
+        ]
+      },
+      "EditionSite": {
+        "type": "object",
+        "description": "Where an edition's hosted site is reachable (NP-005). Each URL serves the latest successful run as a standalone HTML page.",
+        "properties": {
+          "briefingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "The canonical site URL (`/v1/editions/{briefingId}/site`)"
+          },
+          "feedKeyUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri",
+            "description": "The site under the edition's feed key (`/v1/k/{key}/editions/{briefingId}/site`, 035), or null when it has none"
+          },
+          "shareUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri",
+            "description": "The read-only, revocable share link (112) to the site, or null when it has none"
+          },
+          "latestRunId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The run the site shows, or null before the first successful run"
+          },
+          "updatedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When that run finished"
+          }
+        },
+        "required": [
+          "briefingId",
+          "url"
+        ]
       }
     },
     "securitySchemes": {

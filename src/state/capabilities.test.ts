@@ -20,25 +20,25 @@ function backend(apiVersion: string) {
 
 describe('checkVersion', () => {
   it('flags a differing or missing apiVersion', () => {
-    expect(checkVersion('2.0.0', systemInfo('2.0.0')).mismatch).toBe(false);
-    expect(checkVersion('2.0.0', systemInfo('1.1.0'))).toEqual({
-      expected: '2.0.0',
+    expect(checkVersion('2.1.0', systemInfo('2.1.0')).mismatch).toBe(false);
+    expect(checkVersion('2.1.0', systemInfo('1.1.0'))).toEqual({
+      expected: '2.1.0',
       actual: '1.1.0',
       mismatch: true,
     });
     const withoutVersion = { ...systemInfo(), apiVersion: undefined };
-    expect(checkVersion('2.0.0', withoutVersion).mismatch).toBe(true);
+    expect(checkVersion('2.1.0', withoutVersion).mismatch).toBe(true);
   });
 });
 
 describe('createCapabilitiesStore', () => {
   it('loads getSystem and getContract into a ready snapshot', async () => {
-    backend('2.0.0');
+    backend('2.1.0');
     const store = createCapabilitiesStore();
     const listener = vi.fn();
     store.subscribe(listener);
     expect(store.get().status).toBe('loading');
-    await store.load(client(), '2.0.0');
+    await store.load(client(), '2.1.0');
     const snapshot = store.get();
     expect(listener).toHaveBeenCalledTimes(1);
     expect(snapshot.status).toBe('ready');
@@ -51,10 +51,10 @@ describe('createCapabilitiesStore', () => {
   it('surfaces a version mismatch', async () => {
     backend('1.0.0');
     const store = createCapabilitiesStore();
-    await store.load(client(), '2.0.0');
+    await store.load(client(), '2.1.0');
     const snapshot = store.get();
     expect(snapshot.status === 'ready' && snapshot.version).toEqual({
-      expected: '2.0.0',
+      expected: '2.1.0',
       actual: '1.0.0',
       mismatch: true,
     });
@@ -68,7 +68,7 @@ describe('createCapabilitiesStore', () => {
       http.get('/v1/contract', ({ response }) => response(200).json(contract())),
     );
     const store = createCapabilitiesStore();
-    await store.load(client(), '2.0.0');
+    await store.load(client(), '2.1.0');
     const snapshot = store.get();
     expect(snapshot.status).toBe('error');
     expect(snapshot.status === 'error' && snapshot.error).toBeInstanceOf(FsError);

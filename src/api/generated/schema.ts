@@ -13956,6 +13956,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/k/{key}/site": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Open a shared edition site
+         * @description The hosted site of an edition (NP-005, `getEditionSite`) behind its share link: the latest successful run as a standalone HTML page, read-only. The share key grants this page only, never writes, other editions or records. A run citing private or non-redistributable sources is not served. `401` for an unknown key and `410 SHARE_EXPIRED` when the link is revoked, expired or exhausted; `404` when the link is to another target type, the edition was deleted, its site is off, or it has no successful run yet. Strong ETag and `Last-Modified`; 304 on a match.
+         *
+         *     **Scope:** `open` (share key in the path; `/v1/k/{key}/…`).
+         */
+        get: operations["openEditionSiteShareLink"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/exchange/packages": {
         parameters: {
             query?: never;
@@ -17276,6 +17298,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/settings/translation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get news translation settings
+         * @description Target languages, translated fields, engine, budget cap and source-language confidence for translating foreign-language news at ingest (NP-002), with the current translation spend.
+         *
+         *     **Scope:** `admin`.
+         */
+        get: operations["getTranslationSettings"];
+        /**
+         * Set news translation settings
+         * @description Replaces the settings. Takes effect for news ingested afterwards; an already-translated article is not translated again unless its source text changes.
+         *
+         *     **Scope:** `admin`.
+         */
+        put: operations["updateTranslationSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/news-subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get my news subscriptions
+         * @description The outlets and languages the caller follows, which scope the caller's editions (NP-003). A caller who never set any has none, which is no restriction. Subscriptions belong to a signed-in user, so an API token gets `401`. Requires `self.sources`.
+         *
+         *     **Scope:** `read`.
+         */
+        get: operations["getMyNewsSubscriptions"];
+        /**
+         * Update my news subscriptions
+         * @description Replaces the caller's news subscriptions; an empty list removes every restriction. An unknown outlet id or a malformed language tag is a 400. An API token gets `401`. Requires `self.sources`.
+         *
+         *     **Scope:** `read`.
+         */
+        put: operations["updateMyNewsSubscriptions"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/editions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List my editions
+         * @description The caller's editions: the briefings the calling user owns (`Briefing.ownerUserId`, NP-003), newest first. An edition is created, changed, run and deleted through the briefing operations. Any signed-in user; an API token gets `401`.
+         *
+         *     **Scope:** `read`.
+         */
+        get: operations["listMyEditions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/editions/{briefingId}/site": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Edition site
+         * @description The edition's latest successful run as a complete, standalone HTML page (NP-005): a stable, always-current newspaper site. `Accept: application/json` or `?format=json` returns the `EditionSite` (canonical, feed-key and share URLs) instead. Feed keys work through `/v1/k/{key}/editions/{briefingId}/site`, with asset URLs carrying the same key; a share link to the site grants it and its assets only, read-only and revocable. Same visibility as the podcast feed: 404 unless the edition is visible to the caller (its owner, its feed key or its share link for an owned edition), runs citing private sources only behind the private gate, and 404 while the site is off or before the first successful run. Strong ETag and `Last-Modified`; 304 on a match.
+         *
+         *     **Scope:** `read` (open while `security.openReads` is on).
+         */
+        get: operations["getEditionSite"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export interface webhooks {
     notification: {
@@ -19799,6 +19921,26 @@ export interface components {
             /** Format: date-time */
             validTime?: string | null;
             ageMinutes?: number | null;
+            /** @description Briefing-run citations of a briefing with `includeProvenance` only: why the item is in the edition (NP-007); absent elsewhere */
+            provenance?: {
+                /** @description The cross-linked evidence and objects that put the item in scope */
+                refs: components["schemas"]["ObjectRef"][];
+                /** @description A one-line "why included" */
+                reason?: string | null;
+            } | null;
+            /** @description Briefing-run citations of a briefing with `includeCorroboration` only: how well-supported the item is (NP-007), from the 154 corroboration policy; absent elsewhere */
+            corroboration?: {
+                /** @enum {string} */
+                evidenceQuality: "strong" | "moderate" | "weak" | "insufficient";
+                independentSources: number;
+                /** @description Admiralty information credibility; 6 means unknown */
+                credibility?: number | null;
+                /**
+                 * @description Source reliability (109); F means unknown
+                 * @enum {string|null}
+                 */
+                reliability?: "A" | "B" | "C" | "D" | "E" | "F" | null;
+            } | null;
         };
         AskAction: {
             /** Format: uuid */
@@ -19941,6 +20083,35 @@ export interface components {
                  */
                 format: "mp3" | "opus";
             } | null;
+            /** @description The language the edition is written and spoken in (NP-003); null for the owner's `UserPreferences.locale`, or the source language for a briefing without an owner */
+            outputLanguage?: string | null;
+            /** @description Where each run goes (NP-004). Empty or absent: every channel in `channelIds`, as before */
+            deliveryTargets?: components["schemas"]["DeliveryTarget"][];
+            /** @description The hosted edition site (NP-005) */
+            site?: {
+                /**
+                 * @description Serve the latest successful run at `getEditionSite`
+                 * @default false
+                 */
+                enabled: boolean;
+                /**
+                 * @description Keep a read-only, revocable share link to the site
+                 * @default false
+                 */
+                shareable: boolean;
+            };
+            /** @description Breaking-news special editions (NP-006); null for none */
+            breakingNews?: components["schemas"]["BreakingNewsConfig"] | null;
+            /**
+             * @description Each item carries the cross-linked evidence that put it in the edition (`provenance` on the run's citations, NP-007)
+             * @default false
+             */
+            includeProvenance: boolean;
+            /**
+             * @description Each item carries its corroboration signal (`corroboration` on the run's citations, NP-007)
+             * @default false
+             */
+            includeCorroboration: boolean;
         };
         Briefing: components["schemas"]["BriefingInput"] & {
             /** Format: uuid */
@@ -19956,6 +20127,11 @@ export interface components {
             lastRunStatus?: string | null;
             /** @description Non-fatal validation warnings, e.g. a channel not subscribed to `briefing` */
             warnings?: string[];
+            /**
+             * Format: uuid
+             * @description The v2.0 user who owns the edition: the creating user for a signed-in session, null for a briefing created with an API token (NP-003)
+             */
+            readonly ownerUserId?: string | null;
         };
         BriefingRun: {
             /**
@@ -20018,6 +20194,44 @@ export interface components {
                 contentType?: "audio/mpeg" | "audio/ogg" | null;
                 /** @description Detached JWS (`header..signature`, Ed25519, b64:false, `typ` the audio media type) over the audio bytes; verify against /.well-known/jwks.json (109) */
                 signature?: string | null;
+            } | null;
+            /** @description The outcome of each of the briefing's `deliveryTargets` for this run (NP-004), in target order; null for a briefing without targets, which delivers to its channels as before */
+            readonly deliveryResults?: {
+                /** @enum {string} */
+                kind: "channel" | "website" | "podcast";
+                /** Format: uuid */
+                channelId?: string | null;
+                /** @enum {string} */
+                format: "email" | "push" | "alert" | "html" | "audio";
+                /**
+                 * @description `queued` handed to the channel (its own delivery is in the notification's deliveries); `available` a pulled target (`website`, `podcast`) the run can be read at; `skipped` not attempted (`error` says why: a missing, disabled or foreign channel, no audio); `failed` the send failed (`error`). One target's failure never stops the others
+                 * @enum {string}
+                 */
+                status: "queued" | "available" | "skipped" | "failed";
+                /**
+                 * Format: int64
+                 * @description The notification published to the channel
+                 */
+                notificationId?: number | null;
+                /**
+                 * Format: uri
+                 * @description Where a pulled target is available
+                 */
+                url?: string | null;
+                error?: string | null;
+            }[] | null;
+            /** @description The alert that fired this run as a breaking-news special edition (NP-006); null for a scheduled, manual or preview run. A breaking run is otherwise an ordinary run of the edition: same scope, output, delivery targets and site */
+            readonly breaking?: {
+                /** Format: int64 */
+                alertId: number;
+                /** Format: uuid */
+                ruleId?: string | null;
+                ruleName?: string | null;
+                /** @enum {string} */
+                severity: "info" | "warning" | "critical";
+                /** Format: date-time */
+                firedAt?: string | null;
+                message?: string | null;
             } | null;
         };
         BriefingRunPage: {
@@ -29897,7 +30111,7 @@ export interface components {
             /** @description First characters of the fss_ key */
             keyPrefix: string;
             /** @enum {string} */
-            targetType: "record" | "alert" | "view" | "track" | "briefing-run" | "export" | "workspace" | "report";
+            targetType: "record" | "alert" | "view" | "track" | "briefing-run" | "export" | "workspace" | "report" | "edition-site";
             targetRef: string;
             fieldMask?: string[] | null;
             precisionM?: number | null;
@@ -38224,6 +38438,19 @@ export interface components {
             syndicated?: boolean;
             /** @description `gdelt-articles` or a `news-feed-*` source */
             sourceId: string;
+            /** @description The language of the translated fields, or null when untranslated */
+            targetLanguage?: string | null;
+            /** @description `title` in `targetLanguage`; the original fields are never overwritten (NP-002) */
+            translatedTitle?: string | null;
+            /** @description The excerpt (an article's `summary`) in `targetLanguage`; the original fields are never overwritten (NP-002) */
+            translatedExcerpt?: string | null;
+            /** @description How the translation was made */
+            translationProvenance?: {
+                engine: string;
+                model?: string | null;
+                /** Format: date-time */
+                at: string;
+            } | null;
         };
         /** @description One page of news articles */
         NewsArticlePage: {
@@ -38261,6 +38488,19 @@ export interface components {
             situations?: components["schemas"]["ObjectEnvelope"][];
             /** @description Detail view */
             canonicalEvents?: components["schemas"]["ObjectEnvelope"][];
+            /** @description The language of the translated fields, or null when untranslated */
+            targetLanguage?: string | null;
+            /** @description `title` in `targetLanguage`; the original fields are never overwritten (NP-002) */
+            translatedTitle?: string | null;
+            /** @description The excerpt (an article's `summary`) in `targetLanguage`; the original fields are never overwritten (NP-002) */
+            translatedExcerpt?: string | null;
+            /** @description How the translation was made */
+            translationProvenance?: {
+                engine: string;
+                model?: string | null;
+                /** Format: date-time */
+                at: string;
+            } | null;
         };
         /** @description One page of news stories */
         NewsStoryPage: {
@@ -41997,6 +42237,195 @@ export interface components {
             area?: components["schemas"]["Geometry"] | null;
             /** @description Places whose areas, unioned, bound what may be read; unknown places fail closed */
             placeIds?: string[] | null;
+        };
+        /** @description News translation settings (settings key `translation`, NP-002). Replaces the settings: an omitted member takes its default; the read-only `spend` of a GET may be sent back and is ignored. */
+        TranslationSettingsInput: {
+            /**
+             * @description Master switch: off, no article or story is translated and reads carry the originals only
+             * @default false
+             */
+            enabled: boolean;
+            /** @description Languages foreign news is translated into; an article already in a target language is not translated into it */
+            targetLanguages?: string[];
+            /**
+             * @description Which fields are translated: `title` (the article or story title) and `excerpt` (the article's feed summary). Expected to grow (`x-extensible-enum`).
+             * @default [
+             *       "title",
+             *       "excerpt"
+             *     ]
+             */
+            fields: string[];
+            /**
+             * @description The translation engine: `llm` uses the 026 LLM layer under the `translation` feature, budget-governed. Expected to grow (`x-extensible-enum`).
+             * @default llm
+             */
+            engine: string;
+            /** @description A spend cap for translation alone, inside the provider's own caps (162) */
+            budget?: {
+                /**
+                 * @description The UTC window the cap applies to
+                 * @default day
+                 * @enum {string}
+                 */
+                window: "hour" | "day" | "month";
+                /** @description USD translation may spend per window, or null for no separate cap; once spent, articles are left untranslated (and recorded as skipped) until the window resets */
+                capUsd?: number | null;
+            };
+            /**
+             * @description The least confidence in the detected source language at which an article is translated; below it the article is left as is
+             * @default 0.8
+             */
+            minSourceLanguageConfidence: number;
+        };
+        /** @description News translation at ingest (NP-002): foreign-language news is translated into the target languages and stored beside the untouched original, with provenance. */
+        TranslationSettings: {
+            /**
+             * @description Master switch: off, no article or story is translated and reads carry the originals only
+             * @default false
+             */
+            enabled: boolean;
+            /** @description Languages foreign news is translated into; an article already in a target language is not translated into it */
+            targetLanguages: string[];
+            /**
+             * @description Which fields are translated: `title` (the article or story title) and `excerpt` (the article's feed summary). Expected to grow (`x-extensible-enum`).
+             * @default [
+             *       "title",
+             *       "excerpt"
+             *     ]
+             */
+            fields: string[];
+            /**
+             * @description The translation engine: `llm` uses the 026 LLM layer under the `translation` feature, budget-governed. Expected to grow (`x-extensible-enum`).
+             * @default llm
+             */
+            engine: string;
+            /** @description A spend cap for translation alone, inside the provider's own caps (162) */
+            budget?: {
+                /**
+                 * @description The UTC window the cap applies to
+                 * @default day
+                 * @enum {string}
+                 */
+                window: "hour" | "day" | "month";
+                /** @description USD translation may spend per window, or null for no separate cap; once spent, articles are left untranslated (and recorded as skipped) until the window resets */
+                capUsd?: number | null;
+            };
+            /**
+             * @description The least confidence in the detected source language at which an article is translated; below it the article is left as is
+             * @default 0.8
+             */
+            minSourceLanguageConfidence: number;
+            /** @description Translation spend in the current `budget.window`, or null when no translation has been priced yet */
+            readonly spend?: components["schemas"]["LlmSpendWindow"] | null;
+        };
+        /** @description One entry of the caller's news subscriptions: an outlet (133) or a language the caller follows */
+        NewsSubscription: {
+            /** @enum {string} */
+            type: "outlet" | "language";
+            /** @description A media outlet id (`listMediaOutlets`) for `outlet`; a BCP 47 language tag for `language` */
+            id: string;
+        };
+        /** @description The caller's news subscriptions (NP-003). With no entry of a type there is no restriction of that type; with at least one, the caller's editions keep only news matching one of them (an outlet entry matches its outlet, a language entry an article in that language or translated into it, NP-002). */
+        NewsSubscriptionView: {
+            subscriptions: components["schemas"]["NewsSubscription"][];
+            /**
+             * Format: date-time
+             * @description When the caller last replaced the subscriptions, or null when never
+             */
+            updatedAt?: string | null;
+        };
+        /** @description Replace the caller's news subscriptions. With no entry of a type there is no restriction of that type; with at least one, the caller's editions keep only news matching one of them (an outlet entry matches its outlet, a language entry an article in that language or translated into it, NP-002). */
+        NewsSubscriptionUpdate: {
+            subscriptions: components["schemas"]["NewsSubscription"][];
+        };
+        /** @description Where an edition run goes and in what shape (NP-004). `channel` sends through a 018 notify channel; `website` is the hosted edition site (`getEditionSite`, NP-005); `podcast` is the briefing podcast feed (`getBriefingPodcast`, 141). */
+        DeliveryTarget: {
+            /** @enum {string} */
+            kind: "channel" | "website" | "podcast";
+            /**
+             * Format: uuid
+             * @description The notify channel (`listChannels`); required for `channel`, null otherwise
+             */
+            channelId?: string | null;
+            /**
+             * @description The payload shape: `email` the HTML edition with the audio attached and a link to the site; `push` a headline, summary and link to the site, never the full body; `alert` the alert-notification shape; `html` the standalone page (`website`); `audio` the synthesized edition (`podcast`)
+             * @enum {string}
+             */
+            format: "email" | "push" | "alert" | "html" | "audio";
+            /** @description Per-kind options, passed to the channel's renderer as they are */
+            options?: {
+                [key: string]: unknown;
+            };
+        };
+        /** @description Off-schedule breaking-news editions (NP-006): an alert of one of `ruleIds` at or above `minSeverity` runs the edition at once, besides its schedule, at most once per `cooldownMinutes` (a burst coalesces into one run). */
+        BreakingNewsConfig: {
+            /** @default false */
+            enabled: boolean;
+            /** @description Trigger rules whose alerts fire a breaking edition */
+            ruleIds?: string[];
+            minSeverity?: components["schemas"]["Severity"];
+            /**
+             * @description The least time between two breaking runs of the edition
+             * @default 60
+             */
+            cooldownMinutes: number;
+        };
+        /** @description One of the caller's editions: a briefing the caller owns (NP-003) */
+        EditionSummary: {
+            /** Format: uuid */
+            briefingId: string;
+            name: string;
+            enabled: boolean;
+            /** @description The language the edition is written and spoken in */
+            outputLanguage?: string | null;
+            /** @description 5-field cron */
+            schedule: string;
+            timezone: string;
+            /** Format: date-time */
+            nextRunAt?: string | null;
+            /** Format: date-time */
+            lastRunAt?: string | null;
+            lastRunStatus?: string | null;
+            /**
+             * Format: uuid
+             * @description The latest completed run, or null before the first
+             */
+            latestRunId?: string | null;
+            /**
+             * Format: uri
+             * @description The edition site (`getEditionSite`), or null when hosting is off
+             */
+            siteUrl?: string | null;
+        };
+        /** @description Where an edition's hosted site is reachable (NP-005). Each URL serves the latest successful run as a standalone HTML page. */
+        EditionSite: {
+            /** Format: uuid */
+            briefingId: string;
+            /**
+             * Format: uri
+             * @description The canonical site URL (`/v1/editions/{briefingId}/site`)
+             */
+            url: string;
+            /**
+             * Format: uri
+             * @description The site under the edition's feed key (`/v1/k/{key}/editions/{briefingId}/site`, 035), or null when it has none
+             */
+            feedKeyUrl?: string | null;
+            /**
+             * Format: uri
+             * @description The read-only, revocable share link (112) to the site, or null when it has none
+             */
+            shareUrl?: string | null;
+            /**
+             * Format: uuid
+             * @description The run the site shows, or null before the first successful run
+             */
+            latestRunId?: string | null;
+            /**
+             * Format: date-time
+             * @description When that run finished
+             */
+            updatedAt?: string | null;
         };
     };
     responses: never;
@@ -88369,6 +88798,79 @@ export interface operations {
             };
         };
     };
+    openEditionSiteShareLink: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description A previous ETag */
+                "If-None-Match"?: string;
+            };
+            path: {
+                /** @description Share key (`fss_…`) */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The site */
+            200: {
+                headers: {
+                    /** @description Strong validator */
+                    ETag?: string;
+                    /** @description When the shown run finished */
+                    "Last-Modified"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description Not modified */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid key (INVALID_SHARE_KEY) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found (NOT_FOUND) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Link expired or revoked (SHARE_EXPIRED) */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate limited (RATE_LIMITED) */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     createExchangePackage: {
         parameters: {
             query?: never;
@@ -97673,6 +98175,356 @@ export interface operations {
             /** @description Already set up: a user exists (ALREADY_SETUP); or a source in `sources` needs credentials first (CREDENTIALS_REQUIRED) */
             409: {
                 headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getTranslationSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Translation settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranslationSettings"];
+                };
+            };
+            /** @description Missing or invalid token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Token lacks the required scope */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateTranslationSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TranslationSettingsInput"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranslationSettings"];
+                };
+            };
+            /** @description Validation failed (VALIDATION_FAILED) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing or invalid token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Token lacks the required scope */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getMyNewsSubscriptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's news subscriptions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewsSubscriptionView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Caller lacks the required permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate limited (RATE_LIMITED) */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateMyNewsSubscriptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewsSubscriptionUpdate"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewsSubscriptionView"];
+                };
+            };
+            /** @description Invalid request body (VALIDATION_FAILED) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Caller lacks the required permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate limited (RATE_LIMITED) */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listMyEditions: {
+        parameters: {
+            query?: {
+                /** @description Opaque pagination cursor from a previous response's nextCursor */
+                cursor?: string;
+                /** @description Page size */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's editions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["EditionSummary"][];
+                        nextCursor?: string | null;
+                    };
+                };
+            };
+            /** @description Invalid cursor or limit (VALIDATION_FAILED) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Caller lacks the required permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate limited (RATE_LIMITED) */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getEditionSite: {
+        parameters: {
+            query?: {
+                /** @description Alternative to the Accept header */
+                format?: "html" | "json";
+            };
+            header?: {
+                /** @description ETag from a previous response; 304 when unchanged */
+                "If-None-Match"?: string;
+            };
+            path: {
+                /** @description Briefing id */
+                briefingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The site */
+            200: {
+                headers: {
+                    /** @description Strong validator */
+                    ETag?: string;
+                    /** @description When the shown run finished */
+                    "Last-Modified"?: string;
+                    /** @description default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data: */
+                    "Content-Security-Policy"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                    "application/json": components["schemas"]["EditionSite"];
+                };
+            };
+            /** @description Not modified */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid `format` */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing or invalid token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Endpoint outside the token's, feed key's or anonymous profile's restriction (RESTRICTED, ENDPOINT_NOT_ALLOWED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unknown or invisible edition, site off, or no successful run yet */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate limited (RATE_LIMITED); honor Retry-After */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before retrying */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
                 content: {

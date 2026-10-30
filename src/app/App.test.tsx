@@ -16,7 +16,7 @@ afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 /** Serves the capability calls, recording the Authorization header each one carried. */
-function backend(apiVersion = '2.0.0') {
+function backend(apiVersion = '2.1.0') {
   const authorization: Array<string | null> = [];
   const devices: unknown[] = [];
   server.use(
@@ -45,7 +45,7 @@ describe('App settings', () => {
   it('reads the backend with no token (open reads)', async () => {
     const { authorization, devices } = backend();
     render(<App session={session()} initialPath="/settings" />);
-    expect(await screen.findByTestId('backend-version')).toHaveTextContent('2.0.0');
+    expect(await screen.findByTestId('backend-version')).toHaveTextContent('2.1.0');
     expect(screen.getByTestId('token-state')).toHaveTextContent('No token: using open reads.');
     expect(screen.queryByTestId('version-mismatch')).not.toBeInTheDocument();
     expect(authorization).toEqual([null]);
@@ -69,7 +69,7 @@ describe('App settings', () => {
     backend('9.9.9');
     render(<App session={session()} initialPath="/settings" />);
     expect(await screen.findByTestId('version-mismatch')).toHaveTextContent(
-      'built for API version 2.0.0, but the backend reports 9.9.9',
+      'built for API version 2.1.0, but the backend reports 9.9.9',
     );
   });
 
