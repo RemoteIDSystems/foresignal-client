@@ -56,6 +56,12 @@ export const RELATION_TYPES: readonly RelationType[] = [
   'precedes',
   'causes',
   'related-to',
+  // Ownership / affiliation edges (R2-011): surfaced in the relation filter and legend.
+  'owns',
+  'controls',
+  'officer-of',
+  'beneficial-owner',
+  'affiliated-with',
 ];
 
 /** The most edges `queryGraph` returns; the client asks for all of them. */

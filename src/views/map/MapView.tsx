@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo } from 'react';
 import type { ForesignalClient } from '../../api/client';
 import type { ChangeStream } from '../../api/stream/ChangeStream';
 import { useDisabledSources } from '../../account/sources';
+import { ReferenceAreaPicker } from '../../reference/ReferenceAreaPicker';
 import { useTheme } from '../../app/theme';
 import { defaultEnabled, drawnLayers, enabledKinds } from '../../map/records/catalog';
 import type { RecordHit } from '../../map/records/recordPicking';
@@ -57,9 +58,15 @@ export function MapView({ api, stream, store = appStore }: MapViewProps) {
   }, [stream, layers, viewport]);
   const selection = useStoreKey('selection', store);
   const select = useCallback((hit: RecordHit | undefined) => store.set('selection', hit), [store]);
+  const referenceArea = useStoreKey('referenceArea', store);
+  const areas = useMemo(
+    () => (referenceArea ? [referenceArea.geometry] : undefined),
+    [referenceArea],
+  );
   return (
     <section className={styles.map} aria-label="Map" data-testid="full-map">
       <h1 className={styles.title}>Map</h1>
+      <ReferenceAreaPicker api={api} store={store} />
       <MapViewer
         api={api}
         overlayStyle={overlayStyle}
@@ -71,6 +78,7 @@ export function MapView({ api, stream, store = appStore }: MapViewProps) {
         stream={stream}
         store={store}
         viewport={storeViewport}
+        areas={areas}
       />
     </section>
   );

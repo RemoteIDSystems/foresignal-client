@@ -1,0 +1,99 @@
+/* The reference-area picker (R2-011), a floating panel on the map. */
+
+.panel {
+  position: absolute;
+  top: 54px;
+  left: 12px;
+  z-index: 5;
+  width: 260px;
+  max-width: calc(100% - 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-md);
+  background: var(--fs-color-panel);
+  box-shadow: var(--fs-shadow-panel);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--fs-font-size-md);
+}
+
+.drawn {
+  margin: 0;
+  font-size: var(--fs-font-size-sm);
+  color: var(--fs-color-text-secondary);
+}
+
+.form {
+  display: flex;
+  gap: 6px;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--fs-color-border);
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-panel-alt);
+  color: var(--fs-color-text);
+  font: inherit;
+}
+
+.muted {
+  margin: 0;
+  color: var(--fs-color-text-muted);
+  font-size: var(--fs-font-size-sm);
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-color-panel-alt);
+  color: var(--fs-color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.result:hover {
+  border-color: var(--fs-color-border-strong);
+}
+
+.resultLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

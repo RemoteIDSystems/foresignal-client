@@ -15,7 +15,8 @@ export type NodeGroup =
   'event' | 'entity' | 'location' | 'infrastructure' | 'source' | 'document' | 'other';
 
 /** The edge styles, after the mock's edge legend; labels show the backend's relation type. */
-export type EdgeFamily = 'supports' | 'contradicts' | 'related' | 'causal' | 'temporal';
+export type EdgeFamily =
+  'supports' | 'contradicts' | 'related' | 'causal' | 'temporal' | 'ownership';
 
 const GROUP_TYPES: Readonly<Record<Exclude<NodeGroup, 'other'>, readonly string[]>> = {
   event: [
@@ -96,14 +97,21 @@ export function edgeFamily(type: RelationType | undefined): EdgeFamily {
       return 'causal';
     case 'precedes':
       return 'temporal';
+    case 'owns':
+    case 'controls':
+    case 'officer-of':
+    case 'beneficial-owner':
+    case 'affiliated-with':
+      return 'ownership';
     default:
+      // Any unlisted (x-extensible-enum) wire type draws as a generic related edge, not dropped.
       return 'related';
   }
 }
 
 /** Whether an edge style is drawn with an arrow head (it has a direction that matters). */
 export function familyArrow(family: EdgeFamily): boolean {
-  return family === 'causal' || family === 'temporal';
+  return family === 'causal' || family === 'temporal' || family === 'ownership';
 }
 
 /** The colors of the edge styles, from the theme, in the mock's hues. */
@@ -114,6 +122,7 @@ export function familyColors(tokens: ThemeTokens): Readonly<Record<EdgeFamily, s
     related: tokens.color.success,
     causal: tokens.color.textSecondary,
     temporal: tokens.color.accent,
+    ownership: tokens.tone.violetFg,
   };
 }
 

@@ -84,7 +84,15 @@ export interface AppState {
   welcomeOpen: boolean;
   /** The dashboard panels the user closed, by id, sorted; kept in a workspace's layout (025). */
   closedPanels: readonly string[];
+  /** A reference area outlined on the map for scoping/labeling (R2-011); undefined when none. */
+  referenceArea: DrawnReferenceArea | undefined;
   [key: `layer:${string}`]: LayerLive | undefined;
+}
+
+/** A reference area drawn over the map: its display label and the geometry to outline. */
+export interface DrawnReferenceArea {
+  label: string;
+  geometry: components['schemas']['Geometry'];
 }
 
 /** The workspace a client is bound to: its id, name, role, and the context version last seen. */
@@ -127,6 +135,7 @@ export const INITIAL_STATE: AppState = {
   shortcutsOpen: false,
   welcomeOpen: false,
   closedPanels: [],
+  referenceArea: undefined,
 };
 
 /**

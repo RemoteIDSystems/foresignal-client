@@ -90,6 +90,93 @@ export function userPreferences(
   };
 }
 
+/** A minimal valid `ObjectEnvelope`; override any field per test. */
+export function objectEnvelope(
+  overrides: Partial<components['schemas']['ObjectEnvelope']> = {},
+): components['schemas']['ObjectEnvelope'] {
+  return {
+    ref: 'organization:01J0000000000000000000000O',
+    type: 'organization',
+    title: 'Acme Holdings',
+    ...overrides,
+  };
+}
+
+/** A minimal valid `OwnershipChain`; pass the reached nodes to show. */
+export function ownershipChain(
+  chains: components['schemas']['OwnershipChainNode'][] = [
+    {
+      node: objectEnvelope({ ref: 'organization:01J0000000000000000000000P', title: 'Parent Co' }),
+      reachedFrom: ['organization:01J0000000000000000000000O'],
+      weakestEdgeLabel: 'likely',
+      paths: [
+        {
+          from: 'organization:01J0000000000000000000000O',
+          hops: ['organization:01J0000000000000000000000P'],
+          relationTypes: ['owns'],
+          weakestEdgeLabel: 'likely',
+        },
+      ],
+    },
+  ],
+): components['schemas']['OwnershipChain'] {
+  return {
+    refs: ['organization:01J0000000000000000000000O'],
+    direction: 'both',
+    asOf: null,
+    generatedAt: '2026-10-29T00:00:00Z',
+    chains,
+    shared: [],
+  };
+}
+
+/** A minimal valid `ReferenceArea`; override any field per test. */
+export function referenceArea(
+  overrides: Partial<components['schemas']['ReferenceArea']> = {},
+): components['schemas']['ReferenceArea'] {
+  return {
+    kind: 'country',
+    code: 'FR',
+    name: 'France',
+    label: 'France',
+    countryIso2: 'FR',
+    countryName: 'France',
+    admin1: null,
+    admin1Name: null,
+    lon: 2.2,
+    lat: 46.2,
+    placeId: null,
+    ...overrides,
+  };
+}
+
+/** A minimal valid `ReferenceAreaOutline`; override any field per test. */
+export function referenceAreaOutline(
+  overrides: Partial<components['schemas']['ReferenceAreaOutline']> = {},
+): components['schemas']['ReferenceAreaOutline'] {
+  return {
+    kind: 'country',
+    code: 'FR',
+    name: 'France',
+    countryIso2: 'FR',
+    countryName: 'France',
+    bbox: [-5, 41, 10, 51],
+    geometry: {
+      type: 'Polygon',
+      coordinates: [
+        [
+          [-5, 41],
+          [10, 41],
+          [10, 51],
+          [-5, 51],
+          [-5, 41],
+        ],
+      ],
+    },
+    ...overrides,
+  };
+}
+
 /** A minimal valid `IntelCalibration` for one scope; override any field per test. */
 export function intelCalibration(
   overrides: Partial<components['schemas']['IntelCalibration']> = {},

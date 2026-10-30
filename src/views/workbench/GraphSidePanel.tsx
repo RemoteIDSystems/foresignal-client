@@ -13,6 +13,7 @@ import {
   type ViewNode,
 } from '../../graph/graphView';
 import { useGraphColors } from '../../graph/useGraphColors';
+import { OwnershipChainPanel } from '../../graph/OwnershipChainPanel';
 import { severityTone, utcText } from '../../intel/analysisView';
 import { statusTone } from '../../objects/dossierView';
 import { Badge } from '../../ui/Badge';
@@ -206,6 +207,7 @@ export function GraphSidePanel({
           {problem}
         </p>
       )}
+      <OwnershipChainPanel api={api} seedRef={node.ref} onOpen={onOpen} />
       <AnnotationsPanel api={api} objectRef={node.ref} actions={envelope?.actions} />
     </aside>
   );
