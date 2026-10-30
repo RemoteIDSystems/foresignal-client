@@ -90,6 +90,63 @@ export function userPreferences(
   };
 }
 
+/** A minimal valid `IntelCalibration` for one scope; override any field per test. */
+export function intelCalibration(
+  overrides: Partial<components['schemas']['IntelCalibration']> = {},
+): components['schemas']['IntelCalibration'] {
+  return {
+    scope: 'intel-event',
+    calibrated: true,
+    sampleN: 120,
+    minSamples: 50,
+    brier: 0.12,
+    bins: [
+      { lower: 0, upper: 0.5, n: 60, meanForecast: 0.25, observedFrequency: 0.22 },
+      { lower: 0.5, upper: 1, n: 60, meanForecast: 0.75, observedFrequency: 0.78 },
+    ],
+    curve: [
+      { forecast: 0.25, calibrated: 0.22 },
+      { forecast: 0.75, calibrated: 0.78 },
+    ],
+    fittedAt: '2026-10-28T00:00:00Z',
+    updatedAt: '2026-10-29T00:00:00Z',
+    ...overrides,
+  };
+}
+
+/** A minimal valid `IntelCorroboration` policy; override any gate per test. */
+export function intelCorroboration(
+  overrides: Partial<components['schemas']['IntelCorroboration']> = {},
+): components['schemas']['IntelCorroboration'] {
+  return {
+    eventQuality: { strongFamilies: 3, strongGroups: 2, moderateFamilies: 2, requireModalities: 0 },
+    situationActivation: { minFamilies: 2, minGroups: 2 },
+    autoCorroborate: { enabled: true, withinKm: 50, window: 'PT24H', maxMembers: 5 },
+    ...overrides,
+  };
+}
+
+/** A minimal valid `ForecastNumericCalibration`; override any field per test. */
+export function forecastNumericCalibration(
+  overrides: Partial<components['schemas']['ForecastNumericCalibration']> = {},
+): components['schemas']['ForecastNumericCalibration'] {
+  return {
+    forecasterId: null,
+    category: null,
+    type: 'numeric',
+    n: 42,
+    label: 'ok',
+    quantileReliability: [
+      { level: 0.05, quantile: 'p05', nominal: 0.05, empirical: 0.06, n: 42 },
+      { level: 0.95, quantile: 'p95', nominal: 0.95, empirical: 0.93, n: 42 },
+    ],
+    pit: { n: 42, bins: [] },
+    scorerVersion: '1.0.0',
+    computedAt: '2026-10-29T00:00:00Z',
+    ...overrides,
+  };
+}
+
 /** A minimal valid active `Session` (`listSessions` item); override any field per test. */
 export function userSession(
   overrides: Partial<components['schemas']['Session']> = {},

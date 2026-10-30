@@ -26,6 +26,7 @@ import {
   tabSections,
 } from '../../intel/assessmentView';
 import { confidenceText, confidenceTone } from '../../intel/hypothesesView';
+import { IntelCorroborationPanel } from '../../intel/IntelCorroborationPanel';
 import type { Part } from '../../intel/useEvidence';
 import { useRead } from '../../intel/useHypotheses';
 import { prettifyId } from '../../lib/labels';
@@ -128,6 +129,7 @@ export function AssessmentTab({
           </ul>
         </section>
       )}
+      {api && <IntelCorroborationPanel api={api} />}
     </div>
   );
 }

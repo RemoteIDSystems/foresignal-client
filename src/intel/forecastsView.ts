@@ -3,7 +3,6 @@ import type { ChartSeries, ReliabilityBin } from '../ui/charts/chartOptions';
 import { prettifyId } from '../lib/labels';
 import type {
   Forecast,
-  ForecastCalibration,
   ForecastHistory,
   ForecastQuestion,
   QuestionSummary,
@@ -170,19 +169,36 @@ export function scoreText(value: number | null | undefined): string {
   return value === null || value === undefined ? '—' : value.toFixed(3);
 }
 
+/**
+ * A reliability diagram's data: the 10-bin table and the recalibrated (PAV) curve. Both the
+ * forecast probability calibration (`ForecastCalibration`) and the intel scope calibration
+ * (`IntelCalibration`) carry this shape, so the two helpers below serve either (R2-010).
+ */
+export interface ReliabilityData {
+  bins?: readonly {
+    n?: number;
+    meanForecast?: number | null;
+    observedFrequency?: number | null;
+  }[];
+  curve?: readonly { forecast?: number; calibrated?: number }[];
+}
+
 /** The calibration's bins that hold forecasts, as chart dots. */
-export function reliabilityBins(calibration: ForecastCalibration): ReliabilityBin[] {
-  return calibration.bins
+export function reliabilityBins(calibration: ReliabilityData): ReliabilityBin[] {
+  return (calibration.bins ?? [])
     .filter(
       (bin) =>
+        typeof bin.n === 'number' &&
         bin.n > 0 &&
         typeof bin.meanForecast === 'number' &&
         typeof bin.observedFrequency === 'number',
     )
-    .map((bin) => ({ forecast: bin.meanForecast!, observed: bin.observedFrequency!, n: bin.n }));
+    .map((bin) => ({ forecast: bin.meanForecast!, observed: bin.observedFrequency!, n: bin.n! }));
 }
 
 /** The recalibrated curve as chart points. */
-export function calibrationCurve(calibration: ForecastCalibration): [number, number][] {
-  return calibration.curve.map((point) => [point.forecast, point.calibrated]);
+export function calibrationCurve(calibration: ReliabilityData): [number, number][] {
+  return (calibration.curve ?? [])
+    .filter((point) => typeof point.forecast === 'number' && typeof point.calibrated === 'number')
+    .map((point) => [point.forecast!, point.calibrated!]);
 }

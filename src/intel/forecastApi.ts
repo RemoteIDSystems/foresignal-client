@@ -20,8 +20,25 @@ export type ForecastScorecard = components['schemas']['ForecastScorecard'];
 /** One scorecard row (`ScorecardEntry`). */
 export type ScorecardEntry = components['schemas']['ScorecardEntry'];
 
-/** Reliability bins and the recalibrated curve (`ForecastCalibration`). */
+/** Reliability bins and the recalibrated curve (`ForecastCalibration`), the probability variant. */
 export type ForecastCalibration = components['schemas']['ForecastCalibration'];
+
+/**
+ * Numeric calibration (152): the quantile-reliability diagram, PIT histogram and calibration-error
+ * summary over resolved numeric questions (`ForecastNumericCalibration`). Modeled here once and
+ * reused by the intel calibration view.
+ */
+export type ForecastNumericCalibration = components['schemas']['ForecastNumericCalibration'];
+
+/** What `getForecastCalibration` returns: the probability variant or the numeric one. */
+export type ForecastCalibrationResult = ForecastCalibration | ForecastNumericCalibration;
+
+/** Whether a calibration result is the numeric variant (`type: "numeric"`, quantile reliability). */
+export function isNumericCalibration(
+  calibration: ForecastCalibrationResult,
+): calibration is ForecastNumericCalibration {
+  return 'type' in calibration && calibration.type === 'numeric';
+}
 
 /** The most questions or forecasts one page holds. */
 export const FORECAST_PAGE_LIMIT = 500;
@@ -112,16 +129,13 @@ export function getForecastScorecard(
 /**
  * The ledger's calibration across forecasters and categories (`getForecastCalibration`).
  *
- * In 2.0.0 this response widened from `ForecastCalibration` to
- * `oneOf [ForecastCalibration, ForecastNumericCalibration]`. The client still reads only the
- * reliability-bin member, so the widened result is narrowed to `ForecastCalibration` here — a
- * documented cast that keeps today's behavior. Discriminating the `ForecastNumericCalibration`
- * variant (`type: "numeric"`, quantile reliability and PIT) belongs to R2-010, which owns the
- * calibration view.
+ * The 2.0.0 response is `oneOf [ForecastCalibration, ForecastNumericCalibration]`. Both variants are
+ * returned; the forecasts view discriminates them with {@link isNumericCalibration} and renders the
+ * reliability diagram or the numeric (quantile/PIT) summary accordingly.
  */
 export function getForecastCalibration(
   api: ForesignalClient,
   signal?: AbortSignal,
-): Promise<ForecastCalibration> {
-  return unwrap(api.GET('/v1/forecasts/calibration', { signal })) as Promise<ForecastCalibration>;
+): Promise<ForecastCalibrationResult> {
+  return unwrap(api.GET('/v1/forecasts/calibration', { signal }));
 }

@@ -14,10 +14,13 @@ import {
   getForecastQuestion,
   getForecastQuestionHistory,
   getForecastScorecard,
+  isNumericCalibration,
   listForecastQuestions,
   listForecasts,
+  type ForecastNumericCalibration,
   type QuestionSummary,
 } from '../../intel/forecastApi';
+import { IntelCalibrationPanel } from '../../intel/IntelCalibrationPanel';
 import {
   calibrationCurve,
   DEFAULT_HORIZON,
@@ -316,16 +319,26 @@ export function LedgerView({ api, onBack }: { api: ForesignalClient; onBack: () 
   const theme = useTheme();
   const scorecard = useRead(api, 'all', readScorecard);
   const calibration = useRead(api, 'all', readCalibration);
+  // The 2.0.0 response is a union: the probability reliability diagram, or the numeric (quantile)
+  // variant. Discriminate once; the probability member feeds the reliability chart.
+  const probability =
+    calibration.status === 'ready' && !isNumericCalibration(calibration.value)
+      ? calibration.value
+      : undefined;
+  const numeric =
+    calibration.status === 'ready' && isNumericCalibration(calibration.value)
+      ? calibration.value
+      : undefined;
   const option = useMemo(
     () =>
-      calibration.status === 'ready'
+      probability
         ? reliabilityOption(
             theme.tokens,
-            reliabilityBins(calibration.value),
-            calibrationCurve(calibration.value),
+            reliabilityBins(probability),
+            calibrationCurve(probability),
           )
         : undefined,
-    [calibration, theme.tokens],
+    [probability, theme.tokens],
   );
   return (
     <div className={styles.grid} data-testid="forecast-ledger">
@@ -412,7 +425,7 @@ export function LedgerView({ api, onBack }: { api: ForesignalClient; onBack: () 
           Calibration
         </h2>
         {partNote(calibration, 'the calibration')}
-        {calibration.status === 'ready' && option && (
+        {probability && option && (
           <>
             <EChart
               option={option}
@@ -421,22 +434,68 @@ export function LedgerView({ api, onBack }: { api: ForesignalClient; onBack: () 
               testId="calibration-chart"
             />
             <p className={styles.muted}>
-              n = {calibration.value.n} · {calibration.value.method === 'corp' ? 'CORP' : 'bins'}
-              {calibration.value.sharpness !== null && calibration.value.sharpness !== undefined
-                ? ` · sharpness ${scoreText(calibration.value.sharpness)}`
+              n = {probability.n} · {probability.method === 'corp' ? 'CORP' : 'bins'}
+              {probability.sharpness !== null && probability.sharpness !== undefined
+                ? ` · sharpness ${scoreText(probability.sharpness)}`
                 : ''}
-              {calibration.value.decomposition
-                ? ` · miscalibration ${scoreText(calibration.value.decomposition.miscalibration)}, discrimination ${scoreText(calibration.value.decomposition.discrimination)}`
+              {probability.decomposition
+                ? ` · miscalibration ${scoreText(probability.decomposition.miscalibration)}, discrimination ${scoreText(probability.decomposition.discrimination)}`
                 : ''}
             </p>
-            {calibration.value.label === 'insufficient' && (
+            {probability.label === 'insufficient' && (
               <p className={styles.muted} data-testid="calibration-insufficient">
                 Too few resolved forecasts to judge calibration yet.
               </p>
             )}
           </>
         )}
+        {numeric && <NumericCalibration calibration={numeric} />}
       </section>
+      <IntelCalibrationPanel api={api} />
+    </div>
+  );
+}
+
+/**
+ * The numeric calibration summary (`ForecastNumericCalibration`): each stated quantile's empirical
+ * coverage against its nominal level, with the PIT sample size. Read-only context (R2-010).
+ */
+function NumericCalibration({ calibration }: { calibration: ForecastNumericCalibration }) {
+  return (
+    <div data-testid="calibration-numeric">
+      <p className={styles.muted}>
+        Numeric calibration · n = {calibration.n}
+        {calibration.pit ? ` · PIT n = ${calibration.pit.n}` : ''}
+      </p>
+      {calibration.quantileReliability.length > 0 && (
+        <div className={styles.tableWrap}>
+          <table className={styles.table} aria-label="Quantile reliability">
+            <thead>
+              <tr>
+                <th>Quantile</th>
+                <th>Nominal</th>
+                <th>Empirical</th>
+                <th>n</th>
+              </tr>
+            </thead>
+            <tbody>
+              {calibration.quantileReliability.map((q) => (
+                <tr key={q.quantile ?? q.level}>
+                  <td>{q.quantile ?? scoreText(q.level)}</td>
+                  <td>{scoreText(q.nominal)}</td>
+                  <td>{scoreText(q.empirical)}</td>
+                  <td>{q.n ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {calibration.label === 'insufficient' && (
+        <p className={styles.muted} data-testid="calibration-insufficient">
+          Too few resolved numeric questions to judge calibration yet.
+        </p>
+      )}
     </div>
   );
 }
